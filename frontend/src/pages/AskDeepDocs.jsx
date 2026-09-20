@@ -1,0 +1,5 @@
+import Header from '../components/Header.jsx'
+import Icon from '../components/Icon.jsx'
+export default function AskDeepDocs() {
+  return <><Header eyebrow="FROM DOCUMENTS TO UNDERSTANDING" title="Ask DeepDocs" description="A future space for questions, context, and document-grounded answers." /><section className="panel ask-panel"><div className="empty-state"><span className="empty-icon"><Icon name="ask" size={32} /></span><span className="small-label">COMING IN A FUTURE PHASE</span><h2>Better answers begin with your documents</h2><p>Document Q&A is not available yet. Once this capability is introduced, this space will help you explore your source material through questions.</p></div><div className="question-preview"><label htmlFor="question">Your question</label><div className="question-field"><input id="question" disabled placeholder="Ask a question about your documents…" aria-describedby="question-note" /><button type="button" disabled aria-label="Send question (not available)"><Icon name="arrow" size={20} /></button></div><p id="question-note">Preview only. Questions cannot be submitted and no AI calls are made.</p></div></section></>
+}
