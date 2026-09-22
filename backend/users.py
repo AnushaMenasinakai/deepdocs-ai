@@ -33,3 +33,26 @@ async def create_user(database: AsyncDatabase, registration: RegistrationRequest
         email=document["email"],
         created_at=document["created_at"],
     )
+
+
+async def find_user_by_email(database: AsyncDatabase, email: str):
+    return await database.get_collection("users").find_one(
+        {"email": email}, {"_id": 1, "password_hash": 1},
+    )
+
+
+async def find_user_by_id(database: AsyncDatabase, user_id: ObjectId):
+    return await database.get_collection("users").find_one(
+        {"_id": user_id}, {"_id": 1, "name": 1, "email": 1, "created_at": 1},
+    )
+
+
+def public_user(document) -> UserResponse:
+    # BSON dates may be decoded as naive UTC by the existing client.
+    created_at = document["created_at"]
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    return UserResponse(
+        id=str(document["_id"]), name=document["name"],
+        email=document["email"], created_at=created_at,
+    )

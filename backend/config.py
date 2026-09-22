@@ -38,3 +38,35 @@ def load_settings() -> Settings:
     if not name or any(char in name for char in '/\\. "$*<>:|?\x00'):
         raise ConfigurationError("MONGODB_DB_NAME must be a valid, non-empty database name.")
     return Settings(mongodb_uri=uri, mongodb_db_name=name)
+
+
+@dataclass(frozen=True)
+class JWTSettings:
+    secret_key: str = field(repr=False)
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
+
+
+def load_jwt_settings() -> JWTSettings:
+    # Kept separate so missing JWT configuration does not disable registration/health.
+    try:
+        values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+    except (OSError, UnicodeError):
+        raise ConfigurationError("Unable to read authentication configuration.") from None
+    secret = values.get("JWT_SECRET_KEY") or ""
+    if (
+        len(secret.encode("utf-8")) < 32
+        or not secret.strip()
+        or secret.startswith("<")
+    ):
+        raise ConfigurationError("JWT_SECRET_KEY requires a strong random secret of at least 32 bytes.")
+    algorithm = values.get("JWT_ALGORITHM", "HS256")
+    if algorithm != "HS256":
+        raise ConfigurationError("JWT_ALGORITHM must be HS256.")
+    try:
+        minutes = int(values.get("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    except (ValueError, TypeError):
+        raise ConfigurationError("JWT_ACCESS_TOKEN_EXPIRE_MINUTES must be an integer from 1 to 1440.") from None
+    if not 1 <= minutes <= 1440:
+        raise ConfigurationError("JWT_ACCESS_TOKEN_EXPIRE_MINUTES must be an integer from 1 to 1440.")
+    return JWTSettings(secret, algorithm, minutes)

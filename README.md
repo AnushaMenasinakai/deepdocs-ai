@@ -116,3 +116,17 @@ Offline verification from the repository root:
 The suite patches configuration and MongoDB clients, never loads the real `backend/.env`, and never modifies Atlas. Registration tests cover input validation, normalization, safe responses, duplicate-key handling (including simulated concurrency), unavailable database/index, lifecycle index setup, and real local Argon2id hashing. Mocked concurrency is not a substitute for manual Atlas index verification.
 
 Phase 2A Atlas connectivity was manually verified outside Codex. For Phase 2B, Python execution in Codex still returns access denied; dependency installation, imports, tests, and actual registration/index creation remain pending external runtime verification. No Atlas connection or write was attempted during implementation.
+
+## Login and current user (Phase 2C)
+
+Set `JWT_SECRET_KEY` privately in the runtime environment or local `backend/.env` to a cryptographically random secret of at least 32 bytes. The example contains a rejected placeholder, not a usable key. `JWT_ALGORITHM` defaults to and permits only `HS256`; `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` defaults to 30 (allowed range 1–1440). Environment variables override file settings. JWT configuration is validated on authentication use; invalid configuration returns a safe 503 and does not disable registration or health checks.
+
+- `POST /api/auth/login`: JSON `email` and `password`, with the same normalization/validation as registration. Returns `access_token` and `token_type: "bearer"`. Unknown accounts, wrong passwords, and corrupt stored hashes share a generic 401; invalid request structure/format returns 422.
+- `GET /api/auth/me`: requires `Authorization: Bearer <access_token>`. Returns only `id`, `name`, `email`, and `created_at`. Invalid, expired, or deleted-user tokens return 401 with `WWW-Authenticate: Bearer`; database failures return safe 503 responses.
+
+Tokens contain only `sub` (MongoDB user ID), `iat`, and `exp`. They are signed, not encrypted. No refresh tokens, frontend authentication, or logout flow is included. Install the new dependency and run offline tests locally:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
+.\backend\.venv\Scripts\python.exe -m pytest backend/tests -v
+```
