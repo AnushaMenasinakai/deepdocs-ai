@@ -81,3 +81,38 @@ Invoke-RestMethod http://127.0.0.1:8000/api/health/database
 The unittest suite uses mocked clients and does not connect to Atlas. It covers missing settings, secret-safe errors, unchanged liveness, shared-client reuse, shutdown, and connection recovery.
 
 During Phase 2A implementation, Codex could not execute the existing Python due to sandbox access restrictions. Dependency installation, imports, HTTP/runtime tests, and live MongoDB connectivity were **not verified**. No `backend/.env` or process `MONGODB_URI` was available. The tests must be run outside that restricted environment before runtime verification can be considered complete.
+
+## Registration API (Phase 2B)
+
+Install the updated requirements into the existing virtual environment from a terminal where project Python is accessible. Start the backend with the existing Uvicorn command. No frontend registration UI or login/token behavior is included.
+
+`POST /api/auth/register` accepts a JSON object with required `name`, `email`, and `password` fields:
+
+- Name is trimmed and must contain 1–100 characters afterward.
+- Email is trimmed, validated by Pydantic/email-validator, and stored lowercase (maximum 254 characters). No provider-specific dot removal or plus-address rewriting is performed.
+- Password must contain 8–128 characters. It is not trimmed or subjected to character-composition rules. Extra request fields are rejected.
+- Passwords are hashed with Argon2id using argon2-cffi (64 MiB, three iterations, four lanes, random salts). Hashing runs in a worker thread, not the event loop.
+
+The `deepdocs_ai.users` documents contain `_id` (ObjectId), `name`, normalized `email`, `password_hash`, and a timezone-aware UTC `created_at`. MongoDB stores datetime values as UTC BSON dates. Plaintext passwords are never included in insert documents. The response model explicitly exposes only `id` (string), `name`, `email`, and `created_at`.
+
+Startup creates/confirms the named unique index `users_email_unique` on `email`, once per application lifespan. Concurrent duplicate inserts are enforced by MongoDB, not a find-then-insert pre-check. If the initial database connection or index creation fails, registration remains unavailable until a successful restart. Existing data/indexes are not automatically repaired or deleted. The existing health endpoints keep their response contracts; database reachability alone does not mean registration initialization succeeded.
+
+Registration responses:
+
+- **201:** Public user fields, with no password, password hash, session, or token.
+- **422:** Invalid input. Validation errors omit raw input and context to avoid echoing submitted passwords.
+- **409:** A duplicate key conflicts with an existing account.
+- **503:** Database unavailable or unique-index initialization incomplete.
+- **500:** Password hashing could not complete, with a generic message.
+
+The existing local frontend CORS origins now permit POST as well as GET. Frontend source is unchanged.
+
+Offline verification from the repository root:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m unittest discover -s backend/tests -v
+```
+
+The suite patches configuration and MongoDB clients, never loads the real `backend/.env`, and never modifies Atlas. Registration tests cover input validation, normalization, safe responses, duplicate-key handling (including simulated concurrency), unavailable database/index, lifecycle index setup, and real local Argon2id hashing. Mocked concurrency is not a substitute for manual Atlas index verification.
+
+Phase 2A Atlas connectivity was manually verified outside Codex. For Phase 2B, Python execution in Codex still returns access denied; dependency installation, imports, tests, and actual registration/index creation remain pending external runtime verification. No Atlas connection or write was attempted during implementation.

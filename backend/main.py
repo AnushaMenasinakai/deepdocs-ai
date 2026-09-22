@@ -1,16 +1,31 @@
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pymongo.asynchronous.database import AsyncDatabase
 
 from database import UNAVAILABLE_MESSAGE, database_lifespan, get_database, ping_database
+from auth_routes import router as auth_router
 
 app = FastAPI(title="DeepDocs AI API", lifespan=database_lifespan)
+app.include_router(auth_router)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request, error):
+    # FastAPI's default errors can include raw input, including passwords or
+    # an entire malformed body. Keep field locations/messages without input/context.
+    details = [
+        {"type": item["type"], "loc": item["loc"], "msg": item["msg"]}
+        for item in error.errors()
+    ]
+    return JSONResponse(status_code=422, content={"detail": details})
 
 # Only the local Vite development frontend may make cross-origin requests.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 

@@ -10,6 +10,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import PyMongoError
 
 from config import ConfigurationError, load_settings
+from users import ensure_user_indexes
 
 logger = logging.getLogger(__name__)
 UNAVAILABLE_MESSAGE = "MongoDB is unavailable. Check configuration and Atlas connectivity."
@@ -31,6 +32,7 @@ async def database_lifespan(app: FastAPI):
     client = None
     app.state.database = None
     app.state.database_configuration_error = None
+    app.state.users_index_ready = False
     try:
         try:
             settings = load_settings()
@@ -55,10 +57,20 @@ async def database_lifespan(app: FastAPI):
         elif not await ping_database(app.state.database):
             # Keep the client: later health requests can detect recovery.
             logger.warning("%s", UNAVAILABLE_MESSAGE)
+        else:
+            try:
+                async with asyncio.timeout(5):
+                    await ensure_user_indexes(app.state.database)
+                app.state.users_index_ready = True
+            except (PyMongoError, TimeoutError):
+                # Never permit inserts without confirmed uniqueness enforcement.
+                # No destructive repair of existing records or indexes is attempted.
+                logger.error("Users index initialization failed. Registration is unavailable.")
 
         # Liveness remains available even if database readiness fails.
         yield
     finally:
+        app.state.users_index_ready = False
         app.state.database = None
         if client is not None:
             try:

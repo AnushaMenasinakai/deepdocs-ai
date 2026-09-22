@@ -74,7 +74,10 @@ class DatabaseTests(unittest.IsolatedAsyncioTestCase):
     def mock_client(self):
         client = MagicMock()
         client.close = AsyncMock()
-        database = SimpleNamespace(command=AsyncMock(return_value={"ok": 1}))
+        database = SimpleNamespace(
+            command=AsyncMock(return_value={"ok": 1}),
+            get_collection=MagicMock(return_value=SimpleNamespace(create_index=AsyncMock())),
+        )
         client.get_database.return_value = database
         return client, database
 
