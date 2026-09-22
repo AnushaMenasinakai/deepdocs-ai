@@ -4,9 +4,11 @@ import Dashboard from './pages/Dashboard.jsx'
 import KnowledgeBases from './pages/KnowledgeBases.jsx'
 import Documents from './pages/Documents.jsx'
 import AskDeepDocs from './pages/AskDeepDocs.jsx'
+import Login from './pages/Login.jsx'
+import Register from './pages/Register.jsx'
 
 export default function App() {
-  return <BrowserRouter><Routes><Route element={<AppLayout />}>
+  return <BrowserRouter><Routes><Route path="/login" element={<Login />} /><Route path="/register" element={<Register />} /><Route element={<AppLayout />}>
     <Route index element={<Dashboard />} />
     <Route path="knowledge-bases" element={<KnowledgeBases />} />
     <Route path="documents" element={<Documents />} />

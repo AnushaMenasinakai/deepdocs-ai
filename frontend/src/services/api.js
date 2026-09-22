@@ -1,0 +1,45 @@
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL?.trim() || 'http://127.0.0.1:8000',
+  timeout: 15000,
+  headers: { 'Content-Type': 'application/json' },
+})
+
+function safeError(error, action) {
+  if (axios.isCancel(error)) return error
+  const status = error.response?.status
+  let message = 'Something went wrong. Please try again.'
+  if (!error.response) message = 'Unable to connect. Please check your connection and try again.'
+  else if (status === 409 && action === 'register') message = 'An account with this email already exists.'
+  else if (status === 401 && action === 'login') message = 'Invalid email or password.'
+  else if (status === 422) message = 'Please check your details and try again.'
+  else if (status === 503) message = 'Authentication service is temporarily unavailable.'
+  // Never pass Axios errors (which contain the request body) or server details to the UI.
+  return new Error(message)
+}
+
+export async function register({ name, email, password }, signal) {
+  let response
+  try {
+    response = await api.post('/api/auth/register', { name: name.trim(), email: email.trim().toLowerCase(), password }, { signal })
+  } catch (error) {
+    throw safeError(error, 'register')
+  }
+  if (response.status !== 201) throw new Error('We could not confirm registration. Please try again.')
+}
+
+export async function login({ email, password }, signal) {
+  let response
+  try {
+    response = await api.post('/api/auth/login', { email: email.trim().toLowerCase(), password }, { signal })
+  } catch (error) {
+    throw safeError(error, 'login')
+  }
+  const data = response.data
+  if (response.status !== 200 || data?.token_type !== 'bearer' ||
+      typeof data.access_token !== 'string' || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(data.access_token)) {
+    throw new Error('We could not complete sign in. Please try again.')
+  }
+  return data.access_token
+}
