@@ -240,3 +240,27 @@ h1 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; font-weight: 650;
   .auth-description { font-size: 13px; }
   .auth-footer { margin-top: 30px; }
 }
+
+/* Authentication bootstrap and current-user controls */
+.auth-status-screen { min-height: 100vh; display: grid; place-items: center; padding: 28px; }
+.auth-status-card { width: 100%; max-width: 470px; padding: 36px; }
+.auth-status-card h1 { font-size: 26px; margin-bottom: 14px; }
+.auth-status-card > p:last-of-type { font-size: 14px; color: #61766c; line-height: 1.8; }
+.auth-status-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 22px; }
+.authenticated-topbar { gap: 16px; }
+.session-controls { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.session-identity { display: flex; align-items: center; gap: 9px; min-width: 0; color: #375c4e; }
+.session-avatar { width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: #e4f0e9; font-weight: 600; }
+.session-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-button { min-height: 40px; padding: 8px 13px; border: 1px solid #cfddd4; border-radius: 6px; color: #276d59; background: #fff; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.session-button:hover { background: #edf5ef; }
+@media (max-width: 900px) {
+  .session-controls { gap: 10px; }
+  .session-name { max-width: 115px; }
+}
+@media (max-width: 600px) {
+  .authenticated-topbar { height: auto; min-height: 100px; padding: 14px 20px; flex-wrap: wrap; gap: 8px; }
+  .session-controls { width: 100%; justify-content: space-between; }
+  .session-name { max-width: 210px; }
+  .auth-status-card { padding: 26px; }
+}

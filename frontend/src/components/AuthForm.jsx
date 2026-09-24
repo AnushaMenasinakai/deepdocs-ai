@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { login, register } from '../services/api.js'
-import { setAccessToken } from '../services/tokenStorage.js'
+import { register } from '../services/api.js'
+import { useAuth } from '../context/AuthContext.jsx'
+import { intendedDestination } from './AuthRoutes.jsx'
 import Icon from './Icon.jsx'
 
 export default function AuthForm({ mode }) {
   const isRegister = mode === 'register'
+  const { authenticate } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const formRef = useRef(null)
@@ -40,12 +42,11 @@ export default function AuthForm({ mode }) {
     try {
       if (isRegister) {
         await register({ name, email, password }, controller.signal)
-        if (!controller.signal.aborted) navigate('/login', { replace: true, state: { registered: true } })
+        if (!controller.signal.aborted) navigate('/login', { replace: true, state: { registered: true, from: intendedDestination(location.state?.from) } })
       } else {
-        const token = await login({ email, password }, controller.signal)
-        if (!controller.signal.aborted) {
-          setAccessToken(token)
-          navigate('/', { replace: true })
+        const currentUser = await authenticate({ email, password }, controller.signal)
+        if (currentUser && !controller.signal.aborted) {
+          navigate(intendedDestination(location.state?.from), { replace: true })
         }
       }
     } catch (error) {
@@ -110,7 +111,7 @@ export default function AuthForm({ mode }) {
       </form>
       <p className="auth-switch">
         {isRegister ? 'Already have an account? ' : 'New to DeepDocs AI? '}
-        <Link to={isRegister ? '/login' : '/register'}>{isRegister ? 'Sign in' : 'Create an account'}</Link>
+        <Link to={isRegister ? '/login' : '/register'} state={{ from: intendedDestination(location.state?.from) }}>{isRegister ? 'Sign in' : 'Create an account'}</Link>
       </p>
     </>
   )

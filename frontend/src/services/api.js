@@ -16,7 +16,9 @@ function safeError(error, action) {
   else if (status === 422) message = 'Please check your details and try again.'
   else if (status === 503) message = 'Authentication service is temporarily unavailable.'
   // Never pass Axios errors (which contain the request body) or server details to the UI.
-  return new Error(message)
+  const safe = new Error(message)
+  safe.status = status
+  return safe
 }
 
 export async function register({ name, email, password }, signal) {
@@ -42,4 +44,25 @@ export async function login({ email, password }, signal) {
     throw new Error('We could not complete sign in. Please try again.')
   }
   return data.access_token
+}
+
+// Authorization is constructed here, never in page components or URLs.
+export async function getCurrentUser(token, signal) {
+  let response
+  try {
+    response = await api.get('/api/auth/me', {
+      headers: { Authorization: 'Bearer ' + token },
+      signal,
+    })
+  } catch (error) {
+    throw safeError(error, 'currentUser')
+  }
+  const user = response.data
+  if (response.status !== 200 || !user || typeof user.id !== 'string' ||
+      typeof user.name !== 'string' || typeof user.email !== 'string' ||
+      typeof user.created_at !== 'string') {
+    throw new Error('We could not confirm your account. Please try again.')
+  }
+  // Keep only the public fields, even if an unexpected server field is added.
+  return { id: user.id, name: user.name, email: user.email, created_at: user.created_at }
 }
