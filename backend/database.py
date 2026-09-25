@@ -11,6 +11,7 @@ from pymongo.errors import PyMongoError
 
 from config import ConfigurationError, load_settings
 from users import ensure_user_indexes
+from knowledge_bases import ensure_knowledge_base_indexes
 
 logger = logging.getLogger(__name__)
 UNAVAILABLE_MESSAGE = "MongoDB is unavailable. Check configuration and Atlas connectivity."
@@ -67,6 +68,12 @@ async def database_lifespan(app: FastAPI):
                 # No destructive repair of existing records or indexes is attempted.
                 logger.error("Users index initialization failed. Registration is unavailable.")
 
+            try:
+                async with asyncio.timeout(5):
+                    await ensure_knowledge_base_indexes(app.state.database)
+            except (PyMongoError, TimeoutError):
+                # This is a performance index, not an ownership/uniqueness constraint.
+                logger.error("Knowledge Base index initialization failed. Retry on restart.")
         # Liveness remains available even if database readiness fails.
         yield
     finally:

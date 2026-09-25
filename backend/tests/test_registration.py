@@ -156,7 +156,10 @@ class IndexLifecycleTests(unittest.IsolatedAsyncioTestCase):
                 collection.create_index.side_effect = OperationFailure("private-index-detail")
             database = SimpleNamespace(
                 command=AsyncMock(return_value={"ok": 1}),
-                get_collection=MagicMock(return_value=collection),
+                get_collection=MagicMock(side_effect=lambda name: (
+                    collection if name == "users"
+                    else SimpleNamespace(create_index=AsyncMock())
+                )),
             )
             client = MagicMock()
             client.get_database.return_value = database

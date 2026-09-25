@@ -130,3 +130,23 @@ Tokens contain only `sub` (MongoDB user ID), `iat`, and `exp`. They are signed, 
 .\backend\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
 .\backend\.venv\Scripts\python.exe -m pytest backend/tests -v
 ```
+
+## Knowledge Base API (Phase 3A)
+
+All five endpoints require `Authorization: Bearer <access_token>` and operate only on the authenticated user's resources:
+
+| Method | Endpoint | Success |
+| --- | --- | --- |
+| POST | /api/knowledge-bases | 201: created Knowledge Base |
+| GET | /api/knowledge-bases | 200: array ordered by updated_at descending, then ID descending |
+| GET | /api/knowledge-bases/{id} | 200: one Knowledge Base |
+| PATCH | /api/knowledge-bases/{id} | 200: updated Knowledge Base |
+| DELETE | /api/knowledge-bases/{id} | 204: no content |
+
+Create accepts `name` (trimmed, 1–100 characters) and optional `description` (trimmed, maximum 500 characters). Missing, null, and blank descriptions normalize to null. PATCH accepts at least one of these fields; null names and all unknown/server-owned fields are rejected. Responses contain only `id`, `name`, `description`, `created_at`, and `updated_at`. Timestamps are server-controlled UTC values.
+
+Malformed IDs/input return 422; missing and other users' resources share the same 404. Database failures return sanitized 503 responses. Ownership comes exclusively from the existing authentication dependency, and every individual read/update/delete filters by both resource ID and owner ID.
+
+Startup creates the `knowledge_bases_owner_updated` index on owner_id ascending, updated_at descending, and _id descending. Failure is logged without driver details and retried on restart; this performance index is not required for ownership enforcement. No documents, uploads, vectors, or cascade cleanup are implemented.
+
+Run the complete offline backend suite with `.ackend.venvScriptspython.exe -m pytest backend/tests -v`. Tests use isolated in-memory/mocked database operations, never production Atlas.
