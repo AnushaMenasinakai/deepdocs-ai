@@ -1,3 +1,4 @@
+import { getAccessToken } from './tokenStorage.js'
 import axios from 'axios'
 
 const api = axios.create({
@@ -66,3 +67,34 @@ export async function getCurrentUser(token, signal) {
   // Keep only the public fields, even if an unexpected server field is added.
   return { id: user.id, name: user.name, email: user.email, created_at: user.created_at }
 }
+
+
+// Shared authenticated request path; pages never construct Bearer headers.
+async function knowledgeBaseRequest(method, id, data, signal) {
+  try {
+    const response = await api.request({
+      method,
+      url: '/api/knowledge-bases' + (id ? '/' + encodeURIComponent(id) : ''),
+      data,
+      signal,
+      headers: { Authorization: 'Bearer ' + getAccessToken() },
+    })
+    return response.data
+  } catch (error) {
+    if (axios.isCancel(error)) throw error
+    const status = error.response?.status
+    let message = 'Knowledge Base service is temporarily unavailable. Please try again.'
+    if (!error.response) message = 'Unable to connect. Please check your connection and try again.'
+    if (status === 401) message = 'Your session has expired. Please sign in again.'
+    if (status === 404) message = 'This Knowledge Base is no longer available. The list has been refreshed.'
+    if (status === 422) message = 'Check that the name contains 1–100 characters and the description is no longer than 500 characters.'
+    const safe = new Error(message)
+    safe.status = status
+    throw safe
+  }
+}
+
+export const listKnowledgeBases = (signal) => knowledgeBaseRequest('get', null, undefined, signal)
+export const createKnowledgeBase = (data, signal) => knowledgeBaseRequest('post', null, data, signal)
+export const updateKnowledgeBase = (id, data, signal) => knowledgeBaseRequest('patch', id, data, signal)
+export const deleteKnowledgeBase = (id, signal) => knowledgeBaseRequest('delete', id, undefined, signal)
