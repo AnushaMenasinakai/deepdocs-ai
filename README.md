@@ -150,3 +150,28 @@ Malformed IDs/input return 422; missing and other users' resources share the sam
 Startup creates the `knowledge_bases_owner_updated` index on owner_id ascending, updated_at descending, and _id descending. Failure is logged without driver details and retried on restart; this performance index is not required for ownership enforcement. No documents, uploads, vectors, or cascade cleanup are implemented.
 
 Run the complete offline backend suite with `.ackend.venvScriptspython.exe -m pytest backend/tests -v`. Tests use isolated in-memory/mocked database operations, never production Atlas.
+
+## PDF upload and document metadata (Phase 3C)
+
+Install the updated backend requirements using the existing setup command; this phase adds only python-multipart==0.0.32. All document endpoints require Bearer authentication:
+
+| Method | Endpoint | Success |
+| --- | --- | --- |
+| POST | /api/knowledge-bases/{knowledge_base_id}/documents | 201: metadata; multipart field named file |
+| GET | /api/knowledge-bases/{knowledge_base_id}/documents | 200: metadata array, newest first |
+| GET | /api/documents/{document_id} | 200: metadata only |
+| DELETE | /api/documents/{document_id} | 204: file and metadata removed |
+
+Uploads/listing require an owned Knowledge Base. Individual document operations filter by document ID and owner ID. Missing and other users' resources share 404 responses.
+
+Original PDFs are stored only in the ignored backend/storage/documents/ directory, under generated ObjectId filenames. MongoDB stores metadata, not PDF bytes. API responses expose only id, knowledge_base_id, filename, content_type, file_size, status, created_at, and updated_at; initial status is uploaded. The displayed filename is the client filename's basename, never a storage path. The local directory is not mounted for public download. Back up both metadata and local files together; deployments need durable shared storage before using multiple hosts.
+
+DOCUMENT_MAX_UPLOAD_BYTES defaults to **10485760 (10 MiB)** and accepts 1–104857600 bytes through backend environment configuration. Uploads must be non-empty, have a .pdf extension, declare application/pdf, and begin with %PDF-. This is signature validation, not full PDF validation or malware scanning. The multipart stream is capped at the file limit plus 64 KiB for MIME overhead, with one file and no extra fields. File copying uses bounded chunks and checks the exact file size. Invalid input returns 415/422, excessive size 413, and storage/database failures sanitized 503 responses.
+
+Knowledge Base deletion returns **409** until its owned documents are deleted. Internal document-ID reservations and a revision guard prevent concurrent uploads from being orphaned by deletion; these fields are never client-controlled or public. The documents index covers owner, Knowledge Base, creation time descending, and ID descending.
+
+If metadata insertion fails, upload cleanup removes the newly written file. Deletion removes the file first; a file cleanup failure keeps metadata for retry. A missing file is treated as already removed when retrying deletion. Storage references must match the document's generated name and remain within the storage root; unsafe references are rejected without deleting anything.
+
+MongoDB and the local filesystem are not one transaction. A process crash, uncertain database acknowledgement, or cleanup failure can require manual reconciliation of files, metadata, and internal Knowledge Base reservations (_document_ids, _document_revision). Stale reservations block Knowledge Base deletion rather than silently orphaning uploads. Do not clear reservations while uploads are active. There is no automatic cascade or destructive repair.
+
+Offline tests use temporary directories under ignored .verification/ (created by the suite when absent) and mocked MongoDB; they do not connect to Atlas. No PDF extraction, page processing, chunking, embeddings, search, RAG, or document frontend is implemented.

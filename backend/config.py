@@ -70,3 +70,18 @@ def load_jwt_settings() -> JWTSettings:
     if not 1 <= minutes <= 1440:
         raise ConfigurationError("JWT_ACCESS_TOKEN_EXPIRE_MINUTES must be an integer from 1 to 1440.")
     return JWTSettings(secret, algorithm, minutes)
+
+@dataclass(frozen=True)
+class DocumentSettings:
+    max_upload_bytes: int = 10 * 1024 * 1024
+
+
+def load_document_settings() -> DocumentSettings:
+    try:
+        values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+        limit = int(values.get("DOCUMENT_MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
+    except (OSError, UnicodeError, TypeError, ValueError):
+        raise ConfigurationError("Invalid document upload configuration.") from None
+    if limit < 1 or limit > 100 * 1024 * 1024:
+        raise ConfigurationError("DOCUMENT_MAX_UPLOAD_BYTES must be between 1 and 104857600.")
+    return DocumentSettings(limit)

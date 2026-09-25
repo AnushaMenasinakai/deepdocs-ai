@@ -7,10 +7,12 @@ from pymongo.asynchronous.database import AsyncDatabase
 from database import UNAVAILABLE_MESSAGE, database_lifespan, get_database, ping_database
 from auth_routes import router as auth_router
 from knowledge_base_routes import router as knowledge_base_router
+from document_routes import router as document_router
 
 app = FastAPI(title="DeepDocs AI API", lifespan=database_lifespan)
 app.include_router(auth_router)
 app.include_router(knowledge_base_router)
+app.include_router(document_router)
 
 
 @app.exception_handler(RequestValidationError)

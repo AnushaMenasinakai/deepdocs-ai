@@ -61,8 +61,29 @@ async def update_knowledge_base(database, owner_id, knowledge_base_id, data):
     return public_knowledge_base(document) if document is not None else None
 
 
+class KnowledgeBaseHasDocuments(ValueError):
+    pass
+
+
 async def delete_knowledge_base(database, owner_id, knowledge_base_id):
-    result = await database.get_collection("knowledge_bases").delete_one(
-        {"_id": knowledge_base_id, "owner_id": owner_id}
+    bases = database.get_collection("knowledge_bases")
+    owned = {"_id": knowledge_base_id, "owner_id": owner_id}
+    base = await bases.find_one(owned)
+    if base is None:
+        return False
+    document = await database.get_collection("documents").find_one(
+        {"knowledge_base_id": knowledge_base_id, "owner_id": owner_id}
     )
-    return result.deleted_count == 1
+    if document is not None or base.get("_document_ids"):
+        raise KnowledgeBaseHasDocuments()
+    # Reservations prevent upload/delete races. Revision also detects an entire
+    # upload/delete cycle occurring between the reads and this conditional delete.
+    result = await bases.delete_one({
+        **owned, "_document_ids.0": {"$exists": False},
+        "_document_revision": base.get("_document_revision", {"$exists": False}),
+    })
+    if result.deleted_count == 1:
+        return True
+    if await bases.find_one(owned) is not None:
+        raise KnowledgeBaseHasDocuments()
+    return False

@@ -17,6 +17,8 @@ router = APIRouter(prefix="/api/knowledge-bases", tags=["Knowledge Bases"])
 def safe_database_errors():
     try:
         yield
+    except knowledge_bases.KnowledgeBaseHasDocuments:
+        raise HTTPException(409, "Delete this Knowledge Base's documents first, then retry. An upload may still be in progress.") from None
     except (PyMongoError, TimeoutError):
         raise HTTPException(503, "Knowledge Base service is temporarily unavailable.") from None
 

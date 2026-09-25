@@ -78,7 +78,14 @@ class MemoryCollection:
             raise self.failure
         return [
             document for document in self.documents.values()
-            if all(document.get(key) == value for key, value in query.items())
+            if all(
+                (bool(document.get("_document_ids")) == value["$exists"])
+                if key == "_document_ids.0"
+                else ((key in document) == value["$exists"])
+                if isinstance(value, dict) and "$exists" in value
+                else document.get(key) == value
+                for key, value in query.items()
+            )
         ]
 
     async def insert_one(self, document):
@@ -112,7 +119,9 @@ class MemoryCollection:
 class KnowledgeBaseTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.collection = MemoryCollection()
-        self.database = SimpleNamespace(get_collection=MagicMock(return_value=self.collection))
+        self.document_collection = MemoryCollection()
+        self.database = SimpleNamespace(get_collection=MagicMock(side_effect=lambda name:
+            self.document_collection if name == "documents" else self.collection))
         self.owner = ObjectId()
         self.other_owner = ObjectId()
         self.current_owner = self.owner
@@ -212,7 +221,8 @@ class KnowledgeBaseTests(unittest.IsolatedAsyncioTestCase):
         body = await self.create()
         status, result, _ = await request("GET", BASE + "/" + body["id"])
         self.assertEqual((status, result), (200, body))
-        self.assertEqual(self.collection.queries[-1], {"_id": ObjectId(body["id"]), "owner_id": self.owner})
+        self.assertEqual(self.collection.queries[-1]["_id"], ObjectId(body["id"]))
+        self.assertEqual(self.collection.queries[-1]["owner_id"], self.owner)
         for method, payload in [("GET", None), ("PATCH", {"name": "New"}), ("DELETE", None)]:
             with self.subTest(method=method):
                 status, result, _ = await request(method, BASE + "/" + str(ObjectId()), payload)
@@ -265,7 +275,8 @@ class KnowledgeBaseTests(unittest.IsolatedAsyncioTestCase):
         path = BASE + "/" + body["id"]
         status, response, _ = await request("DELETE", path)
         self.assertEqual((status, response), (204, None))
-        self.assertEqual(self.collection.queries[-1], {"_id": ObjectId(body["id"]), "owner_id": self.owner})
+        self.assertEqual(self.collection.queries[-1]["_id"], ObjectId(body["id"]))
+        self.assertEqual(self.collection.queries[-1]["owner_id"], self.owner)
         self.assertEqual(self.collection.documents, {})
         self.assertEqual((await request("DELETE", path))[0], 404)
 
@@ -331,7 +342,7 @@ class KnowledgeBaseIndexTests(unittest.IsolatedAsyncioTestCase):
                     bases.create_index.side_effect = OperationFailure("private-index-detail")
                 database = SimpleNamespace(
                     command=AsyncMock(return_value={"ok": 1}),
-                    get_collection=MagicMock(side_effect=lambda name: {"users": users, "knowledge_bases": bases}[name]),
+                    get_collection=MagicMock(side_effect=lambda name: {"users": users, "knowledge_bases": bases, "documents": SimpleNamespace(create_index=AsyncMock())}[name]),
                 )
                 client = MagicMock()
                 client.get_database.return_value = database

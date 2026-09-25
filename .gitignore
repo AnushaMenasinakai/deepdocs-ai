@@ -17,3 +17,7 @@ Desktop.ini
 *.log
 .npm-cache/
 .verification/
+
+# Uploaded originals are local data, never source code.
+backend/storage/documents/*
+!backend/storage/documents/.gitkeep
