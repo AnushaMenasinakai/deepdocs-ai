@@ -87,6 +87,7 @@ async function knowledgeBaseRequest(method, id, data, signal) {
     if (!error.response) message = 'Unable to connect. Please check your connection and try again.'
     if (status === 401) message = 'Your session has expired. Please sign in again.'
     if (status === 404) message = 'This Knowledge Base is no longer available. The list has been refreshed.'
+    if (status === 409) message = 'This Knowledge Base contains documents or an upload is in progress. Delete its documents before deleting the Knowledge Base.'
     if (status === 422) message = 'Check that the name contains 1–100 characters and the description is no longer than 500 characters.'
     const safe = new Error(message)
     safe.status = status
@@ -98,3 +99,45 @@ export const listKnowledgeBases = (signal) => knowledgeBaseRequest('get', null, 
 export const createKnowledgeBase = (data, signal) => knowledgeBaseRequest('post', null, data, signal)
 export const updateKnowledgeBase = (id, data, signal) => knowledgeBaseRequest('patch', id, data, signal)
 export const deleteKnowledgeBase = (id, signal) => knowledgeBaseRequest('delete', id, undefined, signal)
+
+// Documents use the same Axios instance and centralized token helper.
+async function documentRequest(method, url, data, signal) {
+  try {
+    const response = await api.request({
+      method, url, data, signal,
+      headers: {
+        Authorization: 'Bearer ' + getAccessToken(),
+        // Clear the instance JSON default; the browser supplies the boundary.
+        ...(data instanceof FormData ? { 'Content-Type': undefined } : {}),
+      },
+    })
+    const expected = method === 'post' ? 201 : method === 'delete' ? 204 : 200
+    if (response.status !== expected) throw new Error('Unexpected response')
+    return response.data
+  } catch (error) {
+    if (axios.isCancel(error)) throw error
+    const status = error.response?.status
+    let message = 'Document service is temporarily unavailable. Please try again.'
+    if (!error.response) message = 'Unable to confirm the request. Check your connection and refresh the document list before trying again.'
+    if (status === 401) message = 'Your session has expired. Please sign in again.'
+    if (status === 404) message = 'This document or Knowledge Base is no longer available.'
+    if (status === 413) message = 'The PDF exceeds the upload limit. Choose a PDF up to 10 MiB; the server may have a lower limit.'
+    if (status === 415 || status === 422) message = 'Choose a valid, non-empty PDF file and try again.'
+    const safe = new Error(message)
+    safe.status = status
+    throw safe
+  }
+}
+
+export const listDocuments = (knowledgeBaseId, signal) =>
+  documentRequest('get', '/api/knowledge-bases/' + encodeURIComponent(knowledgeBaseId) + '/documents', undefined, signal)
+
+export function uploadDocument(knowledgeBaseId, file, signal) {
+  const data = new FormData()
+  // Some browsers report no MIME type. The backend still checks the signature.
+  data.append('file', file.type ? file : new File([file], file.name, { type: 'application/pdf' }))
+  return documentRequest('post', '/api/knowledge-bases/' + encodeURIComponent(knowledgeBaseId) + '/documents', data, signal)
+}
+
+export const deleteDocument = (documentId, signal) =>
+  documentRequest('delete', '/api/documents/' + encodeURIComponent(documentId), undefined, signal)

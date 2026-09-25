@@ -295,3 +295,36 @@ h1 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; font-weight: 650;
   .kb-editor textarea { font-size: 16px; }
   .kb-toolbar > button { width: 100%; }
 }
+
+/* Document library and PDF upload */
+.document-selector { max-width: 550px; margin-bottom: 24px; }
+.document-selector label, .document-upload label { display: block; color: #354c42; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.document-selector select { width: 100%; min-width: 0; min-height: 46px; border: 1px solid #cddbd3; border-radius: 7px; padding: 10px 12px; background: #fff; color: #213d31; font: inherit; text-overflow: ellipsis; }
+.document-selector select:focus-visible { outline: 3px solid #168980; outline-offset: 4px; }
+.document-upload { padding: 26px; border-color: #cbded4; }
+.document-upload h2 { font-size: 18px; }
+.document-upload form { margin-top: 20px; }
+.document-upload input { display: block; width: 100%; max-width: 100%; min-width: 0; padding: 12px; border: 1px dashed #9fbeb0; border-radius: 8px; background: #f5faf7; color: #496857; font-size: 13px; }
+.document-upload input::file-selector-button { border: 1px solid #cddbd3; background: white; padding: 9px 12px; margin-right: 12px; color: #276d59; border-radius: 5px; cursor: pointer; }
+.document-upload .kb-actions { margin-top: 18px; }
+.document-selected { margin: 14px 0; font-size: 13px; overflow-wrap: anywhere; }
+.document-selected span { color: #6c7d74; margin-left: 8px; }
+.document-upload .auth-error { margin-top: 16px; }
+.document-list-heading { margin-top: 30px; }
+.document-list-heading h2 { overflow-wrap: anywhere; }
+.document-list { display: grid; gap: 14px; }
+.document-card { display: flex; align-items: center; gap: 18px; padding: 22px; min-width: 0; }
+.document-card .feature-icon { margin: 0; flex-shrink: 0; }
+.document-info { min-width: 0; flex: 1; }
+.document-info h3 { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.document-info p { font-size: 12px; color: #697d72; margin: 6px 0 9px; }
+.document-status { display: inline-block; border: 1px solid #cfe3d5; border-radius: 5px; background: #edf6ef; color: #326a47; padding: 3px 8px; font-size: 11px; }
+.document-card button:disabled { opacity: .55; cursor: not-allowed; }
+@media (max-width: 600px) {
+  .document-upload { padding: 20px; }
+  .document-selector select { font-size: 16px; }
+  .document-card { flex-wrap: wrap; padding: 20px; align-items: flex-start; gap: 12px; }
+  .document-card .document-info { flex-basis: calc(100% - 56px); }
+  .document-card > button { margin-left: 52px; }
+  .document-upload input { font-size: 12px; padding: 9px; }
+}

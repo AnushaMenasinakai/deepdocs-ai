@@ -175,3 +175,7 @@ If metadata insertion fails, upload cleanup removes the newly written file. Dele
 MongoDB and the local filesystem are not one transaction. A process crash, uncertain database acknowledgement, or cleanup failure can require manual reconciliation of files, metadata, and internal Knowledge Base reservations (_document_ids, _document_revision). Stale reservations block Knowledge Base deletion rather than silently orphaning uploads. Do not clear reservations while uploads are active. There is no automatic cascade or destructive repair.
 
 Offline tests use temporary directories under ignored .verification/ (created by the suite when absent) and mocked MongoDB; they do not connect to Atlas. No PDF extraction, page processing, chunking, embeddings, search, RAG, or document frontend is implemented.
+
+## Document library UI (Phase 3D)
+
+The protected Documents page now lists the selected Knowledge Base's PDFs and supports single-file upload and confirmed deletion. It automatically selects the first available Knowledge Base and links to Knowledge Bases when none exist. The UI checks file extension, available MIME type, non-empty content, and the 10 MiB limit; backend validation remains authoritative. Status "Uploaded" confirms storage only. PDF processing, extraction, chunking, embeddings, Qdrant, and RAG are not implemented.

@@ -125,7 +125,7 @@ export default function KnowledgeBases() {
       : items.length === 0 ? <section className="panel empty-state">
         <span className="empty-icon"><Icon name="library" size={32} /></span>
         <h2>Your knowledge starts with a collection</h2>
-        <p>Create your first Knowledge Base for project references, course notes, or research. Document uploads will come in a later phase.</p>
+        <p>Create your first Knowledge Base for project references, course notes, or research. Then add PDFs from the Documents page.</p>
       </section>
       : <div className="kb-grid">{items.map(item => <article className="panel kb-card" key={item.id}>
         <span className="feature-icon"><Icon name="library" size={22} /></span>
