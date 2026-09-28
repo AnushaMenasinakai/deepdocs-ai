@@ -10,6 +10,24 @@ class DocumentResponse(BaseModel):
     filename: str
     content_type: Literal["application/pdf"]
     file_size: int
-    status: Literal["uploaded"]
+    status: Literal["uploaded", "processing", "processed", "failed"]
     created_at: datetime
     updated_at: datetime
+
+    page_count: int | None = None
+    chunk_count: int | None = None
+    processed_at: datetime | None = None
+    processing_error: str | None = None
+
+
+class ChunkResponse(BaseModel):
+    id: str
+    document_id: str
+    knowledge_base_id: str
+    source_filename: str
+    chunk_index: int
+    text: str
+    page_start: int
+    page_end: int
+    character_count: int
+    created_at: datetime

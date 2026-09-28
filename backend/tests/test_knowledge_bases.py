@@ -83,6 +83,7 @@ class MemoryCollection:
                 if key == "_document_ids.0"
                 else ((key in document) == value["$exists"])
                 if isinstance(value, dict) and "$exists" in value
+                else document.get(key) != value["$ne"] if isinstance(value, dict) and "$ne" in value
                 else document.get(key) == value
                 for key, value in query.items()
             )
@@ -342,7 +343,7 @@ class KnowledgeBaseIndexTests(unittest.IsolatedAsyncioTestCase):
                     bases.create_index.side_effect = OperationFailure("private-index-detail")
                 database = SimpleNamespace(
                     command=AsyncMock(return_value={"ok": 1}),
-                    get_collection=MagicMock(side_effect=lambda name: {"users": users, "knowledge_bases": bases, "documents": SimpleNamespace(create_index=AsyncMock())}[name]),
+                    get_collection=MagicMock(side_effect=lambda name: {"users": users, "knowledge_bases": bases, "documents": SimpleNamespace(create_index=AsyncMock()), "document_chunks": SimpleNamespace(create_index=AsyncMock())}[name]),
                 )
                 client = MagicMock()
                 client.get_database.return_value = database

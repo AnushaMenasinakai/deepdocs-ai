@@ -85,3 +85,36 @@ def load_document_settings() -> DocumentSettings:
     if limit < 1 or limit > 100 * 1024 * 1024:
         raise ConfigurationError("DOCUMENT_MAX_UPLOAD_BYTES must be between 1 and 104857600.")
     return DocumentSettings(limit)
+
+
+@dataclass(frozen=True)
+class ProcessingSettings:
+    chunk_target: int = 1000
+    chunk_overlap: int = 150
+    max_pages: int = 1000
+    max_text_characters: int = 5_000_000
+    max_chunks: int = 20_000
+    max_source_bytes: int = 10 * 1024 * 1024
+
+
+def load_processing_settings() -> ProcessingSettings:
+    try:
+        values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+        settings = ProcessingSettings(
+            chunk_target=int(values.get("PDF_CHUNK_TARGET", "1000")),
+            chunk_overlap=int(values.get("PDF_CHUNK_OVERLAP", "150")),
+            max_pages=int(values.get("PDF_MAX_PAGES", "1000")),
+            max_text_characters=int(values.get("PDF_MAX_TEXT_CHARACTERS", "5000000")),
+            max_chunks=int(values.get("PDF_MAX_CHUNKS", "20000")),
+            max_source_bytes=int(values.get("DOCUMENT_MAX_UPLOAD_BYTES", str(10 * 1024 * 1024))),
+        )
+        if not (100 <= settings.chunk_target <= 5000 and
+                0 <= settings.chunk_overlap < settings.chunk_target // 2 and
+                1 <= settings.max_pages <= 5000 and
+                100 <= settings.max_text_characters <= 10_000_000 and
+                1 <= settings.max_chunks <= 50_000 and
+                1 <= settings.max_source_bytes <= 100 * 1024 * 1024):
+            raise ValueError
+        return settings
+    except (OSError, UnicodeError, TypeError, ValueError):
+        raise ConfigurationError("Invalid PDF processing configuration.") from None

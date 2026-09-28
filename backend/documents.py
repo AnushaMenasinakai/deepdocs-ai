@@ -5,6 +5,7 @@ from bson import ObjectId
 from fastapi.concurrency import run_in_threadpool
 from document_schemas import DocumentResponse
 from document_storage import StorageCleanupError
+from document_operations import claim_document, release_document
 
 ORDER = [("created_at", -1), ("_id", -1)]
 
@@ -24,6 +25,11 @@ def public_document(document):
         id=str(document["_id"]), knowledge_base_id=str(document["knowledge_base_id"]),
         filename=document["original_filename"], content_type=document["content_type"],
         file_size=document["file_size"], status=document["status"], **dates,
+        page_count=document.get("page_count"), chunk_count=document.get("chunk_count"),
+        processing_error=document.get("processing_error"),
+        processed_at=(document["processed_at"].replace(tzinfo=timezone.utc)
+                      if document.get("processed_at") and document["processed_at"].tzinfo is None
+                      else document.get("processed_at")),
     )
 
 
@@ -84,16 +90,31 @@ async def find_document(database, owner_id, document_id):
 
 
 async def delete_document(database, storage, owner_id, document_id):
-    document = await find_document(database, owner_id, document_id)
+    document, token = await claim_document(database, owner_id, document_id)
     if document is None:
         return False
-    # File first: on failure metadata remains for retry. Missing files are safe
-    # to retry after an earlier interrupted delete; unsafe paths are never used.
-    await run_in_threadpool(storage.delete, document)
-    # Release before metadata deletion: a DB failure leaves retryable metadata.
-    # The KB deletion policy also checks actual documents, not just reservations.
-    await release_reservation(database, owner_id, document["knowledge_base_id"], document_id)
-    result = await database.get_collection("documents").delete_one(
-        {"_id": document_id, "owner_id": owner_id}
-    )
-    return result.deleted_count == 1
+    deleted = False
+    file_removed = False
+    try:
+        await run_in_threadpool(storage.delete, document)
+        file_removed = True
+        await database.get_collection("document_chunks").delete_many(
+            {"document_id": document_id, "owner_id": owner_id}
+        )
+        await release_reservation(database, owner_id, document["knowledge_base_id"], document_id)
+        result = await database.get_collection("documents").delete_one(
+            {"_id": document_id, "owner_id": owner_id, "_operation": token}
+        )
+        deleted = result.deleted_count == 1
+        return deleted
+    except BaseException:
+        if file_removed:
+            await database.get_collection("documents").update_one(
+                {"_id": document_id, "owner_id": owner_id, "_operation": token},
+                {"$set": {"status": "failed", "processing_error": "Document deletion is incomplete. Retry deletion.",
+                          "updated_at": datetime.now(timezone.utc)}},
+            )
+        raise
+    finally:
+        if not deleted:
+            await release_document(database, owner_id, document_id, token)

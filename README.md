@@ -179,3 +179,26 @@ Offline tests use temporary directories under ignored .verification/ (created by
 ## Document library UI (Phase 3D)
 
 The protected Documents page now lists the selected Knowledge Base's PDFs and supports single-file upload and confirmed deletion. It automatically selects the first available Knowledge Base and links to Knowledge Bases when none exist. The UI checks file extension, available MIME type, non-empty content, and the 10 MiB limit; backend validation remains authoritative. Status "Uploaded" confirms storage only. PDF processing, extraction, chunking, embeddings, Qdrant, and RAG are not implemented.
+
+## PDF processing pipeline (Phase 4)
+
+Processing is available through Swagger/API only:
+
+- POST /api/documents/{document_id}/process processes an owned stored PDF and returns document metadata including page_count, chunk_count, processed_at, and a safe processing_error.
+- GET /api/documents/{document_id}/chunks returns the owned document's active chunk set in chunk_index order.
+
+Both endpoints require Bearer authentication. Cross-user resources return 404. Invalid IDs return 422; concurrent process/delete operations return 409; parser/no-text failures return 422; unavailable storage/database services return safe 503 responses.
+
+Install pymupdf==1.28.2 using backend/requirements.txt in the existing environment. PyMuPDF extracts text one page at a time in sorted reading order; human-facing page numbers begin at 1. Empty pages count toward page_count but create no chunks. Image-only/no-text and password-protected or unreadable PDFs fail safely. No OCR is implemented.
+
+Normalization only standardizes newlines and horizontal whitespace, reduces excess blank lines, and trims whitespace. It preserves line/list structure, punctuation, and numbers; it does not join ambiguous wrapped lines or rewrite text. Chunks stay within one page, prefer paragraph then sentence then whitespace boundaries, and overlap at whole-word boundaries. Defaults: PDF_CHUNK_TARGET=1000 and PDF_CHUNK_OVERLAP=150 characters. Small tails can extend a chunk up to target + overlap; an indivisible long word may exceed the target rather than being cut. Indices begin at 0 across the document. Character counts describe cleaned chunk text, not byte offsets in the original PDF.
+
+The document_chunks collection stores ObjectId document/Knowledge Base/owner references, source filename, text, chunk order, page_start/page_end, character_count, and UTC created_at. A private generation identifier separates staged and active data. Neither owner IDs nor generation/storage internals are exposed by the chunk API. A compound index supports owner + document + generation + chunk order.
+
+Lifecycle: uploaded → processing → processed, or failed. Reprocessing preserves the last successful generation and its counts/timestamp until all replacement chunks have been inserted and a single metadata update activates the replacement. Failed extraction/insertion marks the attempt failed and preserves the old active chunks; failed-stage chunks are cleaned up where possible. Inspection returns only the active generation, including the last successful one after a failed reprocessing attempt. Deleting a document removes all its owned chunk generations and its PDF. Knowledge Base deletion still requires deleting documents first.
+
+No cross-collection transaction or background queue is used. An uncertain activation acknowledgement preserves generations and the operation lock for manual reconciliation; metadata may remain processing until reviewed. Cleanup failures can leave inactive generations, which inspection never returns. Process termination can leave a stale operation lock. Reconcile only when no operation is running; do not blindly delete the active generation. A failed deletion can leave retryable metadata with a missing PDF or chunks and a safe failure message.
+
+This intentionally synchronous local pipeline runs native PyMuPDF extraction on the event-loop thread, not concurrently in worker threads; other requests on that worker may wait during extraction. Configurable limits are PDF_MAX_PAGES=1000, PDF_MAX_TEXT_CHARACTERS=5000000, and PDF_MAX_CHUNKS=20000. They bound accepted output but are not a hard memory/time sandbox for native PDF decompression.
+
+The frontend only displays uploaded/processing/processed/failed statuses; processing actions and chunk inspection remain API-only. No embeddings, embedding models, Qdrant, vector/search pipeline, Gemini, retrieval, RAG, or citation UI is implemented.

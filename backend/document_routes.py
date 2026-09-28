@@ -1,5 +1,6 @@
 """HTTP upload boundaries; existing authentication remains authoritative."""
 from contextlib import contextmanager
+from datetime import timezone
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pymongo.errors import PyMongoError
@@ -9,10 +10,14 @@ from python_multipart.exceptions import MultipartParseError
 from auth import get_current_user
 from config import ConfigurationError, load_document_settings
 from database import get_database
-from document_schemas import DocumentResponse
+from document_schemas import DocumentResponse, ChunkResponse
 from document_storage import get_document_storage, UploadRejected
 import documents
 import knowledge_bases
+import document_processing
+from document_operations import DocumentBusy
+from pdf_processing import ProcessingFailure
+from config import load_processing_settings
 
 router = APIRouter(tags=["Documents"])
 UPLOAD_SCHEMA = {"requestBody": {"required": True, "content": {}}}
@@ -26,6 +31,10 @@ UPLOAD_SCHEMA["requestBody"]["content"]["multipart/form-data"] = {
 def safe_errors():
     try:
         yield
+    except DocumentBusy:
+        raise HTTPException(409, "A document operation is already in progress. Please retry later.") from None
+    except ProcessingFailure as error:
+        raise HTTPException(error.status, str(error)) from None
     except UploadRejected as error:
         raise HTTPException(error.status, str(error)) from None
     except (PyMongoError, OSError, TimeoutError):
@@ -126,3 +135,41 @@ async def delete(
     with safe_errors():
         found(await documents.delete_document(database, storage, ObjectId(current_user.id), parse_id(document_id)))
     return Response(status_code=204)
+
+
+def processing_settings():
+    try:
+        return load_processing_settings()
+    except ConfigurationError:
+        raise HTTPException(503, "PDF processing configuration is unavailable.") from None
+
+
+@router.post("/api/documents/{document_id}/process", response_model=DocumentResponse)
+async def process(
+    document_id: str, current_user=Depends(get_current_user), database=Depends(get_database),
+    storage=Depends(get_document_storage), settings=Depends(processing_settings),
+):
+    with safe_errors():
+        document = found(await document_processing.process_document(
+            database, storage, ObjectId(current_user.id), parse_id(document_id), settings,
+        ))
+        return documents.public_document(document)
+
+
+@router.get("/api/documents/{document_id}/chunks", response_model=list[ChunkResponse])
+async def chunks(
+    document_id: str, current_user=Depends(get_current_user), database=Depends(get_database),
+):
+    with safe_errors():
+        values = found(await document_processing.inspect_chunks(
+            database, ObjectId(current_user.id), parse_id(document_id),
+        ))
+        return [ChunkResponse(
+            id=str(value["_id"]), document_id=str(value["document_id"]),
+            knowledge_base_id=str(value["knowledge_base_id"]),
+            **{key: value[key] for key in (
+                "source_filename", "chunk_index", "text", "page_start", "page_end", "character_count",
+            )},
+            created_at=value["created_at"].replace(tzinfo=timezone.utc)
+            if value["created_at"].tzinfo is None else value["created_at"],
+        ) for value in values]

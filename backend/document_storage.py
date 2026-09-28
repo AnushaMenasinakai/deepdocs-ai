@@ -76,12 +76,21 @@ class DocumentStorage:
                     raise StorageCleanupError("Upload cleanup is unavailable.") from None
             raise
 
-    def delete(self, document):
+    def reference(self, document):
         expected = str(document["_id"]) + ".pdf"
         # Do not trust even persisted paths, or allow deleting a different PDF.
         if document.get("stored_filename") != expected or document.get("storage_path") != expected:
             raise StorageError("Invalid storage reference.")
-        self.path(expected).unlink(missing_ok=True)
+        return self.path(expected)
+
+    def processing_path(self, document):
+        path = self.reference(document)
+        if not path.is_file():
+            raise StorageError("Stored PDF is unavailable.")
+        return path
+
+    def delete(self, document):
+        self.reference(document).unlink(missing_ok=True)
 
 
 def get_document_storage():

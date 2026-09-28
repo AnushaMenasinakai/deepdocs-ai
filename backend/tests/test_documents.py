@@ -28,7 +28,7 @@ from user_schemas import UserResponse
 from test_knowledge_bases import MemoryCollection
 
 PDF = b"%PDF-1.7\nfixture only; not processed\n%%EOF"
-PUBLIC = {"id", "knowledge_base_id", "filename", "content_type", "file_size", "status", "created_at", "updated_at"}
+PUBLIC = {"id", "knowledge_base_id", "filename", "content_type", "file_size", "status", "created_at", "updated_at", "page_count", "chunk_count", "processed_at", "processing_error"}
 
 
 class Collection(MemoryCollection):
@@ -40,7 +40,20 @@ class Collection(MemoryCollection):
         self.apply(matches[0], update)
         return old
 
+    async def insert_many(self, values, **kwargs):
+        for value in values:
+            await self.insert_one(value)
+
+    async def delete_many(self, query):
+        matches = self.matching(query)
+        for document in matches:
+            del self.documents[document["_id"]]
+        return SimpleNamespace(deleted_count=len(matches))
+
     def apply(self, document, update):
+        document.update(copy.deepcopy(update.get("$set", {})))
+        for key in update.get("$unset", {}):
+            document.pop(key, None)
         for key, value in update.get("$addToSet", {}).items():
             if value not in document.setdefault(key, []):
                 document[key].append(value)
@@ -98,9 +111,9 @@ class DocumentTests(unittest.IsolatedAsyncioTestCase):
         self.temp = tempfile.TemporaryDirectory(dir=verification)
         self.root = Path(self.temp.name) / "pdfs"
         self.storage = DocumentStorage(self.root)
-        self.bases, self.docs = Collection(), Collection()
+        self.bases, self.docs, self.chunks = Collection(), Collection(), Collection()
         self.database = SimpleNamespace(get_collection=lambda name: {
-            "knowledge_bases": self.bases, "documents": self.docs,
+            "knowledge_bases": self.bases, "documents": self.docs, "document_chunks": self.chunks,
         }[name])
         self.owner, self.other, self.base_id = ObjectId(), ObjectId(), ObjectId()
         now = datetime.now(timezone.utc)
