@@ -118,3 +118,25 @@ def load_processing_settings() -> ProcessingSettings:
         return settings
     except (OSError, UnicodeError, TypeError, ValueError):
         raise ConfigurationError("Invalid PDF processing configuration.") from None
+
+
+@dataclass(frozen=True)
+class EmbeddingSettings:
+    model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
+    batch_size: int = 32
+
+
+def load_embedding_settings() -> EmbeddingSettings:
+    import re
+    try:
+        values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+        name = values.get("EMBEDDING_MODEL_NAME", EmbeddingSettings.model_name)
+        size = int(values.get("EMBEDDING_BATCH_SIZE", "32"))
+        # Repository IDs only, never local paths or remote executable code.
+        if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9_-]+/[A-Za-z0-9_-]+", name):
+            raise ValueError
+        if not 1 <= size <= 128:
+            raise ValueError
+        return EmbeddingSettings(name, size)
+    except (OSError, UnicodeError, TypeError, ValueError):
+        raise ConfigurationError("Invalid embedding configuration.") from None

@@ -17,7 +17,10 @@ import knowledge_bases
 import document_processing
 from document_operations import DocumentBusy
 from pdf_processing import ProcessingFailure
-from config import load_processing_settings
+from config import load_processing_settings, load_embedding_settings
+from embeddings import EmbeddingFailure
+import document_embeddings
+from document_schemas import EmbeddingResponse
 
 router = APIRouter(tags=["Documents"])
 UPLOAD_SCHEMA = {"requestBody": {"required": True, "content": {}}}
@@ -33,7 +36,7 @@ def safe_errors():
         yield
     except DocumentBusy:
         raise HTTPException(409, "A document operation is already in progress. Please retry later.") from None
-    except ProcessingFailure as error:
+    except (ProcessingFailure, EmbeddingFailure) as error:
         raise HTTPException(error.status, str(error)) from None
     except UploadRejected as error:
         raise HTTPException(error.status, str(error)) from None
@@ -173,3 +176,21 @@ async def chunks(
             created_at=value["created_at"].replace(tzinfo=timezone.utc)
             if value["created_at"].tzinfo is None else value["created_at"],
         ) for value in values]
+
+
+def embedding_settings():
+    try:
+        return load_embedding_settings()
+    except ConfigurationError:
+        raise HTTPException(503, "Embedding configuration is unavailable.") from None
+
+
+@router.post("/api/documents/{document_id}/embeddings", response_model=EmbeddingResponse)
+async def generate_embeddings(
+    document_id: str, current_user=Depends(get_current_user), database=Depends(get_database),
+    settings=Depends(embedding_settings),
+):
+    with safe_errors():
+        return found(await document_embeddings.generate_embeddings(
+            database, ObjectId(current_user.id), parse_id(document_id), settings,
+        ))

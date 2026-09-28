@@ -31,3 +31,11 @@ class ChunkResponse(BaseModel):
     page_end: int
     character_count: int
     created_at: datetime
+
+
+class EmbeddingResponse(BaseModel):
+    document_id: str
+    chunk_count: int
+    embedding_model: str
+    embedding_dimension: int
+    status: Literal["generated"]

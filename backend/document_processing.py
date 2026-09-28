@@ -28,7 +28,8 @@ async def process_document(database, storage, owner_id, document_id, settings):
     activated = False
     try:
         await docs.update_one(claimed, {"$set": {
-            "status": "processing", "processing_error": None, "updated_at": datetime.now(timezone.utc),
+            "status": "processing", "processing_error": None,
+            "embedding": {"status": "not_generated"}, "updated_at": datetime.now(timezone.utc),
         }})
         # Keep native parser calls on the event-loop thread for this synchronous
         # local pipeline. Never run concurrent PyMuPDF work in a thread pool.
