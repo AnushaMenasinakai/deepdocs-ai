@@ -14,6 +14,7 @@ from users import ensure_user_indexes
 from knowledge_bases import ensure_knowledge_base_indexes
 from documents import ensure_document_indexes
 from document_processing import ensure_chunk_indexes
+from vector_store import close_vector_store
 
 logger = logging.getLogger(__name__)
 UNAVAILABLE_MESSAGE = "MongoDB is unavailable. Check configuration and Atlas connectivity."
@@ -89,6 +90,7 @@ async def database_lifespan(app: FastAPI):
         # Liveness remains available even if database readiness fails.
         yield
     finally:
+        await close_vector_store()
         app.state.users_index_ready = False
         app.state.database = None
         if client is not None:

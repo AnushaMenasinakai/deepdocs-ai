@@ -19,6 +19,8 @@ from document_operations import DocumentBusy
 from pdf_processing import ProcessingFailure
 from config import load_processing_settings, load_embedding_settings
 from embeddings import EmbeddingFailure
+from vector_store import VectorFailure, get_vector_store
+from document_operations import claim_document, release_document
 import document_embeddings
 from document_schemas import EmbeddingResponse
 
@@ -34,6 +36,8 @@ UPLOAD_SCHEMA["requestBody"]["content"]["multipart/form-data"] = {
 def safe_errors():
     try:
         yield
+    except VectorFailure:
+        raise HTTPException(503, "Vector service is temporarily unavailable or incompatible.") from None
     except DocumentBusy:
         raise HTTPException(409, "A document operation is already in progress. Please retry later.") from None
     except (ProcessingFailure, EmbeddingFailure) as error:
@@ -194,3 +198,36 @@ async def generate_embeddings(
         return found(await document_embeddings.generate_embeddings(
             database, ObjectId(current_user.id), parse_id(document_id), settings,
         ))
+
+
+@router.get("/api/health/qdrant")
+async def qdrant_health():
+    with safe_errors():
+        await get_vector_store().health()
+        return {"status": "ok", "message": "Qdrant is reachable"}
+
+
+@router.get("/api/documents/{document_id}/vector-status")
+async def vector_status(document_id: str, current_user=Depends(get_current_user), database=Depends(get_database)):
+    owner, identifier = ObjectId(current_user.id), parse_id(document_id)
+    with safe_errors():
+        document, token = await claim_document(database, owner, identifier)
+        found(document)
+        try:
+            state = document.get("vector_index", {})
+            count = 0
+            current_count = 0
+            if state.get("collection_name"):
+                store = get_vector_store()
+                store.check_target(state)
+                count = await store.count(document, collection=state["collection_name"])
+                current_count = await store.count(document, document.get("chunk_generation"), state["collection_name"])
+            expected = document.get("chunk_count", 0)
+            synchronized = (state.get("status") == "indexed" and document.get("status") == "processed"
+                            and state.get("chunk_generation") == document.get("chunk_generation")
+                            and expected > 0 and count == current_count == expected)
+            return {"document_id": document_id, "status": state.get("status", "not_generated"),
+                    "collection_name": state.get("collection_name"), "expected_chunk_count": expected,
+                    "stored_vector_count": count, "synchronized": synchronized}
+        finally:
+            await release_document(database, owner, identifier, token)

@@ -140,3 +140,32 @@ def load_embedding_settings() -> EmbeddingSettings:
         return EmbeddingSettings(name, size)
     except (OSError, UnicodeError, TypeError, ValueError):
         raise ConfigurationError("Invalid embedding configuration.") from None
+
+
+@dataclass(frozen=True)
+class QdrantSettings:
+    url: str = field(repr=False)
+    api_key: str | None = field(default=None, repr=False)
+    collection_name: str = "deepdocs_chunks"
+
+
+def load_qdrant_settings() -> QdrantSettings:
+    import re
+    from urllib.parse import urlsplit
+    try:
+        values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+        url = (values.get("QDRANT_URL") or "").strip().rstrip("/")
+        parsed = urlsplit(url)
+        if (parsed.scheme not in {"https", "http"} or not parsed.hostname or
+                parsed.username or parsed.password or parsed.query or parsed.fragment or
+                parsed.path not in {"", "/"} or not parsed.port and url.endswith(":")):
+            raise ValueError
+        if parsed.scheme == "http" and parsed.hostname not in {"localhost", "127.0.0.1", "::1"}:
+            raise ValueError
+        name = values.get("QDRANT_COLLECTION_NAME", "deepdocs_chunks")
+        if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", name):
+            raise ValueError
+        key = values.get("QDRANT_API_KEY") or None
+        return QdrantSettings(url, key, name)
+    except (OSError, UnicodeError, TypeError, ValueError):
+        raise ConfigurationError("Invalid Qdrant configuration.") from None

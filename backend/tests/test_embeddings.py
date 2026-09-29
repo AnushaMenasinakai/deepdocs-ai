@@ -93,7 +93,16 @@ class ProviderTests(unittest.TestCase):
 
 
 class EmbeddingTests(unittest.IsolatedAsyncioTestCase):
-    asyncSetUp = document_helpers.DocumentTests.asyncSetUp
+    async def asyncSetUp(self):
+        await document_helpers.DocumentTests.asyncSetUp(self)
+        from qdrant_helpers import FakeQdrant
+        from vector_store import VectorStore
+        from config import QdrantSettings
+        self.qdrant = FakeQdrant()
+        self.vector_store = VectorStore(QdrantSettings("http://localhost:6333"), self.qdrant)
+        self.store_patch = patch("vector_store._store", self.vector_store)
+        self.store_patch.start()
+        self.addCleanup(self.store_patch.stop)
     asyncTearDown = document_helpers.DocumentTests.asyncTearDown
     make_document = processing_helpers.ProcessingTests.make_document
     process = processing_helpers.ProcessingTests.process
@@ -117,7 +126,7 @@ class EmbeddingTests(unittest.IsolatedAsyncioTestCase):
             for _ in range(2):
                 status, value, _ = await self.embed(body)
                 self.assertEqual(status, 200)
-                self.assertEqual(set(value), {"document_id", "chunk_count", "embedding_model", "embedding_dimension", "status"})
+                self.assertEqual(set(value), {"document_id", "chunk_count", "embedding_model", "embedding_dimension", "status", "vector_store", "collection_name", "vector_status"})
                 self.assertEqual(value["embedding_dimension"], 3)
                 self.assertEqual(value["chunk_count"], 3)
                 self.assertEqual(value["status"], "generated")

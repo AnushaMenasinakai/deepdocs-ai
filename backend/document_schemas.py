@@ -39,3 +39,6 @@ class EmbeddingResponse(BaseModel):
     embedding_model: str
     embedding_dimension: int
     status: Literal["generated"]
+    vector_store: Literal["qdrant"]
+    collection_name: str
+    vector_status: Literal["indexed"]

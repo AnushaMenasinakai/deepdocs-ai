@@ -6,6 +6,7 @@ from fastapi.concurrency import run_in_threadpool
 from document_schemas import DocumentResponse
 from document_storage import StorageCleanupError
 from document_operations import claim_document, release_document
+from vector_store import cleanup_document_vectors
 
 ORDER = [("created_at", -1), ("_id", -1)]
 
@@ -96,6 +97,12 @@ async def delete_document(database, storage, owner_id, document_id):
     deleted = False
     file_removed = False
     try:
+        if document.get("vector_index", {}).get("collection_name"):
+            await database.get_collection("documents").update_one(
+                {"_id": document_id, "owner_id": owner_id, "_operation": token},
+                {"$set": {"vector_index": {**document["vector_index"], "status": "stale"}}},
+            )
+            await cleanup_document_vectors(document)
         await run_in_threadpool(storage.delete, document)
         file_removed = True
         await database.get_collection("document_chunks").delete_many(

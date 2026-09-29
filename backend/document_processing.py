@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from bson import ObjectId
 from document_operations import claim_document, release_document
 from pdf_processing import extract_chunks, ProcessingFailure
+from vector_store import cleanup_document_vectors
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,8 @@ async def process_document(database, storage, owner_id, document_id, settings):
     try:
         await docs.update_one(claimed, {"$set": {
             "status": "processing", "processing_error": None,
-            "embedding": {"status": "not_generated"}, "updated_at": datetime.now(timezone.utc),
+            "embedding": {"status": "not_generated"},
+            "vector_index": {**document.get("vector_index", {}), "status": "stale"}, "updated_at": datetime.now(timezone.utc),
         }})
         # Keep native parser calls on the event-loop thread for this synchronous
         # local pipeline. Never run concurrent PyMuPDF work in a thread pool.
@@ -42,9 +44,11 @@ async def process_document(database, storage, owner_id, document_id, settings):
             "created_at": now, **value,
         } for value in values]
         await chunks.insert_many(staged, ordered=True)
+        await cleanup_document_vectors(document)
         promotion_started = True
         changes = {
             "status": "processed", "chunk_generation": generation,
+            "vector_index": {"status": "not_generated"},
             "page_count": page_count, "chunk_count": len(staged),
             "processed_at": now, "processing_error": None, "updated_at": now,
         }
