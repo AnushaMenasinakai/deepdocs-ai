@@ -1,4 +1,4 @@
-"""Official Qdrant client boundary. No search operations or secret diagnostics."""
+"""Official Qdrant client boundary. Scoped storage/retrieval with no secret diagnostics."""
 import hashlib
 from uuid import UUID, uuid5
 from contextlib import asynccontextmanager
@@ -82,6 +82,34 @@ class VectorStore:
             for key in ("owner_id", "knowledge_base_id", "document_id", "chunk_generation"):
                 await self.client.create_payload_index(self.collection, key,
                     field_schema=models.PayloadSchemaType.KEYWORD, wait=True)
+
+    async def search(self, vector, dimension, owner_id, base_id, top_k, generations):
+        """Read-only nearest-neighbor query; never initialize collections here."""
+        from qdrant_client import models
+        async with safe_vector_errors():
+            vector = validate_vector(vector, dimension)
+            if not generations:
+                return []
+            if not await self.client.collection_exists(self.collection):
+                return []
+            info = await self.client.get_collection(self.collection)
+            config = info.config.params.vectors
+            if not isinstance(config, models.VectorParams) or config.size != dimension or config.distance != models.Distance.COSINE:
+                raise VectorFailure()
+            def equal(key, value):
+                return models.FieldCondition(key=key, match=models.MatchValue(value=str(value)))
+            query_filter = models.Filter(
+                must=[equal("owner_id", owner_id), equal("knowledge_base_id", base_id)],
+                should=[models.Filter(must=[equal("document_id", doc_id), equal("chunk_generation", generation)])
+                        for doc_id, generation in generations],
+            )
+            response = await self.client.query_points(
+                self.collection, query=vector, query_filter=query_filter, limit=top_k,
+                with_vectors=False, with_payload=True,
+            )
+            if not isinstance(response.points, list):
+                raise VectorFailure()
+            return response.points
 
     async def upsert(self, chunks, vectors, dimension):
         from qdrant_client import models

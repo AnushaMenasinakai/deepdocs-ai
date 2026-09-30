@@ -48,7 +48,12 @@ class FakeQdrant:
         return SimpleNamespace(status=models.UpdateStatus.COMPLETED)
 
     def matches(self, point, query):
-        return all(point.payload.get(condition.key) == condition.match.value for condition in query.must)
+        def matches_condition(condition):
+            if isinstance(condition, models.Filter):
+                return self.matches(point, condition)
+            return point.payload.get(condition.key) == condition.match.value
+        return (all(matches_condition(condition) for condition in (query.must or []))
+                and (not query.should or any(matches_condition(condition) for condition in query.should)))
 
     async def count(self, name, count_filter, exact):
         self.check()
@@ -66,3 +71,12 @@ class FakeQdrant:
 
     async def close(self):
         self.closed = True
+
+
+    async def query_points(self, name, query, query_filter, limit, with_vectors, with_payload):
+        self.check()
+        self.last_query = {"vector": query, "filter": query_filter, "limit": limit,
+                           "with_vectors": with_vectors, "with_payload": with_payload}
+        points = [SimpleNamespace(id=point.id, payload=point.payload.copy(), score=1.0 - point.payload["chunk_index"] * 0.1)
+                  for point in self.points[name].values() if self.matches(point, query_filter)]
+        return SimpleNamespace(points=sorted(points, key=lambda point: point.score, reverse=True)[:limit])
