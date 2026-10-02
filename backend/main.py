@@ -10,6 +10,7 @@ from knowledge_base_routes import router as knowledge_base_router
 from document_routes import router as document_router
 from search_routes import router as search_router
 from rag_routes import router as rag_router
+from history_routes import router as history_router
 
 app = FastAPI(title="DeepDocs AI API", lifespan=database_lifespan)
 app.include_router(auth_router)
@@ -17,6 +18,7 @@ app.include_router(knowledge_base_router)
 app.include_router(document_router)
 app.include_router(search_router)
 app.include_router(rag_router)
+app.include_router(history_router)
 
 
 @app.exception_handler(RequestValidationError)

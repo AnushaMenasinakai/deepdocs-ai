@@ -112,8 +112,9 @@ class DocumentTests(unittest.IsolatedAsyncioTestCase):
         self.root = Path(self.temp.name) / "pdfs"
         self.storage = DocumentStorage(self.root)
         self.bases, self.docs, self.chunks = Collection(), Collection(), Collection()
+        self.history = Collection()
         self.database = SimpleNamespace(get_collection=lambda name: {
-            "knowledge_bases": self.bases, "documents": self.docs, "document_chunks": self.chunks,
+            "knowledge_bases": self.bases, "documents": self.docs, "document_chunks": self.chunks, "ask_history": self.history,
         }[name])
         self.owner, self.other, self.base_id = ObjectId(), ObjectId(), ObjectId()
         now = datetime.now(timezone.utc)

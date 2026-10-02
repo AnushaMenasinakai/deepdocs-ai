@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Header from '../components/Header.jsx'
 import Icon from '../components/Icon.jsx'
+import AskHistory from '../components/AskHistory.jsx'
 import SupportingSources from '../components/SupportingSources.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { askKnowledgeBase, listKnowledgeBases } from '../services/api.js'
@@ -9,6 +10,7 @@ import { askKnowledgeBase, listKnowledgeBases } from '../services/api.js'
 function QuestionForm({ base, refreshBases }) {
   const { logout } = useAuth()
   const [question, setQuestion] = useState('')
+  const [historyRevision, setHistoryRevision] = useState(0)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [missing, setMissing] = useState(false)
@@ -28,7 +30,7 @@ function QuestionForm({ base, refreshBases }) {
     setBusy(true); setError(''); setResult(null)
     try {
       const answer = await askKnowledgeBase(base.id, question, controller.signal)
-      if (active.current && !controller.signal.aborted) setResult(answer)
+      if (active.current && !controller.signal.aborted) { setResult(answer); setHistoryRevision(current => current + 1) }
     } catch (failure) {
       if (!active.current || controller.signal.aborted) return
       if (failure.status === 401) logout()
@@ -67,6 +69,7 @@ function QuestionForm({ base, refreshBases }) {
         {result.status === 'answered' && <SupportingSources sources={result.sources} />}
       </section>}
     </div>
+    <AskHistory knowledgeBaseId={base.id} revision={historyRevision} />
   </div>
 }
 

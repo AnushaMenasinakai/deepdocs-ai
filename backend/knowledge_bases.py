@@ -1,5 +1,6 @@
 """Owner-scoped operations using the existing shared MongoDB database."""
 from datetime import datetime, timezone
+from ask_history import delete_base_history
 from bson import ObjectId
 from pymongo import ASCENDING, DESCENDING, ReturnDocument
 from knowledge_base_schemas import KnowledgeBaseResponse
@@ -70,6 +71,9 @@ async def delete_knowledge_base(database, owner_id, knowledge_base_id):
     owned = {"_id": knowledge_base_id, "owner_id": owner_id}
     base = await bases.find_one(owned)
     if base is None:
+        # Retry cleanup after a previously successful KB delete whose history cleanup failed.
+        # The owner/base filter cannot touch another user's records.
+        await delete_base_history(database, owner_id, knowledge_base_id)
         return False
     document = await database.get_collection("documents").find_one(
         {"knowledge_base_id": knowledge_base_id, "owner_id": owner_id}
@@ -83,6 +87,7 @@ async def delete_knowledge_base(database, owner_id, knowledge_base_id):
         "_document_revision": base.get("_document_revision", {"$exists": False}),
     })
     if result.deleted_count == 1:
+        await delete_base_history(database, owner_id, knowledge_base_id)
         return True
     if await bases.find_one(owned) is not None:
         raise KnowledgeBaseHasDocuments()

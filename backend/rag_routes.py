@@ -1,5 +1,7 @@
 """Owned Knowledge Base questions; all provider failures are sanitized."""
 from bson import ObjectId
+from pydantic import ValidationError
+import ask_history
 from fastapi import APIRouter, Depends, HTTPException
 from pymongo.errors import PyMongoError
 from auth import get_current_user
@@ -32,6 +34,9 @@ async def ask(knowledge_base_id: str, data: AskRequest,
     owner, base_id = ObjectId(current_user.id), parse_id(knowledge_base_id)
     try:
         require_found(await knowledge_bases.get_knowledge_base(database, owner, base_id))
-        return await answer_question(database, owner, base_id, data.question, embedding_settings, settings)
-    except (PyMongoError, EmbeddingFailure, VectorFailure, GeminiFailure, RAGFailure, OSError, TimeoutError):
+        result = AskResponse.model_validate(await answer_question(
+            database, owner, base_id, data.question, embedding_settings, settings))
+        require_found(await ask_history.save_history(database, owner, base_id, data.question, result))
+        return result
+    except (ValidationError, PyMongoError, EmbeddingFailure, VectorFailure, GeminiFailure, RAGFailure, OSError, TimeoutError):
         raise HTTPException(503, "Question-answering service is temporarily unavailable.") from None

@@ -372,3 +372,19 @@ h1 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; font-weight: 650;
 @media (prefers-reduced-motion: reduce) {
   .ask-loading-dots span { animation: none; opacity: .65; }
 }
+
+/* Saved Q&A snapshots remain separate from the active question. */
+.ask-history { margin-top: 34px; border-top: 1px solid #dbe7df; padding-top: 28px; }
+.ask-history > h2 { font-size: 20px; }
+.ask-history > .kb-muted { margin-bottom: 20px; }
+.history-list { list-style: none; padding: 0; display: grid; gap: 14px; }
+.history-item { padding: 22px; min-width: 0; overflow-wrap: anywhere; }
+.history-item details { min-width: 0; }
+.history-item summary { cursor: pointer; color: #213d31; padding: 4px 0; }
+.history-question { font-size: 15px; font-weight: 600; white-space: pre-wrap; }
+.history-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12px; color: #61766c; margin-top: 10px; }
+.history-answer { padding-top: 20px; }
+.history-item > button { margin-top: 16px; }
+.history-snapshot-note { margin-top: 20px; }
+.history-item summary:focus-visible, .ask-history > h2:focus-visible { outline: 3px solid #168980; outline-offset: 4px; }
+@media (max-width: 600px) { .history-item { padding: 20px; } }

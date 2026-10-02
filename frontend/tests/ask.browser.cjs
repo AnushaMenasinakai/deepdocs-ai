@@ -23,6 +23,7 @@ const answer = {status:'answered',answer:'Grounded answer.\n\nAnother paragraph.
         if(state.baseDelay) await new Promise(r=>setTimeout(r,state.baseDelay));
         return route.fulfill({status:state.baseStatus,json:state.baseStatus===200?state.bases:{detail:'PRIVATE'},headers});
       }
+      if(path.endsWith('/ask-history')) return route.fulfill({json:[],headers});
       if(path.endsWith('/ask')) {
         const body=req.postDataJSON();
         assert.deepEqual(Object.keys(body),['question']);

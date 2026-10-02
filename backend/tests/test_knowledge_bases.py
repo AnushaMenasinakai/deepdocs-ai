@@ -36,8 +36,8 @@ async def request(method, path=BASE, payload=None):
 
     await app({
         "type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1",
-        "method": method, "scheme": "http", "path": path, "raw_path": path.encode(),
-        "query_string": b"", "root_path": "",
+        "method": method, "scheme": "http", "path": path.partition("?")[0], "raw_path": path.partition("?")[0].encode(),
+        "query_string": path.partition("?")[2].encode(), "root_path": "",
         "headers": [(b"content-type", b"application/json")],
         "server": ("test", 80), "client": ("test", 123),
     }, receive, send)
@@ -53,6 +53,10 @@ class MemoryCursor:
     def sort(self, order):
         for key, direction in reversed(order):
             self.documents.sort(key=lambda document: document[key], reverse=direction == -1)
+        return self
+
+    def limit(self, count):
+        self.documents = self.documents[:count]
         return self
 
     def __aiter__(self):
@@ -110,6 +114,12 @@ class MemoryCollection:
         matches[0].update(copy.deepcopy(update["$set"]))
         return copy.deepcopy(matches[0])
 
+    async def delete_many(self, query):
+        matches = self.matching(query)
+        for record in matches:
+            del self.documents[record["_id"]]
+        return SimpleNamespace(deleted_count=len(matches))
+
     async def delete_one(self, query):
         matches = self.matching(query)
         if matches:
@@ -121,8 +131,9 @@ class KnowledgeBaseTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.collection = MemoryCollection()
         self.document_collection = MemoryCollection()
+        self.history = MemoryCollection()
         self.database = SimpleNamespace(get_collection=MagicMock(side_effect=lambda name:
-            self.document_collection if name == "documents" else self.collection))
+            self.history if name == "ask_history" else self.document_collection if name == "documents" else self.collection))
         self.owner = ObjectId()
         self.other_owner = ObjectId()
         self.current_owner = self.owner
@@ -343,7 +354,7 @@ class KnowledgeBaseIndexTests(unittest.IsolatedAsyncioTestCase):
                     bases.create_index.side_effect = OperationFailure("private-index-detail")
                 database = SimpleNamespace(
                     command=AsyncMock(return_value={"ok": 1}),
-                    get_collection=MagicMock(side_effect=lambda name: {"users": users, "knowledge_bases": bases, "documents": SimpleNamespace(create_index=AsyncMock()), "document_chunks": SimpleNamespace(create_index=AsyncMock())}[name]),
+                    get_collection=MagicMock(side_effect=lambda name: {"users": users, "knowledge_bases": bases, "documents": SimpleNamespace(create_index=AsyncMock()), "document_chunks": SimpleNamespace(create_index=AsyncMock()), "ask_history": SimpleNamespace(create_index=AsyncMock())}[name]),
                 )
                 client = MagicMock()
                 client.get_database.return_value = database

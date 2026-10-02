@@ -163,8 +163,12 @@ export async function askKnowledgeBase(knowledgeBaseId, question, signal) {
     safe.status = status
     throw safe
   }
-  const data = response.data
-  if (response.status !== 200 || !data || !['answered', 'insufficient_context'].includes(data.status) ||
+  if (response.status !== 200) throw new Error('We could not read the answer. Please try again.')
+  return publicAskResult(response.data)
+}
+
+function publicAskResult(data) {
+  if (!data || !['answered', 'insufficient_context'].includes(data.status) ||
       typeof data.answer !== 'string' || !data.answer.trim() || data.answer.length > 4000 ||
       !Number.isInteger(data.retrieved_chunk_count) || data.retrieved_chunk_count < 0 ||
       !Array.isArray(data.sources) || data.sources.length > data.retrieved_chunk_count ||
@@ -187,3 +191,43 @@ export async function askKnowledgeBase(knowledgeBaseId, question, signal) {
     ({ document_id, source_filename, page_start, page_end }))
   return { status: data.status, answer: data.answer, retrieved_chunk_count: data.retrieved_chunk_count, sources }
 }
+
+
+async function historyRequest(method, knowledgeBaseId, entryId, signal) {
+  let response
+  try {
+    response = await api.request({ method,
+      url: '/api/knowledge-bases/' + encodeURIComponent(knowledgeBaseId) + '/ask-history' +
+        (entryId ? '/' + encodeURIComponent(entryId) : ''),
+      signal, headers: { Authorization: 'Bearer ' + getAccessToken() },
+    })
+  } catch (error) {
+    if (axios.isCancel(error)) throw error
+    const status = error.response?.status
+    let message = 'Ask history is temporarily unavailable. Please try again.'
+    if (!error.response) message = 'Unable to connect to Ask history. Please try again.'
+    if (status === 401) message = 'Your session has expired. Please sign in again.'
+    if (status === 404) message = 'This history entry or Knowledge Base is no longer available.'
+    const safe = new Error(message)
+    safe.status = status
+    throw safe
+  }
+  if (method === 'delete') {
+    if (response.status !== 204) throw new Error('We could not confirm history deletion. Please refresh history before retrying.')
+    return
+  }
+  try {
+    if (response.status !== 200 || !Array.isArray(response.data) || response.data.length > 100) throw new Error()
+    return response.data.map(item => {
+      if (!item || typeof item.id !== 'string' || !item.id || typeof item.question !== 'string' ||
+          !item.question.trim() || item.question.length > 1000 || typeof item.created_at !== 'string' ||
+          !Number.isFinite(Date.parse(item.created_at))) throw new Error()
+      return { id: item.id, question: item.question, created_at: item.created_at, ...publicAskResult(item) }
+    })
+  } catch {
+    throw new Error('We could not read Ask history. Please try again.')
+  }
+}
+
+export const listAskHistory = (knowledgeBaseId, signal) => historyRequest('get', knowledgeBaseId, null, signal)
+export const deleteAskHistory = (knowledgeBaseId, entryId, signal) => historyRequest('delete', knowledgeBaseId, entryId, signal)
