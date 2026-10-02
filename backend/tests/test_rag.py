@@ -195,7 +195,7 @@ class AskTests(unittest.IsolatedAsyncioTestCase):
         with patch("retrieval.search_chunks", AsyncMock(return_value=values)) as retrieval, patch("rag.get_gemini_provider", return_value=provider):
             status, body, _ = await self.ask({"question": "  How does JWT work?  "})
         self.assertEqual(status, 200)
-        self.assertEqual(body, {"status": "answered", "answer": "JWT verifies signatures.", "retrieved_chunk_count": 2})
+        self.assertEqual(body, {"status": "answered", "answer": "JWT verifies signatures.", "retrieved_chunk_count": 2, "sources": [{key: value[key] for key in ("document_id", "source_filename", "page_start", "page_end")} for value in values]})
         self.assertEqual(retrieval.call_args.args[3].query, "How does JWT work?")
         self.assertEqual(retrieval.call_args.args[3].top_k, 5)
         self.assertEqual(retrieval.call_args.args[1:3], (self.owner, self.base_id))
@@ -230,7 +230,7 @@ class AskTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(values=values), patch("retrieval.search_chunks", AsyncMock(return_value=values)), patch("rag.get_gemini_provider") as provider:
                 status, body, _ = await self.ask()
                 self.assertEqual(status, 200)
-                self.assertEqual(body, {"status": "insufficient_context", "answer": INSUFFICIENT_ANSWER, "retrieved_chunk_count": 0})
+                self.assertEqual(body, {"status": "insufficient_context", "answer": INSUFFICIENT_ANSWER, "retrieved_chunk_count": 0, "sources": []})
                 provider.assert_not_called()
 
     async def test_provider_abstention_returns_fixed_message(self):
@@ -241,6 +241,7 @@ class AskTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(body["status"], "insufficient_context")
         self.assertEqual(body["answer"], INSUFFICIENT_ANSWER)
         self.assertEqual(body["retrieved_chunk_count"], 1)
+        self.assertEqual(body["sources"], [])
 
     async def test_live_service_path_with_fake_embeddings_and_qdrant(self):
         await self.setup_ask()
@@ -284,3 +285,49 @@ class AskTests(unittest.IsolatedAsyncioTestCase):
         operation = schema["paths"]["/api/knowledge-bases/{knowledge_base_id}/ask"]["post"]
         self.assertEqual(operation["security"], [{"HTTPBearer": []}])
         self.assertEqual(set(schema["components"]["schemas"]["AskRequest"]["properties"]), {"question"})
+
+
+    async def test_sources_match_final_context_only_and_deduplicate_in_order(self):
+        await self.setup_ask()
+        first = hit("Included", .9)
+        first["source_filename"] = "Café <notes>.pdf"
+        duplicate = {**first, "chunk_id": str(ObjectId()), "score": .8}
+        other_page = {**first, "chunk_id": str(ObjectId()), "page_start": 3, "page_end": 4, "score": .7}
+        excluded = hit("x" * 15000, .95)
+        low = hit(score=.1)
+        provider = SimpleNamespace(answer=AsyncMock(return_value="Grounded answer."))
+        with patch("retrieval.search_chunks", AsyncMock(return_value=[excluded, first, duplicate, other_page, low])), patch("rag.get_gemini_provider", return_value=provider):
+            status, body, _ = await self.ask()
+        self.assertEqual(status, 200)
+        context = provider.answer.call_args.args[1]
+        self.assertEqual(len(context.chunks), 3)
+        self.assertEqual(body["retrieved_chunk_count"], 3)
+        self.assertEqual(body["sources"], [{key: item[key] for key in
+            ("document_id", "source_filename", "page_start", "page_end")} for item in (first, other_page)])
+        self.assertEqual(json.loads(context.serialized), list(context.chunks))
+        for source in body["sources"]:
+            self.assertEqual(set(source), {"document_id", "source_filename", "page_start", "page_end"})
+            self.assertTrue(any(all(chunk[key] == value for key, value in source.items()) for chunk in context.chunks))
+
+    async def test_invalid_source_metadata_is_never_public(self):
+        await self.setup_ask()
+        for changes in [{"page_start": 0}, {"page_end": -1}, {"page_start": True},
+                        {"page_start": 3, "page_end": 1}, {"source_filename": "../private.pdf"},
+                        {"source_filename": r"C:\private.pdf"}, {"document_id": "bad"}]:
+            with self.subTest(changes=changes), patch("retrieval.search_chunks", AsyncMock(return_value=[{**hit(), **changes}])), patch("rag.get_gemini_provider") as provider:
+                status, body, _ = await self.ask()
+                self.assertEqual(status, 200)
+                self.assertEqual(body["sources"], [])
+                provider.assert_not_called()
+
+    async def test_reprocessed_generation_is_not_a_source(self):
+        await self.setup_ask()
+        document = await self.prepare()
+        with patch("embeddings.load_model", return_value=embedding_helpers.FakeModel()):
+            await self.embed(document)
+        await self.process(document)
+        with patch("rag.get_gemini_provider") as provider:
+            status, body, _ = await self.ask()
+        self.assertEqual(status, 200)
+        self.assertEqual(body["sources"], [])
+        provider.assert_not_called()

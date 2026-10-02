@@ -141,3 +141,49 @@ export function uploadDocument(knowledgeBaseId, file, signal) {
 
 export const deleteDocument = (documentId, signal) =>
   documentRequest('delete', '/api/documents/' + encodeURIComponent(documentId), undefined, signal)
+
+
+export async function askKnowledgeBase(knowledgeBaseId, question, signal) {
+  let response
+  try {
+    response = await api.post('/api/knowledge-bases/' + encodeURIComponent(knowledgeBaseId) + '/ask',
+      { question: question.trim() }, {
+        signal, timeout: 60000,
+        headers: { Authorization: 'Bearer ' + getAccessToken() },
+      })
+  } catch (error) {
+    if (axios.isCancel(error)) throw error
+    const status = error.response?.status
+    let message = 'Answer service is temporarily unavailable. Please try again.'
+    if (!error.response) message = 'Unable to connect to the answer service. Please try again.'
+    if (status === 401) message = 'Your session has expired. Please sign in again.'
+    if (status === 404) message = 'This Knowledge Base is no longer available. Refresh the Knowledge Base list.'
+    if (status === 422) message = 'Enter a question containing 1–1,000 characters.'
+    const safe = new Error(message)
+    safe.status = status
+    throw safe
+  }
+  const data = response.data
+  if (response.status !== 200 || !data || !['answered', 'insufficient_context'].includes(data.status) ||
+      typeof data.answer !== 'string' || !data.answer.trim() || data.answer.length > 4000 ||
+      !Number.isInteger(data.retrieved_chunk_count) || data.retrieved_chunk_count < 0 ||
+      !Array.isArray(data.sources) || data.sources.length > data.retrieved_chunk_count ||
+      (data.status === 'insufficient_context' && data.sources.length !== 0) ||
+      (data.status === 'answered' && data.sources.length === 0) ||
+      data.sources.some(source => !source || typeof source.document_id !== 'string' || !source.document_id ||
+        typeof source.source_filename !== 'string' || !source.source_filename.trim() ||
+        /[\\/:\x00-\x1f]/.test(source.source_filename) ||
+        !Number.isInteger(source.page_start) || source.page_start < 1 ||
+        !Number.isInteger(source.page_end) || source.page_end < source.page_start)) {
+    throw new Error('We could not read the answer. Please try again.')
+  }
+  const seen = new Set()
+  const sources = data.sources.filter(source => {
+    const key = JSON.stringify([source.document_id, source.page_start, source.page_end])
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  }).map(({ document_id, source_filename, page_start, page_end }) =>
+    ({ document_id, source_filename, page_start, page_end }))
+  return { status: data.status, answer: data.answer, retrieved_chunk_count: data.retrieved_chunk_count, sources }
+}

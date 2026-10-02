@@ -267,7 +267,7 @@ Offline tests use fake inference/Qdrant plus an official-client in-memory filter
 
 ## Grounded question answering (Phase 8)
 
-POST /api/knowledge-bases/{knowledge_base_id}/ask requires Bearer authentication and MongoDB Knowledge Base ownership. Request JSON contains only question: a required string, trimmed, nonempty, maximum 1000 characters. Unknown fields (including owner, filters, model, prompt, key, and top_k) return 422; missing/foreign Knowledge Bases return the same 404. Swagger is sufficient for verification. The Ask DeepDocs frontend remains a placeholder.
+POST /api/knowledge-bases/{knowledge_base_id}/ask requires Bearer authentication and MongoDB Knowledge Base ownership. Request JSON contains only question: a required string, trimmed, nonempty, maximum 1000 characters. Unknown fields (including owner, filters, model, prompt, key, and top_k) return 422; missing/foreign Knowledge Bases return the same 404. Swagger supports API verification; the Phase 9 Ask DeepDocs frontend is described below.
 
 This phase uses the maintained official google-genai==2.25.0 SDK, not google-generativeai. A binary-only pip dry run resolved the SDK alongside every existing requirement on Python 3.13.15. Install backend/requirements.txt locally. Set GEMINI_API_KEY privately in backend/.env or the runtime environment; GEMINI_MODEL defaults to gemini-3.1-flash-lite, a currently stable, low-latency/cost-effective model suited to short text-grounded answers. No fallback model is used. Model documentation: https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite . The SDK/client is loaded only after usable context exists, reused per process, and closed at shutdown. Restart to apply changed Gemini settings.
 
@@ -275,7 +275,7 @@ The RAG service calls the existing Phase 7 retrieval service with server-control
 
 RAG_MIN_RELEVANCE_SCORE defaults to 0.50 (configurable finite range 0–1). This is an intentionally conservative, initial positive cosine-similarity heuristic for the existing normalized MiniLM retrieval, not a calibrated probability or a conclusion drawn from one live sample. It may reject answerable questions and admit irrelevant ones; Phase 11 must evaluate recall, unsupported-answer rates, and domain/language behavior before calibration. Phase 7 search remains threshold-free. Only hits meeting this guard can enter the prompt; no qualifying hits means deterministic insufficient_context without creating/calling Gemini, even when its key is absent.
 
-RAG_MAX_CONTEXT_CHARS defaults to 12000 (allowed 1000–30000) and bounds the complete serialized reference-data array including provenance overhead. A deterministic context builder preserves relevance order, deduplicates chunks, and includes complete chunks that fit; oversized chunks are skipped, never rewritten or sliced. JSON encoding preserves Unicode/source text, and malformed records are skipped. Document/chunk IDs, filename, and page range remain internal for Phase 9; they are not exposed as user-facing citations. The separate question is bounded to 1000 characters in addition to this context budget.
+RAG_MAX_CONTEXT_CHARS defaults to 12000 (allowed 1000–30000) and bounds the complete serialized reference-data array including provenance overhead. A deterministic context builder preserves relevance order, deduplicates chunks, and includes complete chunks that fit; oversized chunks are skipped, never rewritten or sliced. JSON encoding preserves Unicode/source text, and malformed records are skipped. Document/chunk IDs, filename, and page range are retained internally. Phase 9 exposes only the document ID, filename, and page range for included context sources. The separate question is bounded to 1000 characters in addition to this context budget.
 
 The fixed system_instruction requires answers only from retrieved context: no outside knowledge, invented facts, unsupported claims, claimed actions, or document-injected instructions. A JSON user message explicitly separates USER_QUESTION and RETRIEVED_DOCUMENT_CONTEXT; document strings cannot replace the system_instruction field. All document/question content is untrusted data, including fake role markers or requests to reveal keys. There are no tools, function calls, external grounding, agents, or streaming. This is defense in depth, not proof that a generative model will always obey; malicious-content tests verify structural separation, not immunity to every prompt injection.
 
@@ -285,4 +285,45 @@ Successful public response: status=answered, answer (plain text), retrieved_chun
 
 Current limitations: generation is instructed to be grounded but there is no independent entailment verifier; fluency, schema validity, or the model's supported flag cannot prove factual support. Evaluate live answers against PDFs, especially on relevant-but-unanswerable and malicious-content questions. Retrieval/answering is not an atomic cross-service snapshot, and a document may change after context retrieval. Existing model token truncation and synchronous embedding limits still apply. Very long complete chunks can exhaust the budget and cause abstention.
 
-Automated verification uses fake Gemini, fake inference/Qdrant, synthetic PDFs, and the existing offline regressions. Live Google API/model access and answer grounding still require manual Swagger verification. Answers are generated under a context-only instruction; no final/inline citations, citation UI, chat/conversation history, persistent answer history, hybrid search, BM25, or reranking is implemented. Phase 9 will add source/citation behavior and the polished Ask DeepDocs UI; it has not started.
+Automated verification uses fake Gemini, fake inference/Qdrant, synthetic PDFs, and the existing offline regressions. Live Google API/model access and answer grounding still require manual Swagger verification. Answers are generated under a context-only instruction; no final/inline citations, citation UI, chat/conversation history, persistent answer history, hybrid search, BM25, or reranking is implemented. Phase 9 adds context-source references and the Ask DeepDocs UI below; these are not sentence-level citations.
+
+
+## Supporting sources and Ask DeepDocs (Phase 9)
+
+The protected React `/ask` page loads the signed-in user's Knowledge Bases, selects the first available one, and accepts one question at a time (trimmed, nonempty, maximum 1000 characters). It uses the existing authenticated Axios client and `/api/knowledge-bases/{knowledge_base_id}/ask`. Loading, empty, retry, provider/network failure, and insufficient-context states are distinct. A missing Knowledge Base can be reconciled by refreshing the selector. Authentication failures use the existing logout mechanism. Switching Knowledge Bases or leaving the page aborts and invalidates pending answers. Requests are not retried automatically.
+
+The existing Phase 8 retrieval, ownership/active-generation validation, relevance threshold, complete-chunk context budget, Gemini provider, and grounding instructions remain in use. Sources are built exclusively from the final validated `Context.chunks` actually supplied to Gemini. Low-relevance, malformed, stale, and over-budget retrieval hits cannot become sources. Filename references reject path separators, drive separators, and control characters. Source text is not rewritten.
+
+Answered response example (illustrative):
+
+```json
+{
+  "status": "answered",
+  "answer": "JWT authentication verifies the token signature and expiration.",
+  "retrieved_chunk_count": 2,
+  "sources": [
+    {"document_id": "507f1f77bcf86cd799439011", "source_filename": "guide.pdf", "page_start": 1, "page_end": 1}
+  ]
+}
+```
+
+Sources contain only `document_id`, `source_filename`, `page_start`, and `page_end`. Identical document/page-range references are deduplicated in first-context-occurrence order. Different ranges remain separate; no adjacent ranges are merged or unsupplied pages inferred. The chunk count counts supplied chunks, not deduplicated source cards. No chunk IDs, owner IDs, vectors, scores, storage paths, prompts, or credentials are added to the public source schema.
+
+Insufficient-context response when retrieval supplies no usable context:
+
+```json
+{
+  "status": "insufficient_context",
+  "answer": "I couldn't find enough relevant information in this Knowledge Base to answer that question.",
+  "retrieved_chunk_count": 0,
+  "sources": []
+}
+```
+
+A Gemini abstention also always returns `sources: []`; its existing chunk count still records how many context chunks were considered. Abstention is a valid result, not an infrastructure error. Empty or all-low-relevance retrieval still skips Gemini.
+
+The UI renders answers and filenames as React text, preserves answer paragraphs, and labels backend-derived cards **Supporting sources**, with Page N or Pages N–M. Cards are not links. These references prove only that the pages were supplied as model context; they do not prove every sentence is entailed by, or attributable to, a particular page. There are no invented inline citation numbers, sentence-level attribution guarantees, PDF viewer, or highlighting. Model-generated filenames/page numbers are never used as source metadata.
+
+The browser validates response shape and public page metadata before presentation. Backend/provider exception details are never displayed. Only the question is sent by the form; clients cannot control ownership, retrieval filters, model, prompt, threshold, or context budget. Existing secrets remain backend-only. Questions/answers are not persisted and no conversational memory, chat history, streaming, hybrid search, BM25, or reranking is added. Phase 10 is not implemented.
+
+Offline UI verification: with the frontend running on port 5176, run `node frontend/tests/ask.browser.cjs`. Supply `PLAYWRIGHT_MODULE` for an existing Playwright installation if it is not locally available, and optionally `FRONTEND_TEST_URL`. The suite uses Edge headless, mocks all APIs, and writes ignored screenshots under `.verification`; it does not contact Atlas, Qdrant, or Gemini. Live answer/source correctness still requires comparing the real UI's answers and page references against the uploaded PDF.

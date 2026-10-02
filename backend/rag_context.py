@@ -1,4 +1,4 @@
-"""Bounded reference data. Provenance stays internal for a later citation phase."""
+"""Bounded reference data. Validated provenance accompanies exactly the included chunks."""
 import json
 import math
 from dataclasses import dataclass, field
@@ -39,6 +39,9 @@ def build_context(results, settings):
         if any(not isinstance(value.get(key), str) or not value[key].strip()
                for key in ("text", "source_filename")):
             continue
+        filename = value["source_filename"]
+        if any(character in filename for character in ("/", "\\", ":")) or any(ord(c) < 32 for c in filename):
+            continue  # Public references must be filenames, never filesystem paths.
         record = {key: value[key] for key in
                   ("document_id", "chunk_id", "source_filename", "page_start", "page_end", "text")}
         valid.append((score, record))

@@ -12,9 +12,22 @@ async def answer_question(database, owner_id, base_id, question, embedding_setti
         SearchRequest(query=question, top_k=settings.top_k), embedding_settings)
     context = build_context(results, settings)
     if not context.chunks:
-        return {"status": "insufficient_context", "answer": INSUFFICIENT_ANSWER, "retrieved_chunk_count": 0}
+        return {"status": "insufficient_context", "answer": INSUFFICIENT_ANSWER, "retrieved_chunk_count": 0, "sources": []}
     answer = await get_gemini_provider().answer(question, context)
     if answer is None:
         return {"status": "insufficient_context", "answer": INSUFFICIENT_ANSWER,
-                "retrieved_chunk_count": len(context.chunks)}
-    return {"status": "answered", "answer": answer, "retrieved_chunk_count": len(context.chunks)}
+                "retrieved_chunk_count": len(context.chunks), "sources": []}
+    return {"status": "answered", "answer": answer, "retrieved_chunk_count": len(context.chunks),
+            "sources": supporting_sources(context)}
+
+
+def supporting_sources(context):
+    """Context membership, not model-generated or sentence-level attribution."""
+    sources, seen = [], set()
+    for chunk in context.chunks:
+        key = (chunk["document_id"], chunk["page_start"], chunk["page_end"])
+        if key not in seen:
+            sources.append({field: chunk[field] for field in
+                            ("document_id", "source_filename", "page_start", "page_end")})
+            seen.add(key)
+    return sources
