@@ -169,3 +169,42 @@ def load_qdrant_settings() -> QdrantSettings:
         return QdrantSettings(url, key, name)
     except (OSError, UnicodeError, TypeError, ValueError):
         raise ConfigurationError("Invalid Qdrant configuration.") from None
+
+
+@dataclass(frozen=True)
+class RAGSettings:
+    min_relevance_score: float = 0.50
+    max_context_chars: int = 12000
+    top_k: int = 5
+
+
+def load_rag_settings() -> RAGSettings:
+    import math
+    try:
+        values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+        score = float(values.get("RAG_MIN_RELEVANCE_SCORE", "0.50"))
+        budget = int(values.get("RAG_MAX_CONTEXT_CHARS", "12000"))
+        if not math.isfinite(score) or not 0 <= score <= 1 or not 1000 <= budget <= 30000:
+            raise ValueError
+        return RAGSettings(score, budget)
+    except (OSError, UnicodeError, TypeError, ValueError):
+        raise ConfigurationError("Invalid question-answering configuration.") from None
+
+
+@dataclass(frozen=True)
+class GeminiSettings:
+    api_key: str = field(repr=False)
+    model: str = "gemini-3.1-flash-lite"
+
+
+def load_gemini_settings() -> GeminiSettings:
+    import re
+    try:
+        values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+        key = (values.get("GEMINI_API_KEY") or "").strip()
+        model = values.get("GEMINI_MODEL", "gemini-3.1-flash-lite")
+        if not key or key.startswith("<") or not isinstance(model, str) or not re.fullmatch(r"gemini-[A-Za-z0-9.-]{1,100}", model):
+            raise ValueError
+        return GeminiSettings(key, model)
+    except (OSError, UnicodeError, TypeError, ValueError):
+        raise ConfigurationError("Gemini configuration is unavailable.") from None
