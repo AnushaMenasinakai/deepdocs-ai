@@ -1,0 +1,776 @@
+{
+  "version": "1.0.0",
+  "provenance": "Hand-authored deterministic regression scenarios; NOT Sentence Transformer measurements. Never tune production from these scores.",
+  "rankings": {
+    "direct-signature": [
+      {
+        "chunk": "auth-signature",
+        "score": 0.82
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.625
+      },
+      {
+        "chunk": "data-mongo",
+        "score": 0.56
+      }
+    ],
+    "direct-expiry": [
+      {
+        "chunk": "auth-expiry",
+        "score": 0.82
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.625
+      },
+      {
+        "chunk": "data-mongo",
+        "score": 0.56
+      }
+    ],
+    "direct-password": [
+      {
+        "chunk": "auth-password",
+        "score": 0.82
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.625
+      },
+      {
+        "chunk": "data-mongo",
+        "score": 0.56
+      }
+    ],
+    "direct-upload": [
+      {
+        "chunk": "storage-original",
+        "score": 0.82
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.625
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.56
+      }
+    ],
+    "direct-backup": [
+      {
+        "chunk": "ops-backup",
+        "score": 0.82
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.625
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.56
+      }
+    ],
+    "para-signature": [
+      {
+        "chunk": "auth-expiry",
+        "score": 0.82
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.625
+      },
+      {
+        "chunk": "data-mongo",
+        "score": 0.56
+      }
+    ],
+    "para-paas": [
+      {
+        "chunk": "cloud-paas",
+        "score": 0.82
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.625
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.56
+      }
+    ],
+    "para-owner": [
+      {
+        "chunk": "auth-signature",
+        "score": 0.82
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.625
+      },
+      {
+        "chunk": "data-mongo",
+        "score": 0.56
+      }
+    ],
+    "para-ocr": [
+      {
+        "chunk": "storage-chunks",
+        "score": 0.82
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.625
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.56
+      }
+    ],
+    "para-history": [
+      {
+        "chunk": "auth-signature",
+        "score": 0.82
+      },
+      {
+        "chunk": "data-history",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.625
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.56
+      }
+    ],
+    "multi-storage": [
+      {
+        "chunk": "storage-original",
+        "score": 0.82
+      },
+      {
+        "chunk": "data-vector",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.625
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.56
+      }
+    ],
+    "multi-cloud": [
+      {
+        "chunk": "cloud-iaas",
+        "score": 0.82
+      },
+      {
+        "chunk": "cloud-paas",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.625
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.56
+      }
+    ],
+    "multi-token": [
+      {
+        "chunk": "auth-signature",
+        "score": 0.82
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.625
+      },
+      {
+        "chunk": "data-mongo",
+        "score": 0.56
+      }
+    ],
+    "multi-deletion": [
+      {
+        "chunk": "storage-delete",
+        "score": 0.82
+      },
+      {
+        "chunk": "data-history",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.625
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.56
+      }
+    ],
+    "multi-backup": [
+      {
+        "chunk": "ops-backup",
+        "score": 0.82
+      },
+      {
+        "chunk": "ops-backup-south",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.625
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.56
+      }
+    ],
+    "unsupported-refresh": [
+      {
+        "chunk": "auth-expiry",
+        "score": 0.66
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.595
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.53
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.465
+      },
+      {
+        "chunk": "data-mongo",
+        "score": 0.4
+      }
+    ],
+    "unsupported-rotation": [
+      {
+        "chunk": "auth-expiry",
+        "score": 0.66
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.595
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.53
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.465
+      },
+      {
+        "chunk": "data-mongo",
+        "score": 0.4
+      }
+    ],
+    "unsupported-region": [
+      {
+        "chunk": "auth-expiry",
+        "score": 0.66
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.595
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.53
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.465
+      },
+      {
+        "chunk": "data-mongo",
+        "score": 0.4
+      }
+    ],
+    "unsupported-price": [
+      {
+        "chunk": "auth-expiry",
+        "score": 0.66
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.595
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.53
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.465
+      },
+      {
+        "chunk": "data-mongo",
+        "score": 0.4
+      }
+    ],
+    "unsupported-recovery": [
+      {
+        "chunk": "auth-expiry",
+        "score": 0.66
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.595
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.53
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.465
+      },
+      {
+        "chunk": "data-mongo",
+        "score": 0.4
+      }
+    ],
+    "unrelated-rice": [
+      {
+        "chunk": "cloud-iaas",
+        "score": 0.14
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.075
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.01
+      },
+      {
+        "chunk": "auth-password",
+        "score": -0.055
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": -0.12
+      }
+    ],
+    "unrelated-bread": [
+      {
+        "chunk": "cloud-iaas",
+        "score": 0.14
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.075
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.01
+      },
+      {
+        "chunk": "auth-password",
+        "score": -0.055
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": -0.12
+      }
+    ],
+    "unrelated-moon": [
+      {
+        "chunk": "cloud-iaas",
+        "score": 0.14
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.075
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.01
+      },
+      {
+        "chunk": "auth-password",
+        "score": -0.055
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": -0.12
+      }
+    ],
+    "unrelated-piano": [
+      {
+        "chunk": "cloud-iaas",
+        "score": 0.14
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.075
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.01
+      },
+      {
+        "chunk": "auth-password",
+        "score": -0.055
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": -0.12
+      }
+    ],
+    "unrelated-bird": [
+      {
+        "chunk": "cloud-iaas",
+        "score": 0.14
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.075
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.01
+      },
+      {
+        "chunk": "auth-password",
+        "score": -0.055
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": -0.12
+      }
+    ],
+    "ambiguous-expiration": [
+      {
+        "chunk": "web-cache",
+        "score": 0.45
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.385
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.32
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.255
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.19
+      }
+    ],
+    "ambiguous-best": [
+      {
+        "chunk": "web-cache",
+        "score": 0.45
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.385
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.32
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.255
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.19
+      }
+    ],
+    "ambiguous-safety": [
+      {
+        "chunk": "web-cache",
+        "score": 0.45
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.385
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.32
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.255
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.19
+      }
+    ],
+    "ambiguous-data": [
+      {
+        "chunk": "data-mongo",
+        "score": 0.82
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.625
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.56
+      }
+    ],
+    "ambiguous-remember": [
+      {
+        "chunk": "data-history",
+        "score": 0.48
+      },
+      {
+        "chunk": "auth-signature",
+        "score": 0.415
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.35
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.285
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.22
+      }
+    ],
+    "disambig-session": [
+      {
+        "chunk": "auth-signature",
+        "score": 0.82
+      },
+      {
+        "chunk": "ops-session",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.625
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.56
+      }
+    ],
+    "disambig-api": [
+      {
+        "chunk": "auth-signature",
+        "score": 0.82
+      },
+      {
+        "chunk": "ops-key",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.625
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.56
+      }
+    ],
+    "disambig-south": [
+      {
+        "chunk": "auth-signature",
+        "score": 0.82
+      },
+      {
+        "chunk": "ops-backup-south",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.625
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.56
+      }
+    ],
+    "disambig-csrf": [
+      {
+        "chunk": "auth-signature",
+        "score": 0.82
+      },
+      {
+        "chunk": "web-csrf",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.625
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.56
+      }
+    ],
+    "disambig-rate": [
+      {
+        "chunk": "auth-signature",
+        "score": 0.82
+      },
+      {
+        "chunk": "web-rate",
+        "score": 0.755
+      },
+      {
+        "chunk": "auth-expiry",
+        "score": 0.69
+      },
+      {
+        "chunk": "auth-password",
+        "score": 0.625
+      },
+      {
+        "chunk": "auth-ownership",
+        "score": 0.56
+      }
+    ]
+  }
+}

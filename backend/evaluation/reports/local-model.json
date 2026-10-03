@@ -1,0 +1,2111 @@
+{
+  "dataset_version": "1.0.0",
+  "dataset_sha256": "fda9eca10cd07f40c3a8edef966b423006c851604c0042a9d33e286f2db1902a",
+  "mode": "local-model",
+  "runtime": {
+    "python": "3.13.15",
+    "qdrant-client": "1.19.1",
+    "sentence-transformers": "6.1.0",
+    "model_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
+  },
+  "measurement": "Cached MiniLM CPU inference + real in-memory Qdrant + production retrieval validation; NOT Cloud/Gemini evaluation",
+  "case_count": 35,
+  "corpus_chunk_count": 20,
+  "category_counts": {
+    "direct": 5,
+    "paraphrase": 5,
+    "multi_chunk": 5,
+    "related_unsupported": 5,
+    "unrelated": 5,
+    "ambiguous": 5,
+    "disambiguation": 5
+  },
+  "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "dimension": 384,
+  "top_k": 5,
+  "max_context_chars": 12000,
+  "retrieval": {
+    "answerable_count": 22,
+    "unsupported_count": 13,
+    "no_valid_hit_count": 0,
+    "hit_at_1": 0.95454545,
+    "hit_at_3": 1.0,
+    "hit_at_5": 1.0,
+    "mrr": 0.97727273,
+    "all_evidence_at_5": 1.0
+  },
+  "baseline_threshold": {
+    "value": 0.5,
+    "tp": 14,
+    "tn": 11,
+    "fp": 2,
+    "fn": 8,
+    "precision": 0.875,
+    "recall": 0.63636364,
+    "f1": 0.73684211
+  },
+  "threshold_sweep": [
+    {
+      "value": 0.2,
+      "tp": 22,
+      "tn": 6,
+      "fp": 7,
+      "fn": 0,
+      "precision": 0.75862069,
+      "recall": 1.0,
+      "f1": 0.8627451
+    },
+    {
+      "value": 0.25,
+      "tp": 22,
+      "tn": 7,
+      "fp": 6,
+      "fn": 0,
+      "precision": 0.78571429,
+      "recall": 1.0,
+      "f1": 0.88
+    },
+    {
+      "value": 0.3,
+      "tp": 21,
+      "tn": 7,
+      "fp": 6,
+      "fn": 1,
+      "precision": 0.77777778,
+      "recall": 0.95454545,
+      "f1": 0.85714286
+    },
+    {
+      "value": 0.35,
+      "tp": 19,
+      "tn": 8,
+      "fp": 5,
+      "fn": 3,
+      "precision": 0.79166667,
+      "recall": 0.86363636,
+      "f1": 0.82608696
+    },
+    {
+      "value": 0.4,
+      "tp": 18,
+      "tn": 8,
+      "fp": 5,
+      "fn": 4,
+      "precision": 0.7826087,
+      "recall": 0.81818182,
+      "f1": 0.8
+    },
+    {
+      "value": 0.45,
+      "tp": 16,
+      "tn": 10,
+      "fp": 3,
+      "fn": 6,
+      "precision": 0.84210526,
+      "recall": 0.72727273,
+      "f1": 0.7804878
+    },
+    {
+      "value": 0.5,
+      "tp": 14,
+      "tn": 11,
+      "fp": 2,
+      "fn": 8,
+      "precision": 0.875,
+      "recall": 0.63636364,
+      "f1": 0.73684211
+    },
+    {
+      "value": 0.55,
+      "tp": 12,
+      "tn": 12,
+      "fp": 1,
+      "fn": 10,
+      "precision": 0.92307692,
+      "recall": 0.54545455,
+      "f1": 0.68571429
+    },
+    {
+      "value": 0.6,
+      "tp": 9,
+      "tn": 13,
+      "fp": 0,
+      "fn": 13,
+      "precision": 1.0,
+      "recall": 0.40909091,
+      "f1": 0.58064516
+    },
+    {
+      "value": 0.65,
+      "tp": 7,
+      "tn": 13,
+      "fp": 0,
+      "fn": 15,
+      "precision": 1.0,
+      "recall": 0.31818182,
+      "f1": 0.48275862
+    },
+    {
+      "value": 0.7,
+      "tp": 5,
+      "tn": 13,
+      "fp": 0,
+      "fn": 17,
+      "precision": 1.0,
+      "recall": 0.22727273,
+      "f1": 0.37037037
+    },
+    {
+      "value": 0.75,
+      "tp": 3,
+      "tn": 13,
+      "fp": 0,
+      "fn": 19,
+      "precision": 1.0,
+      "recall": 0.13636364,
+      "f1": 0.24
+    },
+    {
+      "value": 0.8,
+      "tp": 1,
+      "tn": 13,
+      "fp": 0,
+      "fn": 21,
+      "precision": 1.0,
+      "recall": 0.04545455,
+      "f1": 0.08695652
+    }
+  ],
+  "score_distributions": {
+    "answerable": {
+      "count": 22,
+      "missing": 0,
+      "minimum": 0.27171542,
+      "maximum": 0.8221439,
+      "mean": 0.56045273,
+      "median": 0.58320176
+    },
+    "unsupported": {
+      "count": 13,
+      "missing": 0,
+      "minimum": 0.05855029,
+      "maximum": 0.57503199,
+      "mean": 0.28540567,
+      "median": 0.20144689
+    }
+  },
+  "categories": {
+    "direct": {
+      "retrieval": {
+        "answerable_count": 5,
+        "unsupported_count": 0,
+        "no_valid_hit_count": 0,
+        "hit_at_1": 1.0,
+        "hit_at_3": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 1.0,
+        "all_evidence_at_5": 1.0
+      },
+      "decision": {
+        "value": 0.5,
+        "tp": 4,
+        "tn": 0,
+        "fp": 0,
+        "fn": 1,
+        "precision": 1.0,
+        "recall": 0.8,
+        "f1": 0.88888889
+      }
+    },
+    "paraphrase": {
+      "retrieval": {
+        "answerable_count": 5,
+        "unsupported_count": 0,
+        "no_valid_hit_count": 0,
+        "hit_at_1": 0.8,
+        "hit_at_3": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 0.9,
+        "all_evidence_at_5": 1.0
+      },
+      "decision": {
+        "value": 0.5,
+        "tp": 1,
+        "tn": 0,
+        "fp": 0,
+        "fn": 4,
+        "precision": 1.0,
+        "recall": 0.2,
+        "f1": 0.33333333
+      }
+    },
+    "multi_chunk": {
+      "retrieval": {
+        "answerable_count": 5,
+        "unsupported_count": 0,
+        "no_valid_hit_count": 0,
+        "hit_at_1": 1.0,
+        "hit_at_3": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 1.0,
+        "all_evidence_at_5": 1.0
+      },
+      "decision": {
+        "value": 0.5,
+        "tp": 4,
+        "tn": 0,
+        "fp": 0,
+        "fn": 1,
+        "precision": 1.0,
+        "recall": 0.8,
+        "f1": 0.88888889
+      }
+    },
+    "related_unsupported": {
+      "retrieval": {
+        "answerable_count": 0,
+        "unsupported_count": 5,
+        "no_valid_hit_count": 0,
+        "hit_at_1": null,
+        "hit_at_3": null,
+        "hit_at_5": null,
+        "mrr": null,
+        "all_evidence_at_5": null
+      },
+      "decision": {
+        "value": 0.5,
+        "tp": 0,
+        "tn": 3,
+        "fp": 2,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "unrelated": {
+      "retrieval": {
+        "answerable_count": 0,
+        "unsupported_count": 5,
+        "no_valid_hit_count": 0,
+        "hit_at_1": null,
+        "hit_at_3": null,
+        "hit_at_5": null,
+        "mrr": null,
+        "all_evidence_at_5": null
+      },
+      "decision": {
+        "value": 0.5,
+        "tp": 0,
+        "tn": 5,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "ambiguous": {
+      "retrieval": {
+        "answerable_count": 2,
+        "unsupported_count": 3,
+        "no_valid_hit_count": 0,
+        "hit_at_1": 1.0,
+        "hit_at_3": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 1.0,
+        "all_evidence_at_5": 1.0
+      },
+      "decision": {
+        "value": 0.5,
+        "tp": 0,
+        "tn": 3,
+        "fp": 0,
+        "fn": 2,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "disambiguation": {
+      "retrieval": {
+        "answerable_count": 5,
+        "unsupported_count": 0,
+        "no_valid_hit_count": 0,
+        "hit_at_1": 1.0,
+        "hit_at_3": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 1.0,
+        "all_evidence_at_5": 1.0
+      },
+      "decision": {
+        "value": 0.5,
+        "tp": 5,
+        "tn": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    }
+  },
+  "context_probes": {
+    "exact_budget_keeps_evidence": true,
+    "one_character_below_skips_whole_chunk": true,
+    "bounded": true,
+    "oversized_and_low_excluded": true,
+    "relevance_order_preserved": true,
+    "complete_text_preserved": true,
+    "duplicate_page_deduplicated": true,
+    "sources_only_included_pages": true,
+    "invalid_provenance_excluded": true,
+    "duplicate_chunk_excluded": true,
+    "empty_context": true
+  },
+  "provider_call_confusion": {
+    "tp": 14,
+    "tn": 11,
+    "fp": 2,
+    "fn": 8
+  },
+  "context_all_evidence_count": 10,
+  "failures": {
+    "false_acceptance": [
+      "unsupported-refresh",
+      "unsupported-rotation"
+    ],
+    "false_rejection": [
+      "direct-password",
+      "para-signature",
+      "para-owner",
+      "para-ocr",
+      "para-history",
+      "multi-cloud",
+      "ambiguous-data",
+      "ambiguous-remember"
+    ],
+    "incomplete_context_evidence": [
+      "direct-password",
+      "para-signature",
+      "para-owner",
+      "para-ocr",
+      "para-history",
+      "multi-storage",
+      "multi-cloud",
+      "multi-token",
+      "multi-deletion",
+      "multi-backup",
+      "ambiguous-data",
+      "ambiguous-remember"
+    ]
+  },
+  "cases": [
+    {
+      "id": "direct-signature",
+      "category": "direct",
+      "expected_answerable": true,
+      "top_score": 0.62515331,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.62515331
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.42049938
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.39812872
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.3654262
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.30509447
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 1
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 349,
+      "context_chunk_count": 1,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "direct-expiry",
+      "category": "direct",
+      "expected_answerable": true,
+      "top_score": 0.70177221,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.70177221
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.49766336
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.4792042
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.44290268
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.34699727
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 2
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 321,
+      "context_chunk_count": 1,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "direct-password",
+      "category": "direct",
+      "expected_answerable": true,
+      "top_score": 0.44279455,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.44279455
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.28860458
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.25276707
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.17411221
+        },
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.16049525
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 3
+        }
+      ],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": 0.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "direct-upload",
+      "category": "direct",
+      "expected_answerable": true,
+      "top_score": 0.54185322,
+      "ranked_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.54185322
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.52924683
+        },
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.33722651
+        },
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.23141009
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.19011965
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page": 1
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 654,
+      "context_chunk_count": 2,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "direct-backup",
+      "category": "direct",
+      "expected_answerable": true,
+      "top_score": 0.65782418,
+      "ranked_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.65782418
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.65649495
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.29776715
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.26586694
+        },
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.21694903
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page": 1
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 636,
+      "context_chunk_count": 2,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "para-signature",
+      "category": "paraphrase",
+      "expected_answerable": true,
+      "top_score": 0.41665697,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.41665697
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.40223454
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.39186361
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.34184004
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.30985787
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 1
+        }
+      ],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": 0.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "para-paas",
+      "category": "paraphrase",
+      "expected_answerable": true,
+      "top_score": 0.59114677,
+      "ranked_sources": [
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.59114677
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.37356678
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.30608018
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.14707056
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.10037136
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "cloud-guide.pdf",
+          "page": 2
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 331,
+      "context_chunk_count": 1,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "para-owner",
+      "category": "paraphrase",
+      "expected_answerable": true,
+      "top_score": 0.34289047,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.34289047
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.27867466
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.19856192
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.17556605
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.17418029
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 4
+        }
+      ],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": 0.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "para-ocr",
+      "category": "paraphrase",
+      "expected_answerable": true,
+      "top_score": 0.4801318,
+      "ranked_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.4801318
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.23136444
+        },
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.1907771
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.15502933
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.13416093
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page": 2
+        }
+      ],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": 0.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "para-history",
+      "category": "paraphrase",
+      "expected_answerable": true,
+      "top_score": 0.36147529,
+      "ranked_sources": [
+        {
+          "document": "web-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.36147529
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.34304364
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.14792566
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.14194255
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.11561224
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "data-guide.pdf",
+          "page": 3
+        }
+      ],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": 0.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "multi-storage",
+      "category": "multi_chunk",
+      "expected_answerable": true,
+      "top_score": 0.52978851,
+      "ranked_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.52978851
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.42890173
+        },
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.41915743
+        },
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.38950052
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.32490101
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page": 1
+        },
+        {
+          "document": "data-guide.pdf",
+          "page": 2
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 338,
+      "context_chunk_count": 1,
+      "context_evidence_fraction": 0.5,
+      "sources_match_context": true
+    },
+    {
+      "id": "multi-cloud",
+      "category": "multi_chunk",
+      "expected_answerable": true,
+      "top_score": 0.27171542,
+      "ranked_sources": [
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.27171542
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.26971811
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.15951189
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.11960169
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.1170026
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "cloud-guide.pdf",
+          "page": 1
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page": 2
+        }
+      ],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": 0.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "multi-token",
+      "category": "multi_chunk",
+      "expected_answerable": true,
+      "top_score": 0.58086475,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.58086475
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.44285604
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.42214915
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.38093384
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.36325441
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 1
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page": 2
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 321,
+      "context_chunk_count": 1,
+      "context_evidence_fraction": 0.5,
+      "sources_match_context": true
+    },
+    {
+      "id": "multi-deletion",
+      "category": "multi_chunk",
+      "expected_answerable": true,
+      "top_score": 0.62864603,
+      "ranked_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.62864603
+        },
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.43748395
+        },
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.41084373
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.36453979
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.33204861
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page": 3
+        },
+        {
+          "document": "data-guide.pdf",
+          "page": 3
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 321,
+      "context_chunk_count": 1,
+      "context_evidence_fraction": 0.5,
+      "sources_match_context": true
+    },
+    {
+      "id": "multi-backup",
+      "category": "multi_chunk",
+      "expected_answerable": true,
+      "top_score": 0.58553876,
+      "ranked_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.58553876
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.49540719
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.242977
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.20383999
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.19709113
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page": 1
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page": 4
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 316,
+      "context_chunk_count": 1,
+      "context_evidence_fraction": 0.5,
+      "sources_match_context": true
+    },
+    {
+      "id": "unsupported-refresh",
+      "category": "related_unsupported",
+      "expected_answerable": false,
+      "top_score": 0.57503199,
+      "ranked_sources": [
+        {
+          "document": "web-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.57503199
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.56038844
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.42335443
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.40537517
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.36208191
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 634,
+      "context_chunk_count": 2,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unsupported-rotation",
+      "category": "related_unsupported",
+      "expected_answerable": false,
+      "top_score": 0.51616776,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.51616776
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.43592272
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.39635071
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.37295361
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.33616833
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 349,
+      "context_chunk_count": 1,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unsupported-region",
+      "category": "related_unsupported",
+      "expected_answerable": false,
+      "top_score": 0.44434452,
+      "ranked_sources": [
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.44434452
+        },
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.41171932
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.37122503
+        },
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.26865392
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.12897785
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unsupported-price",
+      "category": "related_unsupported",
+      "expected_answerable": false,
+      "top_score": 0.1881938,
+      "ranked_sources": [
+        {
+          "document": "web-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.1881938
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.17039699
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.12860814
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.09403967
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.09274698
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unsupported-recovery",
+      "category": "related_unsupported",
+      "expected_answerable": false,
+      "top_score": 0.44002135,
+      "ranked_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.44002135
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.34379051
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.27449171
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.22039307
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.19668879
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unrelated-rice",
+      "category": "unrelated",
+      "expected_answerable": false,
+      "top_score": 0.15710584,
+      "ranked_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.15710584
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.12189094
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.11921649
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.09992295
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.06197089
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unrelated-bread",
+      "category": "unrelated",
+      "expected_answerable": false,
+      "top_score": 0.10990535,
+      "ranked_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.10990535
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.10464543
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.07634074
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.07029532
+        },
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.01065771
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unrelated-moon",
+      "category": "unrelated",
+      "expected_answerable": false,
+      "top_score": 0.08359429,
+      "ranked_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.08359429
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.06300842
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.06006256
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.05957766
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.04769741
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unrelated-piano",
+      "category": "unrelated",
+      "expected_answerable": false,
+      "top_score": 0.05855029,
+      "ranked_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.05855029
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.03324994
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": -0.01031443
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": -0.01604807
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": -0.04704909
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unrelated-bird",
+      "category": "unrelated",
+      "expected_answerable": false,
+      "top_score": 0.15400278,
+      "ranked_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.15400278
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.13324219
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.08680548
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.07182296
+        },
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.06778449
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "ambiguous-expiration",
+      "category": "ambiguous",
+      "expected_answerable": false,
+      "top_score": 0.45293337,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.45293337
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.35572368
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.27208015
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.24983526
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.18823683
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "ambiguous-best",
+      "category": "ambiguous",
+      "expected_answerable": false,
+      "top_score": 0.32897553,
+      "ranked_sources": [
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.32897553
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.24954985
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.22747907
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.19500522
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.19012439
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "ambiguous-safety",
+      "category": "ambiguous",
+      "expected_answerable": false,
+      "top_score": 0.20144689,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.20144689
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.14945864
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.12326025
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.07524178
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.06351647
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "ambiguous-data",
+      "category": "ambiguous",
+      "expected_answerable": true,
+      "top_score": 0.47693742,
+      "ranked_sources": [
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.47693742
+        },
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.35370438
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.32550393
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.30025573
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.28046075
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "data-guide.pdf",
+          "page": 1
+        }
+      ],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": 0.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "ambiguous-remember",
+      "category": "ambiguous",
+      "expected_answerable": true,
+      "top_score": 0.34939177,
+      "ranked_sources": [
+        {
+          "document": "data-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.34939177
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.14381718
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.13214717
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.12910506
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.12112999
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "data-guide.pdf",
+          "page": 3
+        }
+      ],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": 0.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "disambig-session",
+      "category": "disambiguation",
+      "expected_answerable": true,
+      "top_score": 0.71190484,
+      "ranked_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.71190484
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.31303162
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.269679
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.24921819
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.2412943
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page": 2
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 330,
+      "context_chunk_count": 1,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "disambig-api",
+      "category": "disambiguation",
+      "expected_answerable": true,
+      "top_score": 0.75694749,
+      "ranked_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.75694749
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.425856
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.39769757
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.39457418
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.34843261
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page": 3
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 316,
+      "context_chunk_count": 1,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "disambig-south",
+      "category": "disambiguation",
+      "expected_answerable": true,
+      "top_score": 0.8221439,
+      "ranked_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.8221439
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.6608317
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.3663186
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.32793317
+        },
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.30659507
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page": 4
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 636,
+      "context_chunk_count": 2,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "disambig-csrf",
+      "category": "disambiguation",
+      "expected_answerable": true,
+      "top_score": 0.66394385,
+      "ranked_sources": [
+        {
+          "document": "web-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.66394385
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.44614254
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.3915508
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.32017692
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.2908003
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "web-guide.pdf",
+          "page": 1
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 304,
+      "context_chunk_count": 1,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "disambig-rate",
+      "category": "disambiguation",
+      "expected_answerable": true,
+      "top_score": 0.7904385,
+      "ranked_sources": [
+        {
+          "document": "web-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.7904385
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.3521568
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.27116515
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.23731989
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.18164878
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "web-guide.pdf",
+          "page": 3
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 317,
+      "context_chunk_count": 1,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    }
+  ],
+  "tuning_decision": "Keep production 0.50. Synthetic results are diagnostic, not sufficient evidence for a global threshold change; evaluate independent held-out real-domain cases."
+}

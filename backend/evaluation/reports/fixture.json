@@ -1,0 +1,2096 @@
+{
+  "dataset_version": "1.0.0",
+  "dataset_sha256": "fda9eca10cd07f40c3a8edef966b423006c851604c0042a9d33e286f2db1902a",
+  "mode": "fixture",
+  "runtime": {
+    "python": "3.13.15",
+    "qdrant-client": "1.19.1",
+    "sentence-transformers": "6.1.0",
+    "model_revision": null
+  },
+  "measurement": "Authored fixture scores; engineering regression ONLY",
+  "case_count": 35,
+  "corpus_chunk_count": 20,
+  "category_counts": {
+    "direct": 5,
+    "paraphrase": 5,
+    "multi_chunk": 5,
+    "related_unsupported": 5,
+    "unrelated": 5,
+    "ambiguous": 5,
+    "disambiguation": 5
+  },
+  "embedding_model": "mock (not real inference)",
+  "dimension": 3,
+  "top_k": 5,
+  "max_context_chars": 12000,
+  "retrieval": {
+    "answerable_count": 22,
+    "unsupported_count": 13,
+    "no_valid_hit_count": 0,
+    "hit_at_1": 0.63636364,
+    "hit_at_3": 1.0,
+    "hit_at_5": 1.0,
+    "mrr": 0.81818182,
+    "all_evidence_at_5": 1.0
+  },
+  "baseline_threshold": {
+    "value": 0.5,
+    "tp": 21,
+    "tn": 8,
+    "fp": 5,
+    "fn": 1,
+    "precision": 0.80769231,
+    "recall": 0.95454545,
+    "f1": 0.875
+  },
+  "threshold_sweep": [
+    {
+      "value": 0.2,
+      "tp": 22,
+      "tn": 5,
+      "fp": 8,
+      "fn": 0,
+      "precision": 0.73333333,
+      "recall": 1.0,
+      "f1": 0.84615385
+    },
+    {
+      "value": 0.25,
+      "tp": 22,
+      "tn": 5,
+      "fp": 8,
+      "fn": 0,
+      "precision": 0.73333333,
+      "recall": 1.0,
+      "f1": 0.84615385
+    },
+    {
+      "value": 0.3,
+      "tp": 22,
+      "tn": 5,
+      "fp": 8,
+      "fn": 0,
+      "precision": 0.73333333,
+      "recall": 1.0,
+      "f1": 0.84615385
+    },
+    {
+      "value": 0.35,
+      "tp": 22,
+      "tn": 5,
+      "fp": 8,
+      "fn": 0,
+      "precision": 0.73333333,
+      "recall": 1.0,
+      "f1": 0.84615385
+    },
+    {
+      "value": 0.4,
+      "tp": 22,
+      "tn": 5,
+      "fp": 8,
+      "fn": 0,
+      "precision": 0.73333333,
+      "recall": 1.0,
+      "f1": 0.84615385
+    },
+    {
+      "value": 0.45,
+      "tp": 22,
+      "tn": 5,
+      "fp": 8,
+      "fn": 0,
+      "precision": 0.73333333,
+      "recall": 1.0,
+      "f1": 0.84615385
+    },
+    {
+      "value": 0.5,
+      "tp": 21,
+      "tn": 8,
+      "fp": 5,
+      "fn": 1,
+      "precision": 0.80769231,
+      "recall": 0.95454545,
+      "f1": 0.875
+    },
+    {
+      "value": 0.55,
+      "tp": 21,
+      "tn": 8,
+      "fp": 5,
+      "fn": 1,
+      "precision": 0.80769231,
+      "recall": 0.95454545,
+      "f1": 0.875
+    },
+    {
+      "value": 0.6,
+      "tp": 21,
+      "tn": 8,
+      "fp": 5,
+      "fn": 1,
+      "precision": 0.80769231,
+      "recall": 0.95454545,
+      "f1": 0.875
+    },
+    {
+      "value": 0.65,
+      "tp": 21,
+      "tn": 8,
+      "fp": 5,
+      "fn": 1,
+      "precision": 0.80769231,
+      "recall": 0.95454545,
+      "f1": 0.875
+    },
+    {
+      "value": 0.7,
+      "tp": 21,
+      "tn": 13,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1.0,
+      "recall": 0.95454545,
+      "f1": 0.97674419
+    },
+    {
+      "value": 0.75,
+      "tp": 21,
+      "tn": 13,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1.0,
+      "recall": 0.95454545,
+      "f1": 0.97674419
+    },
+    {
+      "value": 0.8,
+      "tp": 21,
+      "tn": 13,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1.0,
+      "recall": 0.95454545,
+      "f1": 0.97674419
+    }
+  ],
+  "score_distributions": {
+    "answerable": {
+      "count": 22,
+      "missing": 0,
+      "minimum": 0.48,
+      "maximum": 0.82,
+      "mean": 0.80454545,
+      "median": 0.82
+    },
+    "unsupported": {
+      "count": 13,
+      "missing": 0,
+      "minimum": 0.14,
+      "maximum": 0.66,
+      "mean": 0.41153846,
+      "median": 0.45
+    }
+  },
+  "categories": {
+    "direct": {
+      "retrieval": {
+        "answerable_count": 5,
+        "unsupported_count": 0,
+        "no_valid_hit_count": 0,
+        "hit_at_1": 1.0,
+        "hit_at_3": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 1.0,
+        "all_evidence_at_5": 1.0
+      },
+      "decision": {
+        "value": 0.5,
+        "tp": 5,
+        "tn": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    },
+    "paraphrase": {
+      "retrieval": {
+        "answerable_count": 5,
+        "unsupported_count": 0,
+        "no_valid_hit_count": 0,
+        "hit_at_1": 0.4,
+        "hit_at_3": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 0.7,
+        "all_evidence_at_5": 1.0
+      },
+      "decision": {
+        "value": 0.5,
+        "tp": 5,
+        "tn": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    },
+    "multi_chunk": {
+      "retrieval": {
+        "answerable_count": 5,
+        "unsupported_count": 0,
+        "no_valid_hit_count": 0,
+        "hit_at_1": 1.0,
+        "hit_at_3": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 1.0,
+        "all_evidence_at_5": 1.0
+      },
+      "decision": {
+        "value": 0.5,
+        "tp": 5,
+        "tn": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    },
+    "related_unsupported": {
+      "retrieval": {
+        "answerable_count": 0,
+        "unsupported_count": 5,
+        "no_valid_hit_count": 0,
+        "hit_at_1": null,
+        "hit_at_3": null,
+        "hit_at_5": null,
+        "mrr": null,
+        "all_evidence_at_5": null
+      },
+      "decision": {
+        "value": 0.5,
+        "tp": 0,
+        "tn": 0,
+        "fp": 5,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "unrelated": {
+      "retrieval": {
+        "answerable_count": 0,
+        "unsupported_count": 5,
+        "no_valid_hit_count": 0,
+        "hit_at_1": null,
+        "hit_at_3": null,
+        "hit_at_5": null,
+        "mrr": null,
+        "all_evidence_at_5": null
+      },
+      "decision": {
+        "value": 0.5,
+        "tp": 0,
+        "tn": 5,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "ambiguous": {
+      "retrieval": {
+        "answerable_count": 2,
+        "unsupported_count": 3,
+        "no_valid_hit_count": 0,
+        "hit_at_1": 1.0,
+        "hit_at_3": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 1.0,
+        "all_evidence_at_5": 1.0
+      },
+      "decision": {
+        "value": 0.5,
+        "tp": 1,
+        "tn": 3,
+        "fp": 0,
+        "fn": 1,
+        "precision": 1.0,
+        "recall": 0.5,
+        "f1": 0.66666667
+      }
+    },
+    "disambiguation": {
+      "retrieval": {
+        "answerable_count": 5,
+        "unsupported_count": 0,
+        "no_valid_hit_count": 0,
+        "hit_at_1": 0.0,
+        "hit_at_3": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 0.5,
+        "all_evidence_at_5": 1.0
+      },
+      "decision": {
+        "value": 0.5,
+        "tp": 5,
+        "tn": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    }
+  },
+  "context_probes": {
+    "exact_budget_keeps_evidence": true,
+    "one_character_below_skips_whole_chunk": true,
+    "bounded": true,
+    "oversized_and_low_excluded": true,
+    "relevance_order_preserved": true,
+    "complete_text_preserved": true,
+    "duplicate_page_deduplicated": true,
+    "sources_only_included_pages": true,
+    "invalid_provenance_excluded": true,
+    "duplicate_chunk_excluded": true,
+    "empty_context": true
+  },
+  "provider_call_confusion": {
+    "tp": 21,
+    "tn": 8,
+    "fp": 5,
+    "fn": 1
+  },
+  "context_all_evidence_count": 21,
+  "failures": {
+    "false_acceptance": [
+      "unsupported-refresh",
+      "unsupported-rotation",
+      "unsupported-region",
+      "unsupported-price",
+      "unsupported-recovery"
+    ],
+    "false_rejection": [
+      "ambiguous-remember"
+    ],
+    "incomplete_context_evidence": [
+      "ambiguous-remember"
+    ]
+  },
+  "cases": [
+    {
+      "id": "direct-signature",
+      "category": "direct",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.82
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.625
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 1
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1676,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "direct-expiry",
+      "category": "direct",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.82
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.625
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 2
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1676,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "direct-password",
+      "category": "direct",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.82
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.625
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 3
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1676,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "direct-upload",
+      "category": "direct",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.82
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.625
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page": 1
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1666,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "direct-backup",
+      "category": "direct",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.82
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.625
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page": 1
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1649,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "para-signature",
+      "category": "paraphrase",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.82
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.625
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 1
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1676,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "para-paas",
+      "category": "paraphrase",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.82
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.625
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "cloud-guide.pdf",
+          "page": 2
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1659,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "para-owner",
+      "category": "paraphrase",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.82
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.625
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 4
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1676,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "para-ocr",
+      "category": "paraphrase",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.82
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.625
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page": 2
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1684,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "para-history",
+      "category": "paraphrase",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.82
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.625
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "data-guide.pdf",
+          "page": 3
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1694,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "multi-storage",
+      "category": "multi_chunk",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.82
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.625
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page": 1
+        },
+        {
+          "document": "data-guide.pdf",
+          "page": 2
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1669,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "multi-cloud",
+      "category": "multi_chunk",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.82
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.625
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "cloud-guide.pdf",
+          "page": 1
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page": 2
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1661,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "multi-token",
+      "category": "multi_chunk",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.82
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.625
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 1
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page": 2
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1676,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "multi-deletion",
+      "category": "multi_chunk",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.82
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.625
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page": 3
+        },
+        {
+          "document": "data-guide.pdf",
+          "page": 3
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1679,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "multi-backup",
+      "category": "multi_chunk",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.82
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.625
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page": 1
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page": 4
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1629,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "unsupported-refresh",
+      "category": "related_unsupported",
+      "expected_answerable": false,
+      "top_score": 0.66,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.66
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.595
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.53
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.465
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.4
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 994,
+      "context_chunk_count": 3,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unsupported-rotation",
+      "category": "related_unsupported",
+      "expected_answerable": false,
+      "top_score": 0.66,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.66
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.595
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.53
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.465
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.4
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 994,
+      "context_chunk_count": 3,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unsupported-region",
+      "category": "related_unsupported",
+      "expected_answerable": false,
+      "top_score": 0.66,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.66
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.595
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.53
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.465
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.4
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 994,
+      "context_chunk_count": 3,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unsupported-price",
+      "category": "related_unsupported",
+      "expected_answerable": false,
+      "top_score": 0.66,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.66
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.595
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.53
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.465
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.4
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 994,
+      "context_chunk_count": 3,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unsupported-recovery",
+      "category": "related_unsupported",
+      "expected_answerable": false,
+      "top_score": 0.66,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.66
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.595
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.53
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.465
+        },
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.4
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 994,
+      "context_chunk_count": 3,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unrelated-rice",
+      "category": "unrelated",
+      "expected_answerable": false,
+      "top_score": 0.14,
+      "ranked_sources": [
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.14
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.075
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.01
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": -0.055
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": -0.12
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unrelated-bread",
+      "category": "unrelated",
+      "expected_answerable": false,
+      "top_score": 0.14,
+      "ranked_sources": [
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.14
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.075
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.01
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": -0.055
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": -0.12
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unrelated-moon",
+      "category": "unrelated",
+      "expected_answerable": false,
+      "top_score": 0.14,
+      "ranked_sources": [
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.14
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.075
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.01
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": -0.055
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": -0.12
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unrelated-piano",
+      "category": "unrelated",
+      "expected_answerable": false,
+      "top_score": 0.14,
+      "ranked_sources": [
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.14
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.075
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.01
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": -0.055
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": -0.12
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "unrelated-bird",
+      "category": "unrelated",
+      "expected_answerable": false,
+      "top_score": 0.14,
+      "ranked_sources": [
+        {
+          "document": "cloud-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.14
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.075
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.01
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": -0.055
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": -0.12
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "ambiguous-expiration",
+      "category": "ambiguous",
+      "expected_answerable": false,
+      "top_score": 0.45,
+      "ranked_sources": [
+        {
+          "document": "web-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.45
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.385
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.32
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.255
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.19
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "ambiguous-best",
+      "category": "ambiguous",
+      "expected_answerable": false,
+      "top_score": 0.45,
+      "ranked_sources": [
+        {
+          "document": "web-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.45
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.385
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.32
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.255
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.19
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "ambiguous-safety",
+      "category": "ambiguous",
+      "expected_answerable": false,
+      "top_score": 0.45,
+      "ranked_sources": [
+        {
+          "document": "web-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.45
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.385
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.32
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.255
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.19
+        }
+      ],
+      "expected_sources": [],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": null,
+      "sources_match_context": true
+    },
+    {
+      "id": "ambiguous-data",
+      "category": "ambiguous",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "data-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.82
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.625
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "data-guide.pdf",
+          "page": 1
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1676,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "ambiguous-remember",
+      "category": "ambiguous",
+      "expected_answerable": true,
+      "top_score": 0.48,
+      "ranked_sources": [
+        {
+          "document": "data-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.48
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.415
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.35
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.285
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.22
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "data-guide.pdf",
+          "page": 3
+        }
+      ],
+      "provider_called": false,
+      "mock_status": "insufficient_context",
+      "context_characters": 2,
+      "context_chunk_count": 0,
+      "context_evidence_fraction": 0.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "disambig-session",
+      "category": "disambiguation",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.82
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.625
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page": 2
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1658,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "disambig-api",
+      "category": "disambiguation",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.82
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.625
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page": 3
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1644,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "disambig-south",
+      "category": "disambiguation",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.82
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.625
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page": 4
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1644,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "disambig-csrf",
+      "category": "disambiguation",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.82
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.625
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "web-guide.pdf",
+          "page": 1
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1632,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    },
+    {
+      "id": "disambig-rate",
+      "category": "disambiguation",
+      "expected_answerable": true,
+      "top_score": 0.82,
+      "ranked_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 1,
+          "page_end": 1,
+          "score": 0.82
+        },
+        {
+          "document": "web-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.755
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 2,
+          "page_end": 2,
+          "score": 0.69
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 3,
+          "page_end": 3,
+          "score": 0.625
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page_start": 4,
+          "page_end": 4,
+          "score": 0.56
+        }
+      ],
+      "expected_sources": [
+        {
+          "document": "web-guide.pdf",
+          "page": 3
+        }
+      ],
+      "provider_called": true,
+      "mock_status": "answered",
+      "context_characters": 1645,
+      "context_chunk_count": 5,
+      "context_evidence_fraction": 1.0,
+      "sources_match_context": true
+    }
+  ],
+  "tuning_decision": "Keep production 0.50. Synthetic results are diagnostic, not sufficient evidence for a global threshold change; evaluate independent held-out real-domain cases."
+}

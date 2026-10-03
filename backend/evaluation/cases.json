@@ -1,0 +1,380 @@
+{
+  "version": "1.0.0",
+  "cases": [
+    {
+      "id": "direct-signature",
+      "category": "direct",
+      "question": "How does the server detect a modified JWT?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 1
+        }
+      ]
+    },
+    {
+      "id": "direct-expiry",
+      "category": "direct",
+      "question": "How long does an access token remain valid?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 2
+        }
+      ]
+    },
+    {
+      "id": "direct-password",
+      "category": "direct",
+      "question": "Which algorithm stores password hashes?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 3
+        }
+      ]
+    },
+    {
+      "id": "direct-upload",
+      "category": "direct",
+      "question": "What is the maximum PDF upload size?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page": 1
+        }
+      ]
+    },
+    {
+      "id": "direct-backup",
+      "category": "direct",
+      "question": "How often does North back up metadata?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page": 1
+        }
+      ]
+    },
+    {
+      "id": "para-signature",
+      "category": "paraphrase",
+      "question": "What stops someone editing a login token and passing it off as genuine?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 1
+        }
+      ]
+    },
+    {
+      "id": "para-paas",
+      "category": "paraphrase",
+      "question": "Which cloud offering lets developers deploy code without caring for the operating system?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "cloud-guide.pdf",
+          "page": 2
+        }
+      ]
+    },
+    {
+      "id": "para-owner",
+      "category": "paraphrase",
+      "question": "Can a different account discover my Knowledge Base by guessing its identifier?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 4
+        }
+      ]
+    },
+    {
+      "id": "para-ocr",
+      "category": "paraphrase",
+      "question": "Can the system read words from a scan that contains pictures but no selectable text?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page": 2
+        }
+      ]
+    },
+    {
+      "id": "para-history",
+      "category": "paraphrase",
+      "question": "Will an earlier response be remembered automatically when I ask something new?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "data-guide.pdf",
+          "page": 3
+        }
+      ]
+    },
+    {
+      "id": "multi-storage",
+      "category": "multi_chunk",
+      "question": "Where are PDF originals kept, and where are their embedding vectors kept?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page": 1
+        },
+        {
+          "document": "data-guide.pdf",
+          "page": 2
+        }
+      ]
+    },
+    {
+      "id": "multi-cloud",
+      "category": "multi_chunk",
+      "question": "Compare what the customer manages in IaaS and PaaS.",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "cloud-guide.pdf",
+          "page": 1
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page": 2
+        }
+      ]
+    },
+    {
+      "id": "multi-token",
+      "category": "multi_chunk",
+      "question": "How are token tampering and expired access handled?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 1
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page": 2
+        }
+      ]
+    },
+    {
+      "id": "multi-deletion",
+      "category": "multi_chunk",
+      "question": "What happens to document vectors and old answers when a PDF is deleted?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page": 3
+        },
+        {
+          "document": "data-guide.pdf",
+          "page": 3
+        }
+      ]
+    },
+    {
+      "id": "multi-backup",
+      "category": "multi_chunk",
+      "question": "Compare North and South backup frequency and retention.",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page": 1
+        },
+        {
+          "document": "operations-guide.pdf",
+          "page": 4
+        }
+      ]
+    },
+    {
+      "id": "unsupported-refresh",
+      "category": "related_unsupported",
+      "question": "How long are refresh tokens stored?",
+      "expected_answerable": false,
+      "expected_sources": []
+    },
+    {
+      "id": "unsupported-rotation",
+      "category": "related_unsupported",
+      "question": "How often does this server rotate its JWT signing secret?",
+      "expected_answerable": false,
+      "expected_sources": []
+    },
+    {
+      "id": "unsupported-region",
+      "category": "related_unsupported",
+      "question": "Which geographic region hosts the MongoDB cluster?",
+      "expected_answerable": false,
+      "expected_sources": []
+    },
+    {
+      "id": "unsupported-price",
+      "category": "related_unsupported",
+      "question": "What monthly price does the PaaS provider charge?",
+      "expected_answerable": false,
+      "expected_sources": []
+    },
+    {
+      "id": "unsupported-recovery",
+      "category": "related_unsupported",
+      "question": "What is the measured recovery time after a North outage?",
+      "expected_answerable": false,
+      "expected_sources": []
+    },
+    {
+      "id": "unrelated-rice",
+      "category": "unrelated",
+      "question": "When should rice fields be irrigated?",
+      "expected_answerable": false,
+      "expected_sources": []
+    },
+    {
+      "id": "unrelated-bread",
+      "category": "unrelated",
+      "question": "How much yeast should I add to sourdough bread?",
+      "expected_answerable": false,
+      "expected_sources": []
+    },
+    {
+      "id": "unrelated-moon",
+      "category": "unrelated",
+      "question": "How many moons orbit Neptune?",
+      "expected_answerable": false,
+      "expected_sources": []
+    },
+    {
+      "id": "unrelated-piano",
+      "category": "unrelated",
+      "question": "How should I tune a grand piano?",
+      "expected_answerable": false,
+      "expected_sources": []
+    },
+    {
+      "id": "unrelated-bird",
+      "category": "unrelated",
+      "question": "Why do swallows migrate south?",
+      "expected_answerable": false,
+      "expected_sources": []
+    },
+    {
+      "id": "ambiguous-expiration",
+      "category": "ambiguous",
+      "question": "When does it expire?",
+      "expected_answerable": false,
+      "expected_sources": []
+    },
+    {
+      "id": "ambiguous-best",
+      "category": "ambiguous",
+      "question": "Which service is the best?",
+      "expected_answerable": false,
+      "expected_sources": []
+    },
+    {
+      "id": "ambiguous-safety",
+      "category": "ambiguous",
+      "question": "Is everything secure?",
+      "expected_answerable": false,
+      "expected_sources": []
+    },
+    {
+      "id": "ambiguous-data",
+      "category": "ambiguous",
+      "question": "Where is application metadata stored?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "data-guide.pdf",
+          "page": 1
+        }
+      ]
+    },
+    {
+      "id": "ambiguous-remember",
+      "category": "ambiguous",
+      "question": "Does the next question use my past answers?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "data-guide.pdf",
+          "page": 3
+        }
+      ]
+    },
+    {
+      "id": "disambig-session",
+      "category": "disambiguation",
+      "question": "How long can the North dashboard sit idle before closing its session?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page": 2
+        }
+      ]
+    },
+    {
+      "id": "disambig-api",
+      "category": "disambiguation",
+      "question": "When does a South automation API key expire?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page": 3
+        }
+      ]
+    },
+    {
+      "id": "disambig-south",
+      "category": "disambiguation",
+      "question": "How many days does South retain metadata backups?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "operations-guide.pdf",
+          "page": 4
+        }
+      ]
+    },
+    {
+      "id": "disambig-csrf",
+      "category": "disambiguation",
+      "question": "Which token protects browser forms from cross-site request forgery?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "web-guide.pdf",
+          "page": 1
+        }
+      ]
+    },
+    {
+      "id": "disambig-rate",
+      "category": "disambiguation",
+      "question": "How many requests per minute does the public status endpoint allow?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "web-guide.pdf",
+          "page": 3
+        }
+      ]
+    }
+  ]
+}

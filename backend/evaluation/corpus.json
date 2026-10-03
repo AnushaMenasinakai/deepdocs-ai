@@ -1,0 +1,125 @@
+{
+  "version": "1.0.0",
+  "chunks": [
+    {
+      "id": "auth-signature",
+      "document": "authentication-guide.pdf",
+      "page": 1,
+      "text": "JWT signatures protect token integrity. The server verifies an HS256 signature with its configured secret and rejects a modified token. Verification does not decrypt the token payload."
+    },
+    {
+      "id": "auth-expiry",
+      "document": "authentication-guide.pdf",
+      "page": 2,
+      "text": "Access tokens expire after 30 minutes. The exp claim is checked on authenticated requests. An expired token produces HTTP 401 with WWW-Authenticate: Bearer."
+    },
+    {
+      "id": "auth-password",
+      "document": "authentication-guide.pdf",
+      "page": 3,
+      "text": "Registration stores only an Argon2id password hash. Login verifies the submitted password with the Argon2 verification API. Plaintext passwords are never stored."
+    },
+    {
+      "id": "auth-ownership",
+      "document": "authentication-guide.pdf",
+      "page": 4,
+      "text": "Knowledge Bases belong to one user. MongoDB queries include both the resource ID and authenticated owner ID. Another user receives the same HTTP 404 as a missing resource."
+    },
+    {
+      "id": "data-mongo",
+      "document": "data-guide.pdf",
+      "page": 1,
+      "text": "MongoDB stores application metadata: users, Knowledge Bases, document records, page-aware text chunks, and completed question-answer history. It does not store embedding vectors in this system."
+    },
+    {
+      "id": "data-vector",
+      "document": "data-guide.pdf",
+      "page": 2,
+      "text": "Qdrant stores 384-dimensional document chunk embeddings and retrieval payload text. Cosine similarity ranks chunks. Server-controlled owner and Knowledge Base filters isolate searches."
+    },
+    {
+      "id": "data-history",
+      "document": "data-guide.pdf",
+      "page": 3,
+      "text": "Ask history is a snapshot of completed questions and validated answers. History is ordered newest first and is not included in future question context. Deleting a source document preserves its historical answer."
+    },
+    {
+      "id": "cloud-iaas",
+      "document": "cloud-guide.pdf",
+      "page": 1,
+      "text": "Infrastructure as a Service supplies virtual machines, networks, and disks. Customers manage operating systems and application software; the provider manages physical infrastructure."
+    },
+    {
+      "id": "cloud-paas",
+      "document": "cloud-guide.pdf",
+      "page": 2,
+      "text": "Platform as a Service supplies a managed application runtime. Developers deploy application code without maintaining the underlying operating system or runtime infrastructure."
+    },
+    {
+      "id": "cloud-saas",
+      "document": "cloud-guide.pdf",
+      "page": 3,
+      "text": "Software as a Service supplies a ready-to-use application over the internet. Users consume the software while the provider manages application updates and infrastructure."
+    },
+    {
+      "id": "storage-original",
+      "document": "storage-guide.pdf",
+      "page": 1,
+      "text": "Original PDFs are stored on local server disk. Server-generated filenames prevent path traversal. MongoDB stores metadata, not PDF binary content. Upload size is limited to 10 MiB."
+    },
+    {
+      "id": "storage-chunks",
+      "document": "storage-guide.pdf",
+      "page": 2,
+      "text": "PDF extraction runs page by page. Each text chunk retains its document, source filename, chunk order, and one-based page numbers. Image-only PDFs without extractable text fail; OCR is not supported."
+    },
+    {
+      "id": "storage-delete",
+      "document": "storage-guide.pdf",
+      "page": 3,
+      "text": "Deleting a document removes its local PDF, MongoDB chunks, and Qdrant vectors. A Knowledge Base containing documents cannot be deleted; delete its documents first."
+    },
+    {
+      "id": "ops-backup",
+      "document": "operations-guide.pdf",
+      "page": 1,
+      "text": "The synthetic North service makes a metadata backup every 24 hours and retains each backup for seven days. Restore drills run on the first Monday of each month."
+    },
+    {
+      "id": "ops-session",
+      "document": "operations-guide.pdf",
+      "page": 2,
+      "text": "The synthetic North dashboard closes an idle browser session after 15 minutes. This interface inactivity timer is different from the JWT access-token expiration setting."
+    },
+    {
+      "id": "ops-key",
+      "document": "operations-guide.pdf",
+      "page": 3,
+      "text": "The synthetic South integration uses API keys that expire after 90 days. API keys identify automation clients and are distinct from user JWT access tokens."
+    },
+    {
+      "id": "ops-backup-south",
+      "document": "operations-guide.pdf",
+      "page": 4,
+      "text": "The synthetic South service makes a metadata backup every six hours and retains backups for fourteen days. North and South have different backup schedules."
+    },
+    {
+      "id": "web-csrf",
+      "document": "web-guide.pdf",
+      "page": 1,
+      "text": "A CSRF token helps protect a browser form from cross-site request forgery. A CSRF token is not a JWT access token and does not verify a JWT signature."
+    },
+    {
+      "id": "web-cache",
+      "document": "web-guide.pdf",
+      "page": 2,
+      "text": "A response cache temporarily reuses previously computed HTTP responses. Cache expiration is not the same as authentication token expiration or backup retention."
+    },
+    {
+      "id": "web-rate",
+      "document": "web-guide.pdf",
+      "page": 3,
+      "text": "The synthetic public status endpoint permits 60 requests per minute per client. This rate limit applies to status checks, not to PDF uploads or question answering."
+    }
+  ]
+}

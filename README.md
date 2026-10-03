@@ -354,3 +354,10 @@ Deleting/reprocessing a supporting document **does not delete or rewrite histori
 History is never read by the retrieval service, context builder, or Gemini provider. Every new question still uses only its own question and current eligible document chunks. There are no history embeddings, history Qdrant points, previous-answer context, follow-up rewriting, conversational memory, chat sessions, streaming, agents, or Phase 11 work.
 
 Verification uses offline MongoDB doubles, fake retrieval/Gemini/Qdrant, and browser API mocks. Run the complete backend tests and `frontend/tests/ask.browser.cjs` plus `frontend/tests/history.browser.cjs` with the existing Playwright setup documented above. Real Atlas persistence, reopening the application, cross-account isolation, and cleanup against the live service remain manual checks.
+
+
+## RAG quality evaluation (Phase 11)
+
+Developer-only evaluation now lives in [backend/evaluation](backend/evaluation/README.md). It includes a versioned synthetic 35-question / 20-chunk benchmark, Hit@1/3/5 and MRR@5, threshold confusion metrics and sweep, category/score distributions, context-budget/source checks, and mocked RAG decision evaluation. Default runs use explicitly authored regression scores; optional cached-model runs use local-only MiniLM and in-memory Qdrant. Neither contacts Gemini, Atlas, or production Qdrant, nor changes Ask history.
+
+The measured local-model baseline retrieves expected evidence well (Hit@1 95.45%, Hit@3/5 100%) but 0.50 has TP/TN/FP/FN = 14/11/2/8 and incomplete multi-page context. Threshold tradeoffs do not justify a production change from this small benchmark: **0.50, top_k=5, and 12000 context characters remain unchanged**. Full metrics, observed weaknesses, commands, machine-readable reports, and limitations are in the evaluation document. No reranking, hybrid/BM25 retrieval, LLM judge, evaluation UI/API, or Phase 12 functionality was added.
