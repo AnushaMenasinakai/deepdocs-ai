@@ -116,7 +116,7 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
     <div role="status" aria-live="polite">{notice && <p className="auth-success">{notice}</p>}</div>
     <DocumentUpload busy={locked || loading || Boolean(loadError)} uploading={busy === 'upload'} error={uploadError} onUpload={mutate} onChange={() => setUploadError('')} />
     <div className="kb-toolbar document-list-heading">
-      <div><h2 ref={heading} tabIndex={-1}>Documents in {base.name}</h2><p className="kb-muted">Original files · Processing status</p></div>
+      <div><h2 ref={heading} tabIndex={-1}>Documents in {base.name}</h2><p className="kb-muted">Original files · Processing status (separate from vector indexing)</p></div>
       <button className="session-button" disabled={locked || loading} onClick={load}>Refresh documents</button>
     </div>
     {deleting && <section className="panel kb-editor kb-delete" aria-labelledby="document-delete-title">

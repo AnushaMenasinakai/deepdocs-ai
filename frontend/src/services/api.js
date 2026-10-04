@@ -231,3 +231,37 @@ async function historyRequest(method, knowledgeBaseId, entryId, signal) {
 
 export const listAskHistory = (knowledgeBaseId, signal) => historyRequest('get', knowledgeBaseId, null, signal)
 export const deleteAskHistory = (knowledgeBaseId, entryId, signal) => historyRequest('delete', knowledgeBaseId, entryId, signal)
+
+
+export async function getDashboardSummary(signal) {
+  let response
+  try {
+    response = await api.get('/api/dashboard/summary', { signal, headers: { Authorization: 'Bearer ' + getAccessToken() } })
+  } catch (error) {
+    if (axios.isCancel(error)) throw error
+    const safe = new Error('Workspace overview is temporarily unavailable. Please try again.')
+    safe.status = error.response?.status
+    throw safe
+  }
+  const data = response.data
+  const counts = ['knowledge_base_count', 'document_count', 'indexed_document_count', 'processing_document_count', 'failed_document_count', 'ask_history_count']
+  if (response.status !== 200 || !data || counts.some(key => !Number.isSafeInteger(data[key]) || data[key] < 0) ||
+      !Array.isArray(data.recent_knowledge_bases) || data.recent_knowledge_bases.length > 5 ||
+      data.recent_knowledge_bases.some(item => !item || typeof item.id !== 'string' || !item.id ||
+        typeof item.name !== 'string' || !item.name.trim() || !Number.isSafeInteger(item.document_count) || item.document_count < 0 ||
+        typeof item.updated_at !== 'string' || !Number.isFinite(Date.parse(item.updated_at)))) {
+    throw new Error('We could not read your workspace overview. Please try again.')
+  }
+  return { ...Object.fromEntries(counts.map(key => [key, data[key]])), recent_knowledge_bases: data.recent_knowledge_bases.map(({id, name, document_count, updated_at}) => ({id, name, document_count, updated_at})) }
+}
+
+export async function getServiceHealth(service, signal) {
+  const paths = { api: '/api/health', database: '/api/health/database', vector: '/api/health/qdrant' }
+  if (!paths[service]) return 'unavailable'
+  try {
+    const response = await api.get(paths[service], { signal, timeout: 7000 })
+    return response.status === 200 && response.data?.status === 'ok' ? 'operational' : 'unavailable'
+  } catch {
+    return 'unavailable'
+  }
+}
