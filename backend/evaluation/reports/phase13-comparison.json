@@ -1,0 +1,6463 @@
+{
+  "primary_threshold": 0.5,
+  "top_k": 5,
+  "context_budget": 12000,
+  "retrieval": {
+    "answerable_count": 22,
+    "unsupported_count": 13,
+    "no_valid_hit_count": 0,
+    "hit_at_1": 0.9545454545454546,
+    "hit_at_3": 1.0,
+    "hit_at_5": 1.0,
+    "mrr": 0.9772727272727273,
+    "all_evidence_at_5": 1.0
+  },
+  "candidates": [
+    {
+      "evidence_threshold": 0.2,
+      "answerability": {
+        "value": 0.5,
+        "tp": 14,
+        "tn": 11,
+        "fp": 2,
+        "fn": 8,
+        "precision": 0.875,
+        "recall": 0.6363636363636364,
+        "f1": 0.7368421052631579
+      },
+      "complete_evidence_count": 14,
+      "answerable_count": 22,
+      "multi_chunk_complete": 4,
+      "multi_chunk_count": 5,
+      "multi_chunk_completeness": 0.8,
+      "average_context_chunks_all_cases": 2.142857142857143,
+      "average_context_chunks_primary_accepted": 4.6875,
+      "maximum_context_chunks": 5,
+      "maximum_context_characters": 1725,
+      "new_required_chunks": 4,
+      "new_non_required_chunks": 51,
+      "new_non_required_on_unsupported": 7,
+      "budget_excluded_count": 0,
+      "provider_eligible_confusion": {
+        "tp": 14,
+        "tn": 11,
+        "fp": 2,
+        "fn": 8
+      },
+      "cases": [
+        {
+          "id": "direct-signature",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1616,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 4,
+          "additional_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "direct-expiry",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1581,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 4,
+          "additional_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "direct-password",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "direct-upload",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 4,
+          "context_characters": 1329,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 2,
+          "additional_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 3,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "direct-backup",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1636,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "data-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "para-signature",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-paas",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 3,
+          "context_characters": 993,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 2,
+          "additional_sources": [
+            {
+              "document": "cloud-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "cloud-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "cloud-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "cloud-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "cloud-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "para-owner",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-ocr",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-history",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "multi-storage",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1698,
+          "budget_excluded_count": 0,
+          "new_required_count": 1,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "data-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 2,
+              "required": true
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "multi-cloud",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "multi-token",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1600,
+          "budget_excluded_count": 0,
+          "new_required_count": 1,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1,
+              "required": true
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "multi-deletion",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1725,
+          "budget_excluded_count": 0,
+          "new_required_count": 1,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 3,
+              "required": true
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "multi-backup",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 4,
+          "context_characters": 1264,
+          "budget_excluded_count": 0,
+          "new_required_count": 1,
+          "new_non_required_count": 2,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 1,
+              "required": true
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "unsupported-refresh",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 5,
+          "context_characters": 1598,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "unsupported-rotation",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 5,
+          "context_characters": 1626,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 4,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "unsupported-region",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unsupported-price",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unsupported-recovery",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-rice",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-bread",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-moon",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-piano",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-bird",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-expiration",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-best",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-safety",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-data",
+          "category": "ambiguous",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-remember",
+          "category": "ambiguous",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "disambig-session",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1601,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 4,
+          "additional_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 4,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 3,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "disambig-api",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1593,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 4,
+          "additional_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 4,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "disambig-south",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1601,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "disambig-csrf",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1614,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 4,
+          "additional_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "disambig-rate",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 4,
+          "context_characters": 1279,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evidence_threshold": 0.25,
+      "answerability": {
+        "value": 0.5,
+        "tp": 14,
+        "tn": 11,
+        "fp": 2,
+        "fn": 8,
+        "precision": 0.875,
+        "recall": 0.6363636363636364,
+        "f1": 0.7368421052631579
+      },
+      "complete_evidence_count": 14,
+      "answerable_count": 22,
+      "multi_chunk_complete": 4,
+      "multi_chunk_count": 5,
+      "multi_chunk_completeness": 0.8,
+      "average_context_chunks_all_cases": 1.9428571428571428,
+      "average_context_chunks_primary_accepted": 4.25,
+      "maximum_context_chunks": 5,
+      "maximum_context_characters": 1725,
+      "new_required_chunks": 4,
+      "new_non_required_chunks": 44,
+      "new_non_required_on_unsupported": 7,
+      "budget_excluded_count": 0,
+      "provider_eligible_confusion": {
+        "tp": 14,
+        "tn": 11,
+        "fp": 2,
+        "fn": 8
+      },
+      "cases": [
+        {
+          "id": "direct-signature",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1616,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 4,
+          "additional_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "direct-expiry",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1581,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 4,
+          "additional_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "direct-password",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "direct-upload",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 3,
+          "context_characters": 1009,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 1,
+          "additional_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "direct-backup",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 4,
+          "context_characters": 1299,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 2,
+          "additional_sources": [
+            {
+              "document": "data-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 3,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "para-signature",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-paas",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 3,
+          "context_characters": 993,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 2,
+          "additional_sources": [
+            {
+              "document": "cloud-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "cloud-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "cloud-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "cloud-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "cloud-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "para-owner",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-ocr",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-history",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "multi-storage",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1698,
+          "budget_excluded_count": 0,
+          "new_required_count": 1,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "data-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 2,
+              "required": true
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "multi-cloud",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "multi-token",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1600,
+          "budget_excluded_count": 0,
+          "new_required_count": 1,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1,
+              "required": true
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "multi-deletion",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1725,
+          "budget_excluded_count": 0,
+          "new_required_count": 1,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 3,
+              "required": true
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "multi-backup",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 636,
+          "budget_excluded_count": 0,
+          "new_required_count": 1,
+          "new_non_required_count": 0,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 1,
+              "required": true
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "unsupported-refresh",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 5,
+          "context_characters": 1598,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "unsupported-rotation",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 5,
+          "context_characters": 1626,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 4,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "unsupported-region",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unsupported-price",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unsupported-recovery",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-rice",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-bread",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-moon",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-piano",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-bird",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-expiration",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-best",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-safety",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-data",
+          "category": "ambiguous",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-remember",
+          "category": "ambiguous",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "disambig-session",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 3,
+          "context_characters": 970,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 2,
+          "additional_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "disambig-api",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1593,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 4,
+          "additional_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 4,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "disambig-south",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1601,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "disambig-csrf",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1614,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 4,
+          "additional_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "disambig-rate",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 3,
+          "context_characters": 966,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 2,
+          "additional_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evidence_threshold": 0.3,
+      "answerability": {
+        "value": 0.5,
+        "tp": 14,
+        "tn": 11,
+        "fp": 2,
+        "fn": 8,
+        "precision": 0.875,
+        "recall": 0.6363636363636364,
+        "f1": 0.7368421052631579
+      },
+      "complete_evidence_count": 14,
+      "answerable_count": 22,
+      "multi_chunk_complete": 4,
+      "multi_chunk_count": 5,
+      "multi_chunk_completeness": 0.8,
+      "average_context_chunks_all_cases": 1.8,
+      "average_context_chunks_primary_accepted": 3.9375,
+      "maximum_context_chunks": 5,
+      "maximum_context_characters": 1725,
+      "new_required_chunks": 4,
+      "new_non_required_chunks": 39,
+      "new_non_required_on_unsupported": 7,
+      "budget_excluded_count": 0,
+      "provider_eligible_confusion": {
+        "tp": 14,
+        "tn": 11,
+        "fp": 2,
+        "fn": 8
+      },
+      "cases": [
+        {
+          "id": "direct-signature",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1616,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 4,
+          "additional_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "direct-expiry",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1581,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 4,
+          "additional_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "direct-password",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "direct-upload",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 3,
+          "context_characters": 1009,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 1,
+          "additional_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "direct-backup",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 636,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            }
+          ]
+        },
+        {
+          "id": "para-signature",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-paas",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 3,
+          "context_characters": 993,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 2,
+          "additional_sources": [
+            {
+              "document": "cloud-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "cloud-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "cloud-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "cloud-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "cloud-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "para-owner",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-ocr",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-history",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "multi-storage",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1698,
+          "budget_excluded_count": 0,
+          "new_required_count": 1,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "data-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 2,
+              "required": true
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "multi-cloud",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "multi-token",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1600,
+          "budget_excluded_count": 0,
+          "new_required_count": 1,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1,
+              "required": true
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "multi-deletion",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1725,
+          "budget_excluded_count": 0,
+          "new_required_count": 1,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 3,
+              "required": true
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "multi-backup",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 636,
+          "budget_excluded_count": 0,
+          "new_required_count": 1,
+          "new_non_required_count": 0,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 1,
+              "required": true
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "unsupported-refresh",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 5,
+          "context_characters": 1598,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "unsupported-rotation",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 5,
+          "context_characters": 1626,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 4,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "unsupported-region",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unsupported-price",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unsupported-recovery",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-rice",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-bread",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-moon",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-piano",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-bird",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-expiration",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-best",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-safety",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-data",
+          "category": "ambiguous",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-remember",
+          "category": "ambiguous",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "disambig-session",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 650,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 1,
+          "additional_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "disambig-api",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1593,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 4,
+          "additional_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 4,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "disambig-south",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1601,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "disambig-csrf",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 4,
+          "context_characters": 1285,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "disambig-rate",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 637,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 1,
+          "additional_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evidence_threshold": 0.35,
+      "answerability": {
+        "value": 0.5,
+        "tp": 14,
+        "tn": 11,
+        "fp": 2,
+        "fn": 8,
+        "precision": 0.875,
+        "recall": 0.6363636363636364,
+        "f1": 0.7368421052631579
+      },
+      "complete_evidence_count": 13,
+      "answerable_count": 22,
+      "multi_chunk_complete": 3,
+      "multi_chunk_count": 5,
+      "multi_chunk_completeness": 0.6,
+      "average_context_chunks_all_cases": 1.457142857142857,
+      "average_context_chunks_primary_accepted": 3.1875,
+      "maximum_context_chunks": 5,
+      "maximum_context_characters": 1600,
+      "new_required_chunks": 3,
+      "new_non_required_chunks": 28,
+      "new_non_required_on_unsupported": 6,
+      "budget_excluded_count": 0,
+      "provider_eligible_confusion": {
+        "tp": 14,
+        "tn": 11,
+        "fp": 2,
+        "fn": 8
+      },
+      "cases": [
+        {
+          "id": "direct-signature",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 4,
+          "context_characters": 1296,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "direct-expiry",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 4,
+          "context_characters": 1278,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "direct-password",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "direct-upload",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 654,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "direct-backup",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 636,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            }
+          ]
+        },
+        {
+          "id": "para-signature",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-paas",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 656,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 1,
+          "additional_sources": [
+            {
+              "document": "cloud-guide.pdf",
+              "page": 3,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "cloud-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "cloud-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "para-owner",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-ocr",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-history",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "multi-storage",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 4,
+          "context_characters": 1360,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "data-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 3,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "multi-cloud",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "multi-token",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 5,
+          "context_characters": 1600,
+          "budget_excluded_count": 0,
+          "new_required_count": 1,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1,
+              "required": true
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "multi-deletion",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 4,
+          "context_characters": 1378,
+          "budget_excluded_count": 0,
+          "new_required_count": 1,
+          "new_non_required_count": 2,
+          "additional_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 3,
+              "required": true
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "multi-backup",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 636,
+          "budget_excluded_count": 0,
+          "new_required_count": 1,
+          "new_non_required_count": 0,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 1,
+              "required": true
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "unsupported-refresh",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 5,
+          "context_characters": 1598,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "unsupported-rotation",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 4,
+          "context_characters": 1313,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "unsupported-region",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unsupported-price",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unsupported-recovery",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-rice",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-bread",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-moon",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-piano",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-bird",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-expiration",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-best",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-safety",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-data",
+          "category": "ambiguous",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-remember",
+          "category": "ambiguous",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "disambig-session",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 330,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "disambig-api",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 4,
+          "context_characters": 1264,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 4,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "disambig-south",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 3,
+          "context_characters": 951,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 1,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "disambig-csrf",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 3,
+          "context_characters": 972,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 2,
+          "additional_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "disambig-rate",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 637,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 1,
+          "additional_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evidence_threshold": 0.4,
+      "answerability": {
+        "value": 0.5,
+        "tp": 14,
+        "tn": 11,
+        "fp": 2,
+        "fn": 8,
+        "precision": 0.875,
+        "recall": 0.6363636363636364,
+        "f1": 0.7368421052631579
+      },
+      "complete_evidence_count": 11,
+      "answerable_count": 22,
+      "multi_chunk_complete": 1,
+      "multi_chunk_count": 5,
+      "multi_chunk_completeness": 0.2,
+      "average_context_chunks_all_cases": 1.0285714285714285,
+      "average_context_chunks_primary_accepted": 2.25,
+      "maximum_context_chunks": 4,
+      "maximum_context_characters": 1278,
+      "new_required_chunks": 1,
+      "new_non_required_chunks": 15,
+      "new_non_required_on_unsupported": 3,
+      "budget_excluded_count": 0,
+      "provider_eligible_confusion": {
+        "tp": 14,
+        "tn": 11,
+        "fp": 2,
+        "fn": 8
+      },
+      "cases": [
+        {
+          "id": "direct-signature",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 652,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 1,
+          "additional_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "direct-expiry",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 4,
+          "context_characters": 1278,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 3,
+          "additional_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "direct-password",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "direct-upload",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 654,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "direct-backup",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 636,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            }
+          ]
+        },
+        {
+          "id": "para-signature",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-paas",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 331,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "cloud-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "para-owner",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-ocr",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-history",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "multi-storage",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 3,
+          "context_characters": 1040,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 2,
+          "additional_sources": [
+            {
+              "document": "data-guide.pdf",
+              "page": 1,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "data-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "multi-cloud",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "multi-token",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 3,
+          "context_characters": 949,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 2,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "multi-deletion",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 3,
+          "context_characters": 1013,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 2,
+          "additional_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "multi-backup",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 636,
+          "budget_excluded_count": 0,
+          "new_required_count": 1,
+          "new_non_required_count": 0,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 1,
+              "required": true
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "unsupported-refresh",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 4,
+          "context_characters": 1278,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 2,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "unsupported-rotation",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 2,
+          "context_characters": 664,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 1,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "unsupported-region",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unsupported-price",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unsupported-recovery",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-rice",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-bread",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-moon",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-piano",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-bird",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-expiration",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-best",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-safety",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-data",
+          "category": "ambiguous",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-remember",
+          "category": "ambiguous",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "disambig-session",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 330,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "disambig-api",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 636,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 1,
+          "additional_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "disambig-south",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 636,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "disambig-csrf",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 652,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 1,
+          "additional_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "disambig-rate",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 317,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evidence_threshold": 0.45,
+      "answerability": {
+        "value": 0.5,
+        "tp": 14,
+        "tn": 11,
+        "fp": 2,
+        "fn": 8,
+        "precision": 0.875,
+        "recall": 0.6363636363636364,
+        "f1": 0.7368421052631579
+      },
+      "complete_evidence_count": 11,
+      "answerable_count": 22,
+      "multi_chunk_complete": 1,
+      "multi_chunk_count": 5,
+      "multi_chunk_completeness": 0.2,
+      "average_context_chunks_all_cases": 0.6571428571428571,
+      "average_context_chunks_primary_accepted": 1.4375,
+      "maximum_context_chunks": 3,
+      "maximum_context_characters": 963,
+      "new_required_chunks": 1,
+      "new_non_required_chunks": 2,
+      "new_non_required_on_unsupported": 0,
+      "budget_excluded_count": 0,
+      "provider_eligible_confusion": {
+        "tp": 14,
+        "tn": 11,
+        "fp": 2,
+        "fn": 8
+      },
+      "cases": [
+        {
+          "id": "direct-signature",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 349,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "direct-expiry",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 3,
+          "context_characters": 963,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 2,
+          "additional_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 2,
+              "required": false
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2,
+              "required": false
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "direct-password",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "direct-upload",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 654,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "direct-backup",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 636,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            }
+          ]
+        },
+        {
+          "id": "para-signature",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-paas",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 331,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "cloud-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "para-owner",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-ocr",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-history",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "multi-storage",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 338,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "multi-cloud",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "multi-token",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 321,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "multi-deletion",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 321,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "multi-backup",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 636,
+          "budget_excluded_count": 0,
+          "new_required_count": 1,
+          "new_non_required_count": 0,
+          "additional_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 1,
+              "required": true
+            }
+          ],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "unsupported-refresh",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 2,
+          "context_characters": 634,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "unsupported-rotation",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 1,
+          "context_characters": 349,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "unsupported-region",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unsupported-price",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unsupported-recovery",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-rice",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-bread",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-moon",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-piano",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-bird",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-expiration",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-best",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-safety",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-data",
+          "category": "ambiguous",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-remember",
+          "category": "ambiguous",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "disambig-session",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 330,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "disambig-api",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 316,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "disambig-south",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 636,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "disambig-csrf",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 304,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "disambig-rate",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 317,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evidence_threshold": 0.5,
+      "answerability": {
+        "value": 0.5,
+        "tp": 14,
+        "tn": 11,
+        "fp": 2,
+        "fn": 8,
+        "precision": 0.875,
+        "recall": 0.6363636363636364,
+        "f1": 0.7368421052631579
+      },
+      "complete_evidence_count": 10,
+      "answerable_count": 22,
+      "multi_chunk_complete": 0,
+      "multi_chunk_count": 5,
+      "multi_chunk_completeness": 0.0,
+      "average_context_chunks_all_cases": 0.5714285714285714,
+      "average_context_chunks_primary_accepted": 1.25,
+      "maximum_context_chunks": 2,
+      "maximum_context_characters": 654,
+      "new_required_chunks": 0,
+      "new_non_required_chunks": 0,
+      "new_non_required_on_unsupported": 0,
+      "budget_excluded_count": 0,
+      "provider_eligible_confusion": {
+        "tp": 14,
+        "tn": 11,
+        "fp": 2,
+        "fn": 8
+      },
+      "cases": [
+        {
+          "id": "direct-signature",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 349,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "direct-expiry",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 321,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "direct-password",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "direct-upload",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 654,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "web-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "direct-backup",
+          "category": "direct",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 636,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            }
+          ]
+        },
+        {
+          "id": "para-signature",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-paas",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 331,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "cloud-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "para-owner",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-ocr",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "para-history",
+          "category": "paraphrase",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "multi-storage",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 338,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "multi-cloud",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "multi-token",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 321,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "multi-deletion",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 321,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "storage-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "multi-backup",
+          "category": "multi_chunk",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 316,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            }
+          ]
+        },
+        {
+          "id": "unsupported-refresh",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 2,
+          "context_characters": 634,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 2
+            },
+            {
+              "document": "authentication-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "unsupported-rotation",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": true,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 1,
+          "context_characters": 349,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "authentication-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "unsupported-region",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unsupported-price",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unsupported-recovery",
+          "category": "related_unsupported",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-rice",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-bread",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-moon",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-piano",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "unrelated-bird",
+          "category": "unrelated",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-expiration",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-best",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-safety",
+          "category": "ambiguous",
+          "answerable": false,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": false,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-data",
+          "category": "ambiguous",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "ambiguous-remember",
+          "category": "ambiguous",
+          "answerable": true,
+          "primary_passed": false,
+          "complete": false,
+          "all_evidence_after_validation": true,
+          "context_count": 0,
+          "context_characters": 2,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": []
+        },
+        {
+          "id": "disambig-session",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 330,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 2
+            }
+          ]
+        },
+        {
+          "id": "disambig-api",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 316,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 3
+            }
+          ]
+        },
+        {
+          "id": "disambig-south",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 2,
+          "context_characters": 636,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "operations-guide.pdf",
+              "page": 4
+            },
+            {
+              "document": "operations-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "disambig-csrf",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 304,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "id": "disambig-rate",
+          "category": "disambiguation",
+          "answerable": true,
+          "primary_passed": true,
+          "complete": true,
+          "all_evidence_after_validation": true,
+          "context_count": 1,
+          "context_characters": 317,
+          "budget_excluded_count": 0,
+          "new_required_count": 0,
+          "new_non_required_count": 0,
+          "additional_sources": [],
+          "context_sources": [
+            {
+              "document": "web-guide.pdf",
+              "page": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "baseline_evidence_threshold": 0.5,
+  "selection_gates": {
+    "answerability_unchanged": true,
+    "evidence_improved": true,
+    "multi_chunk_improved": true,
+    "budget_respected": true,
+    "weak_only_never_accepted": true
+  },
+  "selected_evidence_threshold": 0.3,
+  "loss_diagnosis": {
+    "complete_after_authoritative_validation": 22,
+    "complete_after_baseline_context": 10,
+    "answerable_primary_rejections": 8,
+    "budget_exclusions": 0
+  },
+  "selection_reason": "0.30 is the highest tested threshold preserving maximum complete evidence (14/22, 4/5 multi). Higher thresholds lose evidence; lower thresholds add only non-required inclusions. Gate acceptance is stable, not a guarantee of answer correctness.",
+  "dataset_version": "1.0.0",
+  "dataset_sha256": "fda9eca10cd07f40c3a8edef966b423006c851604c0042a9d33e286f2db1902a",
+  "measurement": "Replay of committed measured MiniLM rankings (rounded to 8 decimals), using synthetic corpus text",
+  "baseline_text_sha256": {
+    "local-model.json": "e24e6ceff93f8ea3e2126b9e6d3d8791c0b949126c9cc69e8d342524d189010c",
+    "local-model.md": "8fcdff4f34e7358406b392efd4943dbeef8274bb96e8797da54a3a85954389ca",
+    "fixture.json": "53fb503c48dc1bef518114f13acb268dbc5a998c215f8312593fca34f77250ca",
+    "fixture.md": "efe661a2f2c55c84f16388374db764c9b9e88413d20e00bbaa6d76d89fc030cc"
+  }
+}

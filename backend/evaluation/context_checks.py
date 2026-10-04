@@ -12,14 +12,14 @@ def chunk(name, text, score=.8, page=1):
 
 def context_probes():
     first, second = chunk("first", "Complete evidence "*30, .9), chunk("second", "Another evidence passage "*30, .8, 2)
-    full = build_context([first, second], RAGSettings())
+    full = build_context([first, second], RAGSettings(min_evidence_score=.50))
     exact = len(full.serialized)
-    at_boundary = build_context([first, second], RAGSettings(max_context_chars=exact))
-    below = build_context([first, second], RAGSettings(max_context_chars=exact-1))
+    at_boundary = build_context([first, second], RAGSettings(max_context_chars=exact, min_evidence_score=.50))
+    below = build_context([first, second], RAGSettings(max_context_chars=exact-1, min_evidence_score=.50))
     duplicate_page = chunk("same-page", "Additional evidence on the first page", .7)
     oversized = chunk("oversized", "x"*13000, .95)
     low = chunk("low", "Excluded weak evidence", .49, 3)
-    context = build_context([oversized, first, duplicate_page, low, second], RAGSettings())
+    context = build_context([oversized, first, duplicate_page, low, second], RAGSettings(min_evidence_score=.50))
     sources = supporting_sources(context)
     invalid = {**first, "page_start": 0}
     return {
@@ -31,7 +31,7 @@ def context_probes():
         "complete_text_preserved": context.chunks[0]["text"] == first["text"],
         "duplicate_page_deduplicated": len(sources) == 2,
         "sources_only_included_pages": [s["page_start"] for s in sources] == [1, 2],
-        "invalid_provenance_excluded": not build_context([invalid], RAGSettings()).chunks,
-        "duplicate_chunk_excluded": len(build_context([first, first], RAGSettings()).chunks) == 1,
-        "empty_context": not build_context([], RAGSettings()).chunks,
+        "invalid_provenance_excluded": not build_context([invalid], RAGSettings(min_evidence_score=.50)).chunks,
+        "duplicate_chunk_excluded": len(build_context([first, first], RAGSettings(min_evidence_score=.50)).chunks) == 1,
+        "empty_context": not build_context([], RAGSettings(min_evidence_score=.50)).chunks,
     }

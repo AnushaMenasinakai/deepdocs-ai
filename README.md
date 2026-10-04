@@ -387,3 +387,43 @@ The current teal/neutral layout, semantic stat labels, visible text statuses, ke
 Offline verification: run `python -m pytest backend/tests -v` and `python -m pytest backend/tests/test_evaluation.py -v`. With the existing frontend running on port 5176, run `node frontend/tests/dashboard.browser.cjs` (set `PLAYWRIGHT_MODULE` to an existing Playwright installation if needed). It intercepts all API calls, checks errors/owner-auth handling/navigation, and verifies 1440/768/390 widths. Screenshots are ignored under `.verification`. Run the existing Ask/history and auth/KB/Documents regression checks plus `npm --prefix frontend run build` as well. No new dependencies are required.
 
 Phase 11 baseline reports, relevance threshold **0.50**, embedding model, top-k **5**, context budget **12000**, prompts, and retrieval behavior remain unchanged. No retrieval optimization or Phase 13 functionality is included. Live manual verification should compare summary counts and recent KBs against the signed-in user's real records, verify API/database/vector health, exercise quick actions, and check a new account and mobile layout. Offline tests do not replace an Atlas/Qdrant verification.
+
+## Evidence-preserving context policy (Phase 13)
+
+Phase 13 changes only RAG context selection. Search ranking, owner/Knowledge Base/generation filtering, MongoDB authority checks, embedding model, Gemini model/prompt, source mapping, and history persistence are unchanged. The public search endpoint has no secondary threshold.
+
+Diagnosis from the preserved Phase 11 measured rankings: all required evidence for all 22 answerable cases is present **after authoritative retrieval validation** in top five. Baseline context retains complete evidence for only 10/22. Eight answerable questions fail the primary 0.50 gate; four others pass that gate but lose a required lower-scoring page. No benchmark chunk is excluded by the 12000-character budget. Of five multi-chunk questions, four lose secondary evidence and one fails primary relevance. This identifies filtering, rather than top-k/MongoDB validation/context size, as the observed bottleneck in this synthetic corpus. It does not establish that every real PDF has the same bottleneck.
+
+The new policy separates two decisions:
+
+1. **Primary relevance:** the strongest valid hit must score at least `RAG_MIN_RELEVANCE_SCORE=0.50`. Otherwise, no Gemini call occurs, regardless of secondary scores.
+2. **Evidence retention:** after that gate passes, valid top-five chunks scoring at least `RAG_MIN_EVIDENCE_SCORE=0.30` may enter context. Existing relevance order, complete-chunk inclusion, 12000-character serialized budget, oversized-chunk skipping, deduplication, and source derivation remain in force. If nothing fits, abstain.
+
+Configuration enforces `0 <= evidence <= primary <= 1`, rejects non-finite/invalid values with the existing sanitized configuration failure, and reads environment values only on the backend. The safe `.env.example` includes the new setting; real `.env` is not modified. To reproduce the old policy, explicitly set evidence to 0.50. Primary remains 0.50, top-k remains 5, context budget remains 12000, and the model remains `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions).
+
+[Phase 13 comparison](backend/evaluation/reports/phase13-comparison.md) and its [JSON](backend/evaluation/reports/phase13-comparison.json) cover secondary thresholds 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, and 0.50. **0.30 is selected as the highest tested threshold retaining the maximum recovered evidence:** 14/22 complete answerable cases (63.64%, previously 45.45%) and 4/5 complete multi-chunk cases (80%, previously 0%). Lower values add non-required passages without recovering more required evidence. At 0.35 completeness falls to 13/22 and 3/5. Ranking remains Hit@1 95.45%, Hit@3/5 100%, MRR 0.97727. Every candidate has unchanged primary decisions TP/TN/FP/FN 14/11/2/8, precision 0.875, recall 0.63636, F1 0.73684.
+
+Tradeoffs are visible rather than hidden: selected context grows from 1.25 to 3.9375 chunks per primary-accepted question (maximum 2 to 5), with four recovered required chunk inclusions and **39 additional non-required inclusions** across the benchmark. Seven of those extras enter the two already falsely accepted unsupported cases. Non-required means outside the case's expected supporting pages, not necessarily harmful. PDF provenance is benign background for a storage-location question; South API-key expiry is potentially misleading for a JWT signing-secret rotation question. These examples are classified from corpus meaning, not scores alone. Primary false positives staying constant does **not** prove that Gemini's unsupported-answer rate stays constant; grounded provider abstention remains necessary. No LLM judge or live-answer claim is made.
+
+Historical reports `local-model.json/.md` and `fixture.json/.md` are preserved byte-for-byte. The original runner and context probes now explicitly pin the historical 0.50/0.50 policy so changing application defaults cannot rewrite the baseline interpretation. Phase 13 has separate reports and deterministic regression gates. Replay reconstructs unique synthetic document/page chunks using the committed measured scores rounded to eight decimals and checks the corpus version/digest. A fresh cached MiniLM CPU + in-memory Qdrant run also reproduced the baseline and candidate results; it used no Cloud services or downloads.
+
+Run from the repository root using the existing backend environment:
+
+```powershell
+python -B backend/evaluation/phase13.py
+python -m pytest backend/tests -v
+python -m pytest backend/tests/test_evaluation.py backend/tests/test_evidence_policy.py -v
+```
+
+Optional cached-model confirmation (explicit only, offline weights required, fails without downloads):
+
+```powershell
+python -B backend/evaluation/runner.py --mode local-model --output .verification/phase13-local-check
+python -B backend/evaluation/phase13.py --rankings-report .verification/phase13-local-check/local-model.json --output .verification/phase13-fresh-comparison
+```
+
+The first command writes only the new Phase 13 comparison files by default; it never replaces the four historical baseline artifacts. Ordinary tests and comparison replay require no model inference, internet, Gemini, Qdrant Cloud, or Atlas. Evaluation remains developer tooling with no public endpoint. Query vectors and prompts are not returned or persisted by this change.
+
+Supporting sources still represent only the final context supplied to Gemini, not sentence-level attribution. New Ask history saves the actual final source snapshot; old entries are neither rewritten nor used as context. Frontend production code is unchanged and supports additional source cards already.
+
+Remaining limitations: eight answerable primary rejections remain, including the multi-cloud case. The earlier three-topic manual question may still abstain if its strongest score is below 0.50; this policy cannot safely promise to fix it. Re-test the same direct JWT, paraphrased JWT, unsupported key-rotation, unrelated irrigation, and three-topic questions against the real application. In particular, confirm grounded abstention on key rotation despite the known benchmark overlap. Use held-out documents to evaluate distractor impact before claiming general improvement. Query decomposition is a possible next experiment, not implemented; current ranking gives no immediate reason to add reranking or hybrid/BM25. No Phase 14 work is included.

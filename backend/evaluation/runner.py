@@ -25,7 +25,8 @@ from rag import answer_question, supporting_sources
 async def evaluate(mode="fixture"):
     version, chunks, cases, fixtures = load_dataset()
     rankings, dimension = await retrieve_dataset(chunks, cases, fixtures, mode)
-    settings = RAGSettings()  # Code defaults only; never read backend/.env.
+    settings = RAGSettings(min_relevance_score=0.50, min_evidence_score=0.50,
+                           max_context_chars=12000, top_k=5)  # Historical Phase 11 policy; no .env.
     details, call_counts = [], {"tp": 0, "tn": 0, "fp": 0, "fn": 0}
     for case in cases:
         hits = rankings[case["id"]]

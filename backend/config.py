@@ -176,6 +176,7 @@ class RAGSettings:
     min_relevance_score: float = 0.50
     max_context_chars: int = 12000
     top_k: int = 5
+    min_evidence_score: float = 0.30
 
 
 def load_rag_settings() -> RAGSettings:
@@ -184,9 +185,11 @@ def load_rag_settings() -> RAGSettings:
         values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
         score = float(values.get("RAG_MIN_RELEVANCE_SCORE", "0.50"))
         budget = int(values.get("RAG_MAX_CONTEXT_CHARS", "12000"))
-        if not math.isfinite(score) or not 0 <= score <= 1 or not 1000 <= budget <= 30000:
+        evidence = float(values.get("RAG_MIN_EVIDENCE_SCORE", "0.30"))
+        if (not math.isfinite(score) or not math.isfinite(evidence)
+                or not 0 <= evidence <= score <= 1 or not 1000 <= budget <= 30000):
             raise ValueError
-        return RAGSettings(score, budget)
+        return RAGSettings(score, budget, min_evidence_score=evidence)
     except (OSError, UnicodeError, TypeError, ValueError):
         raise ConfigurationError("Invalid question-answering configuration.") from None
 

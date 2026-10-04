@@ -18,6 +18,9 @@ class Context:
 def build_context(results, settings):
     if not isinstance(results, list):
         raise RAGFailure("Retrieval data is unavailable.")
+    evidence_threshold = settings.min_evidence_score
+    if not 0 <= evidence_threshold <= settings.min_relevance_score <= 1:
+        raise RAGFailure("Question-answering configuration is unavailable.")
     valid = []
     for value in results[:settings.top_k]:
         if not isinstance(value, dict):
@@ -26,7 +29,7 @@ def build_context(results, settings):
         if type(score) not in (int, float):
             continue
         try:
-            if not math.isfinite(score) or not settings.min_relevance_score <= score <= 1:
+            if not math.isfinite(score) or not evidence_threshold <= score <= 1:
                 continue
         except OverflowError:
             continue
@@ -44,8 +47,16 @@ def build_context(results, settings):
             continue  # Public references must be filenames, never filesystem paths.
         record = {key: value[key] for key in
                   ("document_id", "chunk_id", "source_filename", "page_start", "page_end", "text")}
+        try:
+            json.dumps(record, ensure_ascii=False).encode("utf-8")
+        except UnicodeError:
+            continue
         valid.append((score, record))
     valid.sort(key=lambda pair: -pair[0])  # Stable ties preserve retrieval ordering.
+    # Only fully validated evidence may establish primary relevance. Secondary
+    # hits cannot open the gate, even when they would fit the context budget.
+    if not valid or valid[0][0] < settings.min_relevance_score:
+        return Context("[]", ())
     selected, seen = [], set()
     serialized = "[]"
     for _, record in valid:
