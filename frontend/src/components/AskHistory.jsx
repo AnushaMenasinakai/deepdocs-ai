@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { listAskHistory, deleteAskHistory } from '../services/api.js'
-import SupportingSources from './SupportingSources.jsx'
+import AnswerContent from './AnswerContent.jsx'
 
 export default function AskHistory({ knowledgeBaseId, revision }) {
   const { logout } = useAuth()
@@ -79,8 +79,9 @@ export default function AskHistory({ knowledgeBaseId, revision }) {
       {items.map(item => <li className="panel history-item" key={item.id}>
         <details>
           <summary><span className="history-question">{item.question}</span><span className="history-meta"><span>{item.status === 'answered' ? 'Answered' : 'Insufficient context'}</span><time dateTime={item.created_at}>{new Date(item.created_at).toLocaleString()}</time></span></summary>
-          <div className="history-answer"><p className="small-label">SAVED ANSWER</p><p className="answer-text">{item.answer}</p>
-            {!!item.sources.length && <><p className="kb-muted history-snapshot-note">Historical snapshot: these source documents may have changed or been deleted.</p><SupportingSources sources={item.sources} /></>}
+          <div className="history-answer"><p className="small-label">SAVED ANSWER</p>
+            {!!item.sources.length && <p className="kb-muted history-snapshot-note">Historical snapshot: these source documents may have changed or been deleted.</p>}
+            <AnswerContent result={item} />
           </div>
         </details>
         <button className="session-button kb-delete-link" disabled={busy} aria-label={'Delete previous question: ' + item.question}

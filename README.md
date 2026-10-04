@@ -427,3 +427,57 @@ The first command writes only the new Phase 13 comparison files by default; it n
 Supporting sources still represent only the final context supplied to Gemini, not sentence-level attribution. New Ask history saves the actual final source snapshot; old entries are neither rewritten nor used as context. Frontend production code is unchanged and supports additional source cards already.
 
 Remaining limitations: eight answerable primary rejections remain, including the multi-cloud case. The earlier three-topic manual question may still abstain if its strongest score is below 0.50; this policy cannot safely promise to fix it. Re-test the same direct JWT, paraphrased JWT, unsupported key-rotation, unrelated irrigation, and three-topic questions against the real application. In particular, confirm grounded abstention on key rotation despite the known benchmark overlap. Use held-out documents to evaluate distractor impact before claiming general improvement. Query decomposition is a possible next experiment, not implemented; current ranking gives no immediate reason to add reranking or hybrid/BM25. No Phase 14 work is included.
+
+
+## Validated claim citations (Phase 14)
+
+Phase 14 supersedes the context-only source semantics described in the earlier Phase 8–13 sections for **new answers**. It preserves their retrieval, ownership, failure, and history behavior. No package/configuration change is required: primary relevance stays **0.50**, secondary evidence **0.30**, top-k **5**, context budget **12000**, MiniLM **384 dimensions**, and the existing Gemini model/SDK remain unchanged. Semantic `/search` is unchanged. Phase 11/13 committed reports remain historical artifacts.
+
+After the existing context builder has selected complete eligible chunks within its budget, `rag_citations.citation_context` assigns request-local integer IDs 1–5 in first-included order. Exact `(document_id, page_start, page_end)` matches share an ID; filenames alone never establish identity. Adjacent/overlapping but unequal ranges remain separate. Internally the mapping retains the included chunk IDs. The Gemini projection contains only `citation_id`, `source_filename`, `page_start`, `page_end`, and original `text`. It removes document/chunk IDs rather than enlarging the selected context; its serialized length cannot exceed the already-budgeted original. There is no second selection or extra evidence allowance.
+
+The existing lazy Gemini provider requests strict structured JSON:
+
+```json
+{"supported":true,"claims":[{"text":"The server verifies the token signature.","citation_ids":[1]}]}
+```
+
+The server accepts 1–12 short claims for a supported answer, each with nonblank text and 1–5 integer references. Booleans, numeric strings, unknown/out-of-map IDs, unexpected fields, empty claims, missing citations, malformed JSON, blocked/truncated output, and excessive lengths fail safely. Exact repeated IDs within a claim normalize in first-occurrence order; using the same ID in different claims is valid. The public plain answer joins the trimmed claim texts with two newlines and retains the **4000-character total limit**, including separators. A model cannot supply or overwrite source objects, filenames/pages/URLs as citation metadata. No inline-marker parser trusts model prose.
+
+`POST /api/knowledge-bases/{knowledge_base_id}/ask` still accepts only the existing question body. Successful responses add versioned structured fields:
+
+```json
+{
+  "status": "answered",
+  "answer": "The server verifies the token signature.",
+  "retrieved_chunk_count": 2,
+  "citation_version": 1,
+  "claims": [{"text":"The server verifies the token signature.","citation_ids":[1]}],
+  "sources": [{"citation_id":1,"document_id":"507f1f77bcf86cd799439011","source_filename":"guide.pdf","page_start":1,"page_end":1}]
+}
+```
+
+`retrieved_chunk_count` continues to count chunks actually supplied to the provider, **not** source cards or claims. `sources` contains only supplied page references used by validated claims, in context order. Unused sources are omitted without renumbering, so a valid answer may cite `[2]` without `[1]`. All public provenance is resolved from the server map, never model-generated metadata. No owner IDs, internal chunk IDs, vectors, scores, paths, prompts, or credentials are added to the response.
+
+Primary-gate rejection, empty/oversized unusable context, and genuine provider abstention retain the deterministic `insufficient_context` message, with `citation_version:1`, `claims:[]`, `sources:[]`. Pre-provider rejection has count 0; a provider abstention retains the supplied count in the current response and the existing history policy stores count 0. A provider must return `supported:false, claims:[]` to abstain. Invalid citations are **503 service failures**, not silent citation dropping, fabricated replacements, legacy fallback, or insufficient-context answers. They create no history and cause no automatic generation retry. Existing provider timeout, blocked/empty output, safe error handling, and history-persistence-before-success policy continue.
+
+New `ask_history` entries snapshot version 1, deterministic answer, claims, and trusted cited sources alongside the existing fields. No migration or rewriting occurs. Missing version means legacy version 0: old answer text and context-only sources remain unchanged, no claim attribution is inferred. History reads expose empty legacy claims and optional null source IDs; malformed version-1 records fail with sanitized history errors instead of downgrading. Deletion, owner/KB isolation, snapshot behavior after document deletion, and exclusion of history from retrieval/Gemini context remain unchanged.
+
+The shared React `AnswerContent` renders current and historical answers as text. Version-1 claims have accessible numbered buttons beside them; each button focuses its matching numbered page card within that answer instance. Unique React IDs isolate current answers and multiple open history entries. No HTML/Markdown execution, model-generated links, PDF viewer, downloads, or page highlighting is introduced. Legacy records keep the context-only explanation. Source cards themselves remain non-clickable snapshots. The API parser validates version, claim/source membership, unique mappings, page ranges, counts, and deterministic answer agreement before rendering; malformed version-1 responses use existing safe error states. Existing cancellation, loading animation/reduced motion, history refresh/delete, and KB switching behavior are preserved.
+
+**Citation limitation:** a citation verifies that the referenced page was part of validated context supplied to the model and was selected by the model for that claim. It does **not** independently prove semantic entailment or factual correctness. A valid ID can still be attached to a poorly supported claim. Prompt instructions treat source text as untrusted data, prohibit document instructions from redefining IDs, and require grounded abstention; these are defenses, not a semantic proof or absolute prompt-injection guarantee. There is no LLM judge, conversation memory, retrieval optimization, or Phase 15 work.
+
+Offline verification commands (from the repository root, using the existing environment):
+
+```powershell
+.\backend\.venv\Scripts\python.exe -B -m pytest backend/tests -v -p no:cacheprovider
+.\backend\.venv\Scripts\python.exe -B -m pytest backend/tests/test_citations.py backend/tests/test_evaluation.py backend/tests/test_evidence_policy.py -v -p no:cacheprovider
+npm.cmd --prefix frontend run build
+# With the frontend already running on 127.0.0.1:5176 and an existing Playwright installation:
+node frontend/tests/citations.browser.cjs
+node frontend/tests/ask.browser.cjs
+node frontend/tests/history.browser.cjs
+```
+
+Browser scripts accept `PLAYWRIGHT_MODULE` and `FRONTEND_TEST_URL`; all backend/provider responses are mocked. Tests never need Gemini, Atlas, Cloud Qdrant, or model downloads. Synthetic screenshots remain ignored under `.verification`.
+
+Manual live verification remains necessary: repeat the direct JWT, paraphrased JWT, unsupported signing-key rotation, unrelated irrigation, and three-topic JWT/MongoDB/cloud questions. Compare each cited claim against the actual PDF page text, especially multi-source claims. Verify new history after reload, an old pre-citation record, history deletion, keyboard focus, and mobile rendering. Live response reliability under the unchanged 1024-output-token cap and semantic accuracy are not established by mocked tests; truncated structured responses fail safely. Do not use an online provider merely to run regressions.

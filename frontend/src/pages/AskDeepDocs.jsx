@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import Header from '../components/Header.jsx'
 import Icon from '../components/Icon.jsx'
 import AskHistory from '../components/AskHistory.jsx'
-import SupportingSources from '../components/SupportingSources.jsx'
+import AnswerContent from '../components/AnswerContent.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { askKnowledgeBase, listKnowledgeBases } from '../services/api.js'
 
@@ -65,8 +65,7 @@ function QuestionForm({ base, refreshBases }) {
       {result && <section className="panel ask-answer" aria-labelledby="answer-title">
         <p className="eyebrow">{result.status === 'answered' ? 'FROM YOUR DOCUMENTS' : 'MORE CONTEXT NEEDED'}</p>
         <h2 id="answer-title">{result.status === 'answered' ? 'Answer' : 'Not enough relevant information'}</h2>
-        <p className="answer-text">{result.answer}</p>
-        {result.status === 'answered' && <SupportingSources sources={result.sources} />}
+        <AnswerContent result={result} />
       </section>}
     </div>
     <AskHistory knowledgeBaseId={base.id} revision={historyRevision} />

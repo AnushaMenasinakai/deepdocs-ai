@@ -31,7 +31,10 @@ async def evaluate(mode="fixture"):
     for case in cases:
         hits = rankings[case["id"]]
         context = build_context(hits, settings)
-        provider = SimpleNamespace(answer=AsyncMock(return_value="Synthetic provider response for decision testing only."))
+        async def generated(question, supplied):
+            return [{"text": "Synthetic provider response for decision testing only.",
+                     "citation_ids": [s.citation_id for s in supplied.sources]}]
+        provider = SimpleNamespace(answer=AsyncMock(side_effect=generated))
         with patch("retrieval.search_chunks", AsyncMock(return_value=hits)), patch("rag.get_gemini_provider", return_value=provider):
             result = await answer_question(None, None, None, case["question"], EmbeddingSettings(), settings)
         called = provider.answer.await_count == 1

@@ -36,6 +36,8 @@ async def ask(knowledge_base_id: str, data: AskRequest,
         require_found(await knowledge_bases.get_knowledge_base(database, owner, base_id))
         result = AskResponse.model_validate(await answer_question(
             database, owner, base_id, data.question, embedding_settings, settings))
+        if result.citation_version != 1:
+            raise RAGFailure("Invalid answer format.")
         require_found(await ask_history.save_history(database, owner, base_id, data.question, result))
         return result
     except (ValidationError, PyMongoError, EmbeddingFailure, VectorFailure, GeminiFailure, RAGFailure, OSError, TimeoutError):

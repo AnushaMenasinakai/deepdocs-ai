@@ -1,4 +1,5 @@
 """Offline history API/persistence coverage; retrieval and Gemini remain independent."""
+from citation_helpers import claims_for
 import asyncio
 import copy
 import unittest
@@ -32,7 +33,7 @@ class HistoryTests(unittest.IsolatedAsyncioTestCase):
 
     async def completed(self, question="What is JWT?", supported=True):
         await self.setup_ask()
-        provider = SimpleNamespace(answer=AsyncMock(return_value="Validated answer." if supported else None))
+        provider = SimpleNamespace(answer=AsyncMock(side_effect=claims_for("Validated answer.")) if supported else AsyncMock(return_value=None))
         with patch("retrieval.search_chunks", AsyncMock(return_value=[hit()])), patch("rag.get_gemini_provider", return_value=provider):
             result = await self.ask({"question": question})
         self.assertEqual(result[0], 200)
@@ -42,7 +43,7 @@ class HistoryTests(unittest.IsolatedAsyncioTestCase):
         answer = await self.completed("  What is JWT?  ")
         self.assertEqual(len(self.history.documents), 1)
         record = next(iter(self.history.documents.values()))
-        self.assertEqual(set(record), {"_id", "owner_id", "knowledge_base_id", "question", "status", "answer", "retrieved_chunk_count", "sources", "created_at"})
+        self.assertEqual(set(record), {"_id", "owner_id", "knowledge_base_id", "question", "status", "answer", "retrieved_chunk_count", "sources", "created_at", "citation_version", "claims"})
         self.assertEqual(record["owner_id"], self.owner)
         self.assertEqual(record["knowledge_base_id"], self.base_id)
         self.assertEqual(record["question"], "What is JWT?")
@@ -51,8 +52,8 @@ class HistoryTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(record[key], value)
         status, items, _ = await request("GET", self.history_path())
         self.assertEqual(status, 200)
-        self.assertEqual(set(items[0]), {"id", "question", "status", "answer", "retrieved_chunk_count", "sources", "created_at"})
-        self.assertEqual(set(items[0]["sources"][0]), {"document_id", "source_filename", "page_start", "page_end"})
+        self.assertEqual(set(items[0]), {"id", "question", "status", "answer", "retrieved_chunk_count", "sources", "created_at", "citation_version", "claims"})
+        self.assertEqual(set(items[0]["sources"][0]), {"document_id", "source_filename", "page_start", "page_end", "citation_id"})
         self.assertEqual(items[0]["answer"], answer["answer"])
 
     async def test_provider_abstention_snapshot_zero_count_and_no_sources(self):
@@ -102,7 +103,7 @@ class HistoryTests(unittest.IsolatedAsyncioTestCase):
     async def test_save_failure_is_503_and_does_not_repeat_generation(self):
         await self.setup_ask()
         self.history.failure = ConnectionFailure("private db URI")
-        provider = SimpleNamespace(answer=AsyncMock(return_value="A validated answer."))
+        provider = SimpleNamespace(answer=AsyncMock(side_effect=claims_for("A validated answer.")))
         with patch("retrieval.search_chunks", AsyncMock(return_value=[hit()])), patch("rag.get_gemini_provider", return_value=provider):
             status, body, _ = await self.ask()
         self.assertEqual(status, 503)
@@ -119,7 +120,7 @@ class HistoryTests(unittest.IsolatedAsyncioTestCase):
         await self.completed("Previous private question")
         record = next(iter(self.history.documents.values()))
         record["answer"] = "PREVIOUS_ANSWER_MARKER"
-        provider = SimpleNamespace(answer=AsyncMock(return_value="New answer."))
+        provider = SimpleNamespace(answer=AsyncMock(side_effect=claims_for("New answer.")))
         with patch("retrieval.search_chunks", AsyncMock(return_value=[hit("Document text only")])) as search, patch("rag.get_gemini_provider", return_value=provider):
             await self.ask({"question": "New question?"})
         self.assertEqual(search.call_args.args[3].query, "New question?")
@@ -212,7 +213,7 @@ class HistoryTests(unittest.IsolatedAsyncioTestCase):
         await self.setup_ask()
         async def answer(*args):
             self.bases.documents.clear()
-            return "A completed answer."
+            return await claims_for("A completed answer.")(*args)
         with patch("retrieval.search_chunks", AsyncMock(return_value=[hit()])), patch("rag.get_gemini_provider", return_value=SimpleNamespace(answer=answer)):
             self.assertEqual((await self.ask())[0], 404)
         self.assertFalse(self.history.documents)

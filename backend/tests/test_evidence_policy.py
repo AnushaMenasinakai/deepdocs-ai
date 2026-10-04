@@ -1,4 +1,5 @@
 """Phase 13 deterministic safety gates; no models, network, or live providers."""
+from citation_helpers import claims_for
 import copy
 import hashlib
 import json
@@ -56,7 +57,7 @@ class EvidencePolicyTests(unittest.IsolatedAsyncioTestCase):
     async def test_all_measured_provider_decisions_match_unchanged_primary_gate(self):
         cases,rankings,_=measured_rankings()
         for case in cases:
-            provider=SimpleNamespace(answer=AsyncMock(return_value='Synthetic validated answer'))
+            provider=SimpleNamespace(answer=AsyncMock(side_effect=claims_for('Synthetic validated answer')))
             hits=rankings[case['id']]
             with self.subTest(case=case['id']), patch('retrieval.search_chunks',AsyncMock(return_value=hits)),patch('rag.get_gemini_provider',return_value=provider) as factory:
                 result=await answer_question(None,None,None,case['question'],EmbeddingSettings(),RAGSettings())
@@ -64,7 +65,7 @@ class EvidencePolicyTests(unittest.IsolatedAsyncioTestCase):
                     factory.assert_not_called(); self.assertEqual(result['status'],'insufficient_context')
                 else:
                     provider.answer.assert_awaited_once()
-                    self.assertEqual(provider.answer.call_args.args[1],candidate_context(hits,.30))
+                    self.assertEqual(provider.answer.call_args.args[1].chunks,candidate_context(hits,.30).chunks)
 
 
 class EvidenceConfigurationTests(unittest.TestCase):
@@ -120,7 +121,7 @@ class EvidenceHistoryTests(unittest.IsolatedAsyncioTestCase):
     async def test_new_history_snapshots_secondary_sources_old_history_unchanged(self):
         await self.setup_ask()
         first=chunk('old','Primary original',.8)
-        provider=SimpleNamespace(answer=AsyncMock(return_value='Grounded answer'))
+        provider=SimpleNamespace(answer=AsyncMock(side_effect=claims_for('Grounded answer')))
         with patch('retrieval.search_chunks',AsyncMock(return_value=[first])),patch('rag.get_gemini_provider',return_value=provider):
             self.assertEqual((await self.ask())[0],200)
         old=copy.deepcopy(self.history.documents)

@@ -168,28 +168,53 @@ export async function askKnowledgeBase(knowledgeBaseId, question, signal) {
 }
 
 function publicAskResult(data) {
-  if (!data || !['answered', 'insufficient_context'].includes(data.status) ||
-      typeof data.answer !== 'string' || !data.answer.trim() || data.answer.length > 4000 ||
-      !Number.isInteger(data.retrieved_chunk_count) || data.retrieved_chunk_count < 0 ||
+  const invalid = () => { throw new Error('We could not read the answer. Please try again.') }
+  const length = value => Array.from(value).length
+  const validId = value => Number.isInteger(value) && value >= 1 && value <= 5
+  const version = data?.citation_version === undefined ? 0 : data.citation_version
+  if (!data || ![0, 1].includes(version) || !['answered', 'insufficient_context'].includes(data.status) ||
+      typeof data.answer !== 'string' || !data.answer.trim() || length(data.answer) > 4000 ||
+      !Number.isInteger(data.retrieved_chunk_count) || data.retrieved_chunk_count < 0 || data.retrieved_chunk_count > 5 ||
       !Array.isArray(data.sources) || data.sources.length > data.retrieved_chunk_count ||
       (data.status === 'insufficient_context' && data.sources.length !== 0) ||
-      (data.status === 'answered' && data.sources.length === 0) ||
-      data.sources.some(source => !source || typeof source.document_id !== 'string' || !source.document_id ||
+      (data.status === 'answered' && data.sources.length === 0)) invalid()
+  const seen = new Set(), identifiers = new Set(), sources = []
+  for (const source of data.sources) {
+    if (!source || typeof source.document_id !== 'string' || !/^[a-f0-9]{24}$/i.test(source.document_id) ||
         typeof source.source_filename !== 'string' || !source.source_filename.trim() ||
         /[\\/:\x00-\x1f]/.test(source.source_filename) ||
         !Number.isInteger(source.page_start) || source.page_start < 1 ||
-        !Number.isInteger(source.page_end) || source.page_end < source.page_start)) {
-    throw new Error('We could not read the answer. Please try again.')
-  }
-  const seen = new Set()
-  const sources = data.sources.filter(source => {
+        !Number.isInteger(source.page_end) || source.page_end < source.page_start) invalid()
     const key = JSON.stringify([source.document_id, source.page_start, source.page_end])
-    if (seen.has(key)) return false
+    if (version === 1) {
+      if (!validId(source.citation_id) || identifiers.has(source.citation_id) || seen.has(key)) invalid()
+      identifiers.add(source.citation_id)
+    } else if (source.citation_id != null) invalid()
+    if (seen.has(key)) continue // Preserve legacy page deduplication only.
     seen.add(key)
-    return true
-  }).map(({ document_id, source_filename, page_start, page_end }) =>
-    ({ document_id, source_filename, page_start, page_end }))
-  return { status: data.status, answer: data.answer, retrieved_chunk_count: data.retrieved_chunk_count, sources }
+    const { document_id, source_filename, page_start, page_end } = source
+    sources.push({ document_id, source_filename, page_start, page_end,
+      ...(version === 1 ? { citation_id: source.citation_id } : {}) })
+  }
+  let claims = []
+  if (version === 1) {
+    if (!Array.isArray(data.claims) || data.claims.length > 12 ||
+        (data.status === 'answered' ? data.claims.length === 0 : data.claims.length !== 0)) invalid()
+    const used = new Set()
+    claims = data.claims.map(claim => {
+      if (!claim || typeof claim.text !== 'string' || !claim.text.trim() || claim.text !== claim.text.trim() ||
+          length(claim.text) > 4000 || /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(claim.text) ||
+          !Array.isArray(claim.citation_ids) || !claim.citation_ids.length || claim.citation_ids.length > 5 ||
+          claim.citation_ids.some(id => !validId(id) || !identifiers.has(id))) invalid()
+      const citation_ids = [...new Set(claim.citation_ids)]
+      citation_ids.forEach(id => used.add(id))
+      return { text: claim.text, citation_ids }
+    })
+    if (used.size !== identifiers.size ||
+        (data.status === 'answered' && data.answer !== claims.map(claim => claim.text).join('\n\n'))) invalid()
+  } else if (data.claims !== undefined && (!Array.isArray(data.claims) || data.claims.length)) invalid()
+  return { status: data.status, answer: data.answer, retrieved_chunk_count: data.retrieved_chunk_count,
+    citation_version: version, claims, sources }
 }
 
 

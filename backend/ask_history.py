@@ -20,11 +20,12 @@ def scope(owner_id, base_id):
 
 
 def public_history(record):
-    created = record["created_at"]
-    if created.tzinfo is None:
+    created = record.get("created_at")
+    if isinstance(created, datetime) and created.tzinfo is None:
         created = created.replace(tzinfo=timezone.utc)
-    return HistoryResponse(id=str(record["_id"]), question=record["question"], created_at=created,
-        **{key: record[key] for key in ("status", "answer", "retrieved_chunk_count", "sources")})
+    return HistoryResponse(id=str(record["_id"]), question=record.get("question"), created_at=created,
+        **{key: record.get(key) for key in ("status", "answer", "retrieved_chunk_count", "sources")},
+        citation_version=record.get("citation_version", 0), claims=record.get("claims", [] if record.get("citation_version", 0) == 0 else None))
 
 
 async def save_history(database, owner_id, base_id, question, result):
