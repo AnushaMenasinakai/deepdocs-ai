@@ -1,0 +1,7 @@
+{
+  "max_absolute_score_difference": 0.0,
+  "tolerance": 1e-06,
+  "pairs_verified": 225,
+  "network_connections_blocked": true,
+  "repeated_inference_seconds": 1.4771206999430433
+}

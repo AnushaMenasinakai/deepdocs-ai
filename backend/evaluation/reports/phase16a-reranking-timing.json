@@ -1,0 +1,7 @@
+{
+  "model_load_seconds": 47.58261199994013,
+  "inference_seconds": 1.5913556000450626,
+  "average_seconds_per_question": 0.03536345777877917,
+  "candidate_pairs_per_second": 141.3888888150635,
+  "note": "CPU four threads, 225 pairs batched across 45 questions; cold predict call, excludes model load and token-length audit. Not production request latency."
+}

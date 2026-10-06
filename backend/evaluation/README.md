@@ -234,3 +234,94 @@ The audit runner blocks socket connections; it has no model-loader or live-provi
 If a suitable model becomes available later, its suitability, native score behavior, revision, truncation behavior, and local inference cost still need measurement under an explicitly authorized experiment. A classification-head architecture alone is not proof that a model is trained for relevance. The existing cache check flags potential candidates for review but does not auto-run them.
 
 Phase14 citations remain downstream of final evidence selection: only the unchanged server mapping may assign IDs and source metadata. No scorer may invent filenames/pages/citations; history remains a snapshot and never becomes context. Production primary 0.50, secondary 0.30, top-k 5, budget 12000, MiniLM/384, single-query retrieval, frontend, and citations are unchanged. No cloud services, Gemini judge, BM25/hybrid retrieval, production reranker, new dependency, or Phase17 work was added.
+
+## Phase 16A-R: real cross-encoder measurement
+
+**Recommendation B — DO NOT INTEGRATE the tested model/policies.** Real inference is now available under the user's explicit authorization to download one evaluation model. This supersedes the availability blocker, not the historical Phase16A report: that report and every Phase11/13/15 report remain unchanged.
+
+Measured artifacts:
+
+- [Complete measured report](reports/phase16a-reranking-measured.md), including all 35 questions and all 175 candidate scores/ranks, eight false-negative analyses, thirteen unsupported decisions, the full threshold sweep, and the separate safety set.
+- [Machine-readable measured report](reports/phase16a-reranking-measured.json).
+- [Real raw scores](phase16a_real_scores.json), with pinned model revision, candidate and historical fingerprints, tokenizer lengths, runtime versions, and snapshot file hashes. No vectors or model weights.
+- [Timing metadata](reports/phase16a-reranking-timing.json), separated from scores.
+- [Independent offline repeat](reports/phase16a-reranking-offline-check.json).
+
+### Model and execution
+
+The approved identifier `cross-encoder/ms-marco-MiniLM-L-6-v2` resolves on Hugging Face to canonical repository [`cross-encoder/ms-marco-MiniLM-L6-v2`](https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2). This is the same approved model, not a substitute. Revision: `233902d25c440f23af6f7d6e94d2946bac0bee0a`.
+
+Only safetensors weights, configuration, tokenizer files, and model documentation were downloaded: **91,819,431 bytes** (about 91.8 MB / 87.57 MiB). They reside under ignored `backend/.cache/reranking/`. The existing ignore rule suffices; no weights are tracked. No tokens are supplied (`token=False`), no dependencies are added, and the `.venv` and production configuration are untouched. Download retries were confined to the approved model file.
+
+The model is loaded through the installed Sentence Transformers `CrossEncoder`, `local_files_only=True`, `trust_remote_code=False`, safetensors only, one output label, and explicit `torch.nn.Identity` activation. These are raw logits, **not probabilities or factual-confidence values**. CPU, four threads, batch size 16, max sequence length 512, eval mode, fixed seed, deterministic algorithms. Maximum observed pair length was 65 tokens: no pair was truncated.
+
+Exactly **175 historical benchmark pairs + 50 separate safety pairs = 225** were scored. No additional candidate retrieval or decomposition occurred. All socket connections were blocked during loading/inference. The first predict pass took **1.59136 s**, or **0.03536 s/question** averaged over 45 questions, about **141.39 pairs/s**. Initial model/library loading took **47.58 s** separately. These are local batched observations, not production latency guarantees. An independent load/inference repeat took 1.47712 s and reproduced all 225 logits with **maximum absolute difference 0.0** (allowed tolerance 1e-6).
+
+### Declared search and selection
+
+Before reading scores, the experiment fixed evidence offsets **0, 2, and 4 logits** below a primary gate, a bounded integer-logit grid spanning floor(min) to ceil(max) of **original benchmark scores only**, and the existing adoption criteria. The observed development grid was **-12 through 11 inclusive**, giving 24 gates and **72 gate/evidence combinations**. Offset zero is a single-threshold policy. Evidence threshold must not exceed the gate; weak evidence can never independently open it.
+
+Policy A reproduces production .50/.30. Policy B uses a reranker gate and retains every candidate meeting its evidence threshold in reranked order, within the unchanged complete-chunk serialized budget. A new Policy C was **not invented**: retaining cosine .50 cannot recover the target false negatives, and there is no independent justification for an arbitrary lower cosine sanity floor. Cosine and logits are never added or compared as equivalent numbers.
+
+Development selection uses declared criteria first, then number of satisfied criteria, fewer false positives, complete evidence, multi-chunk completeness, recall, less added non-required context, and stricter thresholds. Because none passes all criteria, the retained **diagnostic comparator is not an adopted policy**. The safety set is examined only after that comparator is frozen; its values do not set the grid, offsets, or selected thresholds. Tests verify this separation.
+
+### Results
+
+Ranking before/after: Hit@1 **95.45% → 95.45%**, Hit@3/5 **100% → 100%**, MRR@5 **0.97727 → 0.96970**. Candidate membership and Hit@5 are invariant. Required passages moved up three times and down once; non-required passages moved up 43 times and down 50 times. Non-required is not automatically misleading.
+
+Score distributions (original 175 pairs):
+
+| Group | N | Minimum | Maximum | Mean | Median |
+|---|---:|---:|---:|---:|---:|
+| Required answerable evidence | 27 | -11.00332 | 10.34012 | 1.17453 | 3.69718 |
+| Other answerable candidates | 83 | -11.49235 | 6.41008 | -7.98240 | -9.53986 |
+| Unsupported candidates | 65 | -11.43810 | 1.75969 | -8.70110 | -11.19815 |
+
+Required evidence overlaps the unsupported distribution substantially. The report also includes p10/p90.
+
+Diagnostic comparator: **primary logit 3, evidence logit -1**.
+
+| Metric | Production baseline | Comparator |
+|---|---:|---:|
+| TP/TN/FP/FN | 14/11/2/8 | 15/13/0/7 |
+| Precision | 0.875 | 1.0 |
+| Recall | 0.63636 | 0.68182 |
+| F1 | 0.73684 | 0.81081 |
+| Complete evidence | 14/22 | 13/22 |
+| Multi-chunk complete | 4/5 | 1/5 |
+
+It recovers only `direct-password` and `ambiguous-data`; it additionally rejects formerly accepted `multi-storage`. Both old false positives are corrected, with no new unsupported acceptance. It adds one non-required passage and removes four required inclusions relative to baseline. Accepted contexts average **1.4 chunks / 454.07 characters**, maximum **3 chunks / 965 characters**, with no budget exclusions.
+
+At primary 3, evidence 3 or 1 gives 12/22 complete and 0/5 multi. Lowering evidence to -1 restores a backup page and yields 13/22 and 1/5. Thus separate thresholds help but not enough. Gate **-6 / evidence -10** reaches 18/22 and 4/5, but precision drops to **0.79167** with **19/8/5/3** and neither old false positive corrected. No tested combination meets the retained criteria. Higher F1 alone is not acceptance: some permissive policies reach F1 0.88 with six unsupported acceptances.
+
+### Concrete evidence failures and benefits
+
+- `para-history`: required history page improves rank 2→1, but logit -6.94406 still fails the comparator. Better ranking does not equal recovered answerability.
+- `para-signature`: correct signature page falls rank 1→3 (logit -9.81566); expiry/CSRF passages outrank it. This contributes the MRR decline.
+- `multi-cloud`: PaaS improves rank 5→3 yet has logit -11.00332, so required multipage evidence is still lost.
+- `multi-token` accepts expiry but discards signature evidence; `multi-deletion` accepts deletion but discards history snapshot evidence. Only `multi-backup` remains complete among the five multi-chunk cases.
+- `ambiguous-data` gains the correct metadata answer plus a newly included PDF/MongoDB storage passage. That extra page is useful related background, not necessarily a harmful distractor.
+- `unsupported-refresh`: the former top web-cache passage drops to rank 5, but access-token expiry is promoted to rank 1 (0.77108). It still does not establish refresh-token retention. `unsupported-rotation` keeps signature verification first (1.14804); it still does not establish a rotation policy. The comparator rejects both, but lower gates accept them.
+
+Separate safety results: baseline **3/5/1/1**, P/R/F1 **0.75/0.75/0.75**, complete **2/4**; comparator **2/6/0/2**, P/R/F1 **1.0/0.5/0.66667**, complete **2/4**. Mixed JWT/irrigation and unsupported rotation/revocation are rejected, but the answerable three-topic question is also rejected. No threshold was retuned on these outcomes.
+
+Adoption criteria: recovering >=4 FNs **fails (2)**; correcting >=1 old FP **passes (2)**; <=1 new FP **passes (0)**; >=18 complete **fails (13)**; >=4 multi **fails (1)**; precision >=0.875 **passes**; recall improvement **passes, modestly**; context bounds **pass**; deterministic offline repeat **passes**; local inference cost appears practical but is not a production latency measurement. No Phase16B design is proposed under recommendation B.
+
+### Reproduce
+
+```powershell
+# Model-free replay of real recorded scores:
+.\backend\.venv\Scripts\python.exe -B backend/evaluation/phase16r.py
+# Explicit CPU measurement, approved cached snapshot only; sockets blocked:
+.\backend\.venv\Scripts\python.exe -B backend/evaluation/phase16r.py --measure
+# Independent local-only repeat; preserves first measurement/timing:
+.\backend\.venv\Scripts\python.exe -B backend/evaluation/phase16r.py --verify-offline
+# Tests use recorded scores and mocked adapters, never model downloads:
+.\backend\.venv\Scripts\python.exe -B -m pytest backend/tests/test_real_reranking_evaluation.py backend/tests/test_reranking_evaluation.py -q -p no:cacheprovider
+```
+
+Downloading is a separate explicit action, never a fallback: from `backend`, `.\.venv\Scripts\python.exe -B -m evaluation.cross_encoder_local --download-approved-model`. It is pinned to the one approved public repository/revision and restricted file list. Re-download requires appropriate authorization; ordinary replay/tests never call it.
+
+Recorded scores and metric reports replay deterministically. Fresh inference timing varies and lives in its own artifact; rerunning measurement intentionally refreshes only the new measured files, not historical reports. Model hashes, revision, runtime versions, and candidate fingerprints support reproducibility. Production primary .50, secondary .30, top-k 5, budget 12000, MiniLM/384, single-query retrieval, Phase14 citations, Ask history, and frontend are unchanged. No .env/.venv/requirements changes, live Gemini/Atlas/Qdrant calls, benchmark uploads, production reranker, query decomposition, BM25/hybrid retrieval, LLM judge, or Phase17 work.
+
+Limitations: small synthetic development benchmark with thresholds evaluated on the same cases; bounded offsets rather than all possible policies; no live answer entailment or universal generalization claim; cross-encoder topical relevance can still miss negation, paraphrases, and evidence spanning passages. This rejects the tested model/policies, not every second-stage method.

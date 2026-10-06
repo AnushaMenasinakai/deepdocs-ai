@@ -64,7 +64,7 @@ def rerank(question, candidates, scorer):
     return [{**hit, "reranker_rank": rank} for rank, hit in enumerate(rows, 1)]
 
 
-def select_context(rows, threshold, policy="replace", budget=BUDGET):
+def select_context(rows, threshold, policy="replace", budget=BUDGET, evidence_threshold=None):
     """B: any reranker-qualified passage; C: B AND original cosine gate.
 
     All passages meeting the reranker threshold can enter, not only the winner.
@@ -73,6 +73,9 @@ def select_context(rows, threshold, policy="replace", budget=BUDGET):
     packing mirrors production complete-chunk JSON fields, preserving new order.
     """
     threshold = finite_score(threshold)
+    evidence_threshold = threshold if evidence_threshold is None else finite_score(evidence_threshold)
+    if evidence_threshold > threshold:
+        raise ValueError("Evidence threshold cannot exceed primary threshold")
     if policy not in ("replace", "intersection") or type(budget) is not int or budget < 2:
         raise ValueError("Invalid experimental policy or budget")
     if len(rows) > TOP_K or len(valid_hits(rows)) != len(rows):
@@ -85,7 +88,7 @@ def select_context(rows, threshold, policy="replace", budget=BUDGET):
         return False, Context("[]", ())
     chunks, serialized = [], "[]"
     for hit in rows:
-        if hit["reranker_score"] < threshold:
+        if hit["reranker_score"] < evidence_threshold:
             continue
         record = {key: hit[key] for key in FIELDS}
         trial = json.dumps([*chunks, record], ensure_ascii=False, separators=(",", ":"))
@@ -128,13 +131,16 @@ def movement(cases, rankings):
     return counts
 
 
-def threshold_sweep(cases, rankings, baseline_contexts, thresholds, policy="replace", budget=BUDGET):
+def threshold_sweep(cases, rankings, baseline_contexts, thresholds, policy="replace", budget=BUDGET, evidence_offset=0.):
     """Pure mechanics. Thresholds must be declared for a specific measured model.
 
     No default threshold is guessed while no reranker is available. A passed
     relevance gate and usable bounded context are reported separately.
     """
     thresholds = sorted(set(finite_score(value) for value in thresholds))
+    evidence_offset = finite_score(evidence_offset)
+    if evidence_offset < 0:
+        raise ValueError("Evidence offset cannot be negative")
     if not 1 <= len(thresholds) <= 41:
         raise ValueError("Supply between one and 41 thresholds")
     output = []
@@ -142,8 +148,8 @@ def threshold_sweep(cases, rankings, baseline_contexts, thresholds, policy="repl
         details = []
         for case in cases:
             hits = rankings[case["id"]]
-            accepted, context = select_context(hits, threshold, policy, budget)
-            _, unlimited = select_context(hits, threshold, policy, 1000000)
+            accepted, context = select_context(hits, threshold, policy, budget, threshold-evidence_offset)
+            _, unlimited = select_context(hits, threshold, policy, 1000000, threshold-evidence_offset)
             old = baseline_contexts[case["id"]]
             old_ids = {hit["chunk_id"] for hit in old.chunks}
             included_ids = {hit["chunk_id"] for hit in context.chunks}
@@ -154,7 +160,7 @@ def threshold_sweep(cases, rankings, baseline_contexts, thresholds, policy="repl
                 added_non_required=sum(hit["chunk_id"] not in old_ids and not covered(case, [hit]) for hit in context.chunks),
                 removed_required=sum(hit["chunk_id"] not in included_ids and bool(covered(case, [hit])) for hit in old.chunks)))
         accepted = [row for row in details if row["accepted"]]
-        output.append(dict(threshold=threshold, policy=policy, decision=confusion(details),
+        output.append(dict(threshold=threshold, evidence_threshold=threshold-evidence_offset, policy=policy, decision=confusion(details),
             provider_eligible_decision=confusion([{**row, "accepted":row["provider_eligible"]} for row in details]),
             complete_evidence=sum(row["complete"] for row in details), multi_complete=sum(row["complete"] and row["multi"] for row in details),
             added_non_required=sum(row["added_non_required"] for row in details), removed_required=sum(row["removed_required"] for row in details),
