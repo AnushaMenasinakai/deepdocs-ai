@@ -1,0 +1,129 @@
+{
+  "version": "1.0.0",
+  "cases": [
+    {
+      "id": "safety-related-signature",
+      "question": "How does JWT authentication work and why is its signature checked?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 1
+        }
+      ],
+      "category": "phase15_safety",
+      "rationale": "related compound: preserve its dependency"
+    },
+    {
+      "id": "safety-three-topics",
+      "question": "Explain JWT authentication, MongoDB storage, and cloud service models.",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "authentication-guide.pdf",
+          "page": 1
+        },
+        {
+          "document": "data-guide.pdf",
+          "page": 1
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page": 1
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page": 2
+        },
+        {
+          "document": "cloud-guide.pdf",
+          "page": 3
+        }
+      ],
+      "category": "phase15_safety",
+      "rationale": "explicit three-topic list; requires all three service models"
+    },
+    {
+      "id": "safety-unsupported-rotation",
+      "question": "Explain JWT signing-key rotation and emergency key revocation.",
+      "expected_answerable": false,
+      "expected_sources": [],
+      "category": "phase15_safety",
+      "rationale": "known terminology does not supply absent policies"
+    },
+    {
+      "id": "safety-unrelated-conjunction",
+      "question": "How do irrigation and fertilizer improve rice farming?",
+      "expected_answerable": false,
+      "expected_sources": [],
+      "category": "phase15_safety",
+      "rationale": "conjunction is not an instruction to split"
+    },
+    {
+      "id": "safety-single-concept",
+      "question": "Research and development",
+      "expected_answerable": false,
+      "expected_sources": [],
+      "category": "phase15_safety",
+      "rationale": "single coordinated concept; leave intact"
+    },
+    {
+      "id": "safety-explicit-questions",
+      "question": "Where are original PDFs stored? How long do access tokens remain valid?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "storage-guide.pdf",
+          "page": 1
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page": 2
+        }
+      ],
+      "category": "phase15_safety",
+      "rationale": "independent questions"
+    },
+    {
+      "id": "safety-semicolon-unsupported",
+      "question": "How long are refresh tokens stored; what is the JWT signing-key rotation policy?",
+      "expected_answerable": false,
+      "expected_sources": [],
+      "category": "phase15_safety",
+      "rationale": "independent but both unsupported"
+    },
+    {
+      "id": "safety-mixed-supported-unsupported",
+      "question": "Explain JWT signatures and rice irrigation.",
+      "expected_answerable": false,
+      "expected_sources": [],
+      "category": "phase15_safety",
+      "rationale": "one supported fragment must not establish complete answerability"
+    },
+    {
+      "id": "safety-comparison-unsupported",
+      "question": "Compare what the customer manages in IaaS and the lunar habitat.",
+      "expected_answerable": false,
+      "expected_sources": [],
+      "category": "phase15_safety",
+      "rationale": "shared frame includes an unsupported comparison target"
+    },
+    {
+      "id": "safety-semicolon-supported",
+      "question": "Where is application metadata stored; which algorithm stores password hashes?",
+      "expected_answerable": true,
+      "expected_sources": [
+        {
+          "document": "data-guide.pdf",
+          "page": 1
+        },
+        {
+          "document": "authentication-guide.pdf",
+          "page": 3
+        }
+      ],
+      "category": "phase15_safety",
+      "rationale": "two baseline weak targets; no new synonyms"
+    }
+  ]
+}

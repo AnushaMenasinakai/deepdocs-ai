@@ -1,0 +1,1554 @@
+{
+  "version": "1.0.0",
+  "dataset_version": "1.0.0",
+  "fingerprints": {
+    "corpus.json": "5ef1539ec9309424f16e50c1ea0b49a0b2debc89f3d4d6c37c109df560abbb1c",
+    "cases.json": "94d1d72ac05c063e94dd1be802ae7c3980b22a4f2140d9604d2087245fa9ce95",
+    "phase15a_safety.json": "b1fc60472cf35a614142af19d40aea3a2234995fb6c12f5c93b834805e8d0741",
+    "query_decomposition.py": "81bc6d701535acd217173914b0369052a65473a005a2f0e1df28a0bc7d5262ff"
+  },
+  "historical_hashes": {
+    "fixture.json": "d8c5295ca7d07ace96e37cfdfa7dc54dafb76aad8389c6977abe4b10db9ef51d",
+    "fixture.md": "72af67adf6eeca0ca69e2951704b3180a184f20c3e96a0c5843bcd55fc172147",
+    "local-model.json": "d934000d1d912c10219cf2ccfb5b882269086fcb2c010ca17b6923a45ea3e501",
+    "local-model.md": "f36e1b5dc652ef4a388513df14ffe70d4910423e501129061691e31ff972efc2",
+    "phase13-comparison.json": "8879ee134930b4106df9ffec23a51ebd691d29353e7a19a7805f1169ccf6e989",
+    "phase13-comparison.md": "6e9e143875c92d8ce7eddb15fc0c3c99ede11bfb733b2f36ea0ba98f96d2141d"
+  },
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "dimension": 384,
+  "model_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+  "runtime": {
+    "sentence-transformers": "6.1.0",
+    "qdrant-client": "1.19.1",
+    "torch": "2.14.0"
+  },
+  "measurement": "Cached-only CPU MiniLM, official in-memory Qdrant, production authoritative retrieval validation; all socket connections blocked",
+  "queries": {
+    "39f08e591e31f04dde3c619b": {
+      "text": "How does the server detect a modified JWT?",
+      "hits": [
+        {
+          "chunk": "auth-signature",
+          "score": 0.62515331
+        },
+        {
+          "chunk": "web-csrf",
+          "score": 0.42049938
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.39812872
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.3654262
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.30509447
+        }
+      ]
+    },
+    "799c69c6cd8d1b73edf529a9": {
+      "text": "How long does an access token remain valid?",
+      "hits": [
+        {
+          "chunk": "auth-expiry",
+          "score": 0.70177221
+        },
+        {
+          "chunk": "web-cache",
+          "score": 0.49766336
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.4792042
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.44290268
+        },
+        {
+          "chunk": "web-csrf",
+          "score": 0.34699727
+        }
+      ]
+    },
+    "308289986da4b84767ffedcb": {
+      "text": "Which algorithm stores password hashes?",
+      "hits": [
+        {
+          "chunk": "auth-password",
+          "score": 0.44279455
+        },
+        {
+          "chunk": "data-mongo",
+          "score": 0.28860458
+        },
+        {
+          "chunk": "data-vector",
+          "score": 0.25276707
+        },
+        {
+          "chunk": "ops-backup",
+          "score": 0.17411221
+        },
+        {
+          "chunk": "storage-original",
+          "score": 0.16049525
+        }
+      ]
+    },
+    "540727052deecc57bd0b014e": {
+      "text": "What is the maximum PDF upload size?",
+      "hits": [
+        {
+          "chunk": "storage-original",
+          "score": 0.54185322
+        },
+        {
+          "chunk": "web-rate",
+          "score": 0.52924683
+        },
+        {
+          "chunk": "storage-chunks",
+          "score": 0.33722651
+        },
+        {
+          "chunk": "storage-delete",
+          "score": 0.23141009
+        },
+        {
+          "chunk": "data-vector",
+          "score": 0.19011965
+        }
+      ]
+    },
+    "804eb3a61da2a6bcd8b93366": {
+      "text": "How often does North back up metadata?",
+      "hits": [
+        {
+          "chunk": "ops-backup",
+          "score": 0.65782418
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.65649495
+        },
+        {
+          "chunk": "data-mongo",
+          "score": 0.29776715
+        },
+        {
+          "chunk": "web-rate",
+          "score": 0.26586694
+        },
+        {
+          "chunk": "storage-original",
+          "score": 0.21694903
+        }
+      ]
+    },
+    "b49d1aff6ec3c9a7dd764a28": {
+      "text": "What stops someone editing a login token and passing it off as genuine?",
+      "hits": [
+        {
+          "chunk": "auth-signature",
+          "score": 0.41665697
+        },
+        {
+          "chunk": "web-csrf",
+          "score": 0.40223454
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.39186361
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.34184004
+        },
+        {
+          "chunk": "auth-password",
+          "score": 0.30985787
+        }
+      ]
+    },
+    "437a6e4cc03f7d521444cbef": {
+      "text": "Which cloud offering lets developers deploy code without caring for the operating system?",
+      "hits": [
+        {
+          "chunk": "cloud-paas",
+          "score": 0.59114677
+        },
+        {
+          "chunk": "cloud-saas",
+          "score": 0.37356678
+        },
+        {
+          "chunk": "cloud-iaas",
+          "score": 0.30608018
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.14707056
+        },
+        {
+          "chunk": "data-vector",
+          "score": 0.10037136
+        }
+      ]
+    },
+    "8eeb13003217b32ca064b17b": {
+      "text": "Can a different account discover my Knowledge Base by guessing its identifier?",
+      "hits": [
+        {
+          "chunk": "auth-ownership",
+          "score": 0.34289047
+        },
+        {
+          "chunk": "auth-password",
+          "score": 0.27867466
+        },
+        {
+          "chunk": "data-mongo",
+          "score": 0.19856192
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.17556605
+        },
+        {
+          "chunk": "data-vector",
+          "score": 0.17418029
+        }
+      ]
+    },
+    "b9015b73d5ffd86c16ae7ca3": {
+      "text": "Can the system read words from a scan that contains pictures but no selectable text?",
+      "hits": [
+        {
+          "chunk": "storage-chunks",
+          "score": 0.4801318
+        },
+        {
+          "chunk": "data-vector",
+          "score": 0.23136444
+        },
+        {
+          "chunk": "storage-delete",
+          "score": 0.1907771
+        },
+        {
+          "chunk": "data-mongo",
+          "score": 0.15502933
+        },
+        {
+          "chunk": "web-rate",
+          "score": 0.13416093
+        }
+      ]
+    },
+    "5080024b4496bf3d435cea19": {
+      "text": "Will an earlier response be remembered automatically when I ask something new?",
+      "hits": [
+        {
+          "chunk": "web-cache",
+          "score": 0.36147529
+        },
+        {
+          "chunk": "data-history",
+          "score": 0.34304364
+        },
+        {
+          "chunk": "data-mongo",
+          "score": 0.14792566
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.14194255
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.11561224
+        }
+      ]
+    },
+    "e1fb32fa3c71b9892cdaaf8e": {
+      "text": "Where are PDF originals kept, and where are their embedding vectors kept?",
+      "hits": [
+        {
+          "chunk": "storage-original",
+          "score": 0.52978851
+        },
+        {
+          "chunk": "data-mongo",
+          "score": 0.42890173
+        },
+        {
+          "chunk": "storage-chunks",
+          "score": 0.41915743
+        },
+        {
+          "chunk": "storage-delete",
+          "score": 0.38950052
+        },
+        {
+          "chunk": "data-vector",
+          "score": 0.32490101
+        }
+      ]
+    },
+    "29055213027d6a99c15532c0": {
+      "text": "Compare what the customer manages in IaaS and PaaS.",
+      "hits": [
+        {
+          "chunk": "cloud-iaas",
+          "score": 0.27171542
+        },
+        {
+          "chunk": "cloud-saas",
+          "score": 0.26971811
+        },
+        {
+          "chunk": "auth-password",
+          "score": 0.15951189
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.11960169
+        },
+        {
+          "chunk": "cloud-paas",
+          "score": 0.1170026
+        }
+      ]
+    },
+    "5238134d197de2b6dc02ecae": {
+      "text": "Compare what the customer manages in IaaS",
+      "hits": [
+        {
+          "chunk": "cloud-saas",
+          "score": 0.28087182
+        },
+        {
+          "chunk": "cloud-iaas",
+          "score": 0.25418141
+        },
+        {
+          "chunk": "auth-password",
+          "score": 0.17533496
+        },
+        {
+          "chunk": "cloud-paas",
+          "score": 0.12215901
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.12104837
+        }
+      ]
+    },
+    "3c0f2eb90af8c3617de185f2": {
+      "text": "Compare what the customer manages in PaaS",
+      "hits": [
+        {
+          "chunk": "cloud-iaas",
+          "score": 0.24494221
+        },
+        {
+          "chunk": "cloud-saas",
+          "score": 0.24074841
+        },
+        {
+          "chunk": "data-vector",
+          "score": 0.12141581
+        },
+        {
+          "chunk": "web-rate",
+          "score": 0.11581746
+        },
+        {
+          "chunk": "auth-password",
+          "score": 0.0942552
+        }
+      ]
+    },
+    "7f04046e7dd4ecf590671e47": {
+      "text": "How are token tampering and expired access handled?",
+      "hits": [
+        {
+          "chunk": "auth-expiry",
+          "score": 0.58086475
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.44285604
+        },
+        {
+          "chunk": "web-cache",
+          "score": 0.42214915
+        },
+        {
+          "chunk": "web-csrf",
+          "score": 0.38093384
+        },
+        {
+          "chunk": "auth-signature",
+          "score": 0.36325441
+        }
+      ]
+    },
+    "fd2a79fbd26aab50a0a40056": {
+      "text": "What happens to document vectors and old answers when a PDF is deleted?",
+      "hits": [
+        {
+          "chunk": "storage-delete",
+          "score": 0.62864603
+        },
+        {
+          "chunk": "storage-chunks",
+          "score": 0.43748395
+        },
+        {
+          "chunk": "storage-original",
+          "score": 0.41084373
+        },
+        {
+          "chunk": "data-history",
+          "score": 0.36453979
+        },
+        {
+          "chunk": "data-mongo",
+          "score": 0.33204861
+        }
+      ]
+    },
+    "022d2bdc5f1edb50f7ef89e0": {
+      "text": "Compare North and South backup frequency and retention.",
+      "hits": [
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.58553876
+        },
+        {
+          "chunk": "ops-backup",
+          "score": 0.49540719
+        },
+        {
+          "chunk": "web-cache",
+          "score": 0.242977
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.20383999
+        },
+        {
+          "chunk": "data-history",
+          "score": 0.19709113
+        }
+      ]
+    },
+    "79c4b90306ab2fb1725e1c3e": {
+      "text": "How long are refresh tokens stored?",
+      "hits": [
+        {
+          "chunk": "web-cache",
+          "score": 0.57503199
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.56038844
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.42335443
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.40537517
+        },
+        {
+          "chunk": "ops-backup",
+          "score": 0.36208191
+        }
+      ]
+    },
+    "79500598314007b1abced24f": {
+      "text": "How often does this server rotate its JWT signing secret?",
+      "hits": [
+        {
+          "chunk": "auth-signature",
+          "score": 0.51616776
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.43592272
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.39635071
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.37295361
+        },
+        {
+          "chunk": "web-cache",
+          "score": 0.33616833
+        }
+      ]
+    },
+    "54d0ccc427196bb228ee45ff": {
+      "text": "Which geographic region hosts the MongoDB cluster?",
+      "hits": [
+        {
+          "chunk": "data-mongo",
+          "score": 0.44434452
+        },
+        {
+          "chunk": "storage-original",
+          "score": 0.41171932
+        },
+        {
+          "chunk": "auth-ownership",
+          "score": 0.37122503
+        },
+        {
+          "chunk": "storage-delete",
+          "score": 0.26865392
+        },
+        {
+          "chunk": "data-vector",
+          "score": 0.12897785
+        }
+      ]
+    },
+    "fab70f5b92045253e1e84d62": {
+      "text": "What monthly price does the PaaS provider charge?",
+      "hits": [
+        {
+          "chunk": "web-rate",
+          "score": 0.1881938
+        },
+        {
+          "chunk": "cloud-saas",
+          "score": 0.17039699
+        },
+        {
+          "chunk": "cloud-iaas",
+          "score": 0.12860814
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.09403967
+        },
+        {
+          "chunk": "auth-password",
+          "score": 0.09274698
+        }
+      ]
+    },
+    "4f1ca83861ba1dee38f5b585": {
+      "text": "What is the measured recovery time after a North outage?",
+      "hits": [
+        {
+          "chunk": "ops-backup",
+          "score": 0.44002135
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.34379051
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.27449171
+        },
+        {
+          "chunk": "web-rate",
+          "score": 0.22039307
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.19668879
+        }
+      ]
+    },
+    "3643a64ddd83d892605595e3": {
+      "text": "When should rice fields be irrigated?",
+      "hits": [
+        {
+          "chunk": "ops-backup",
+          "score": 0.15710584
+        },
+        {
+          "chunk": "cloud-iaas",
+          "score": 0.12189094
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.11921649
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.09992295
+        },
+        {
+          "chunk": "web-cache",
+          "score": 0.06197089
+        }
+      ]
+    },
+    "bfcc5843c86fd2aad2368464": {
+      "text": "How much yeast should I add to sourdough bread?",
+      "hits": [
+        {
+          "chunk": "ops-backup",
+          "score": 0.10990535
+        },
+        {
+          "chunk": "auth-ownership",
+          "score": 0.10464543
+        },
+        {
+          "chunk": "web-rate",
+          "score": 0.07634074
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.07029532
+        },
+        {
+          "chunk": "storage-original",
+          "score": 0.01065771
+        }
+      ]
+    },
+    "f8a55413004fe3a1da0859e3": {
+      "text": "How many moons orbit Neptune?",
+      "hits": [
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.08359429
+        },
+        {
+          "chunk": "web-rate",
+          "score": 0.06300842
+        },
+        {
+          "chunk": "cloud-paas",
+          "score": 0.06006256
+        },
+        {
+          "chunk": "data-vector",
+          "score": 0.05957766
+        },
+        {
+          "chunk": "data-mongo",
+          "score": 0.04769741
+        }
+      ]
+    },
+    "515736474efec36522e3f203": {
+      "text": "How should I tune a grand piano?",
+      "hits": [
+        {
+          "chunk": "ops-backup",
+          "score": 0.05855029
+        },
+        {
+          "chunk": "data-vector",
+          "score": 0.03324994
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": -0.01031443
+        },
+        {
+          "chunk": "cloud-saas",
+          "score": -0.01604807
+        },
+        {
+          "chunk": "cloud-paas",
+          "score": -0.04704909
+        }
+      ]
+    },
+    "46c5b6c8701e1d7659710380": {
+      "text": "Why do swallows migrate south?",
+      "hits": [
+        {
+          "chunk": "ops-key",
+          "score": 0.15400278
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.13324219
+        },
+        {
+          "chunk": "data-history",
+          "score": 0.08680548
+        },
+        {
+          "chunk": "auth-password",
+          "score": 0.07182296
+        },
+        {
+          "chunk": "storage-original",
+          "score": 0.06778449
+        }
+      ]
+    },
+    "f4bf3fa8526ae9d8b1107c48": {
+      "text": "When does it expire?",
+      "hits": [
+        {
+          "chunk": "auth-expiry",
+          "score": 0.45293337
+        },
+        {
+          "chunk": "web-cache",
+          "score": 0.35572368
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.27208015
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.24983526
+        },
+        {
+          "chunk": "ops-backup",
+          "score": 0.18823683
+        }
+      ]
+    },
+    "e9c36e8b0515de1cede10c80": {
+      "text": "Which service is the best?",
+      "hits": [
+        {
+          "chunk": "cloud-saas",
+          "score": 0.32897553
+        },
+        {
+          "chunk": "cloud-iaas",
+          "score": 0.24954985
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.22747907
+        },
+        {
+          "chunk": "web-rate",
+          "score": 0.19500522
+        },
+        {
+          "chunk": "cloud-paas",
+          "score": 0.19012439
+        }
+      ]
+    },
+    "120488938be3bd03fc154ae4": {
+      "text": "Is everything secure?",
+      "hits": [
+        {
+          "chunk": "auth-signature",
+          "score": 0.20144689
+        },
+        {
+          "chunk": "auth-password",
+          "score": 0.14945864
+        },
+        {
+          "chunk": "cloud-iaas",
+          "score": 0.12326025
+        },
+        {
+          "chunk": "cloud-paas",
+          "score": 0.07524178
+        },
+        {
+          "chunk": "web-csrf",
+          "score": 0.06351647
+        }
+      ]
+    },
+    "3fc511967ab928e80a5ce53f": {
+      "text": "Where is application metadata stored?",
+      "hits": [
+        {
+          "chunk": "data-mongo",
+          "score": 0.47693742
+        },
+        {
+          "chunk": "storage-original",
+          "score": 0.35370438
+        },
+        {
+          "chunk": "cloud-paas",
+          "score": 0.32550393
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.30025573
+        },
+        {
+          "chunk": "ops-backup",
+          "score": 0.28046075
+        }
+      ]
+    },
+    "5533bbd368e2110a585f0436": {
+      "text": "Does the next question use my past answers?",
+      "hits": [
+        {
+          "chunk": "data-history",
+          "score": 0.34939177
+        },
+        {
+          "chunk": "data-mongo",
+          "score": 0.14381718
+        },
+        {
+          "chunk": "web-cache",
+          "score": 0.13214717
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.12910506
+        },
+        {
+          "chunk": "ops-backup",
+          "score": 0.12112999
+        }
+      ]
+    },
+    "0080b13d4bda3cc9889b8c57": {
+      "text": "How long can the North dashboard sit idle before closing its session?",
+      "hits": [
+        {
+          "chunk": "ops-session",
+          "score": 0.71190484
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.31303162
+        },
+        {
+          "chunk": "ops-backup",
+          "score": 0.269679
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.24921819
+        },
+        {
+          "chunk": "web-rate",
+          "score": 0.2412943
+        }
+      ]
+    },
+    "1b049c352b15dff9c9a3e3ab": {
+      "text": "When does a South automation API key expire?",
+      "hits": [
+        {
+          "chunk": "ops-key",
+          "score": 0.75694749
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.425856
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.39769757
+        },
+        {
+          "chunk": "web-cache",
+          "score": 0.39457418
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.34843261
+        }
+      ]
+    },
+    "92555ca97ea5f459b8986f02": {
+      "text": "How many days does South retain metadata backups?",
+      "hits": [
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.8221439
+        },
+        {
+          "chunk": "ops-backup",
+          "score": 0.6608317
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.3663186
+        },
+        {
+          "chunk": "web-cache",
+          "score": 0.32793317
+        },
+        {
+          "chunk": "storage-original",
+          "score": 0.30659507
+        }
+      ]
+    },
+    "e585a9b717b8a52fe9e2f75a": {
+      "text": "Which token protects browser forms from cross-site request forgery?",
+      "hits": [
+        {
+          "chunk": "web-csrf",
+          "score": 0.66394385
+        },
+        {
+          "chunk": "auth-signature",
+          "score": 0.44614254
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.3915508
+        },
+        {
+          "chunk": "web-cache",
+          "score": 0.32017692
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.2908003
+        }
+      ]
+    },
+    "40ac5f08f748f7445815c705": {
+      "text": "How many requests per minute does the public status endpoint allow?",
+      "hits": [
+        {
+          "chunk": "web-rate",
+          "score": 0.7904385
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.3521568
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.27116515
+        },
+        {
+          "chunk": "web-cache",
+          "score": 0.23731989
+        },
+        {
+          "chunk": "ops-backup",
+          "score": 0.18164878
+        }
+      ]
+    },
+    "af8f69bf8482e3478bd54121": {
+      "text": "How does JWT authentication work and why is its signature checked?",
+      "hits": [
+        {
+          "chunk": "auth-signature",
+          "score": 0.78077547
+        },
+        {
+          "chunk": "web-csrf",
+          "score": 0.58447189
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.36916514
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.36634224
+        },
+        {
+          "chunk": "web-cache",
+          "score": 0.32430349
+        }
+      ]
+    },
+    "84ad1a7a363efd67f5882fae": {
+      "text": "Explain JWT authentication, MongoDB storage, and cloud service models.",
+      "hits": [
+        {
+          "chunk": "auth-signature",
+          "score": 0.54308439
+        },
+        {
+          "chunk": "data-mongo",
+          "score": 0.39806764
+        },
+        {
+          "chunk": "web-csrf",
+          "score": 0.3871888
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.36032124
+        },
+        {
+          "chunk": "auth-ownership",
+          "score": 0.34768783
+        }
+      ]
+    },
+    "49725de82e5a4c05234d2f23": {
+      "text": "JWT authentication",
+      "hits": [
+        {
+          "chunk": "auth-signature",
+          "score": 0.699119
+        },
+        {
+          "chunk": "web-csrf",
+          "score": 0.52748549
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.39615911
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.39168907
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.36470658
+        }
+      ]
+    },
+    "2645313a422f3be9a5eab586": {
+      "text": "MongoDB storage",
+      "hits": [
+        {
+          "chunk": "data-mongo",
+          "score": 0.64942462
+        },
+        {
+          "chunk": "storage-original",
+          "score": 0.57990808
+        },
+        {
+          "chunk": "auth-ownership",
+          "score": 0.42846228
+        },
+        {
+          "chunk": "storage-delete",
+          "score": 0.413803
+        },
+        {
+          "chunk": "data-vector",
+          "score": 0.22324827
+        }
+      ]
+    },
+    "12d2ef4ec1c2697a0e8ac3ef": {
+      "text": "cloud service models",
+      "hits": [
+        {
+          "chunk": "cloud-iaas",
+          "score": 0.42488294
+        },
+        {
+          "chunk": "cloud-saas",
+          "score": 0.35311472
+        },
+        {
+          "chunk": "cloud-paas",
+          "score": 0.21624444
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.19467727
+        },
+        {
+          "chunk": "data-mongo",
+          "score": 0.184068
+        }
+      ]
+    },
+    "80a766748e0991a0f7c5d565": {
+      "text": "Explain JWT signing-key rotation and emergency key revocation.",
+      "hits": [
+        {
+          "chunk": "auth-signature",
+          "score": 0.49870881
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.44664222
+        },
+        {
+          "chunk": "web-csrf",
+          "score": 0.34991216
+        },
+        {
+          "chunk": "web-cache",
+          "score": 0.30417271
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.27825058
+        }
+      ]
+    },
+    "8ca5db16b4bb84d00ffe101d": {
+      "text": "JWT signing-key rotation",
+      "hits": [
+        {
+          "chunk": "auth-signature",
+          "score": 0.5035279
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.37613691
+        },
+        {
+          "chunk": "web-csrf",
+          "score": 0.31683929
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.24346915
+        },
+        {
+          "chunk": "auth-password",
+          "score": 0.20942085
+        }
+      ]
+    },
+    "6513e8fd6149f236475da946": {
+      "text": "emergency key revocation",
+      "hits": [
+        {
+          "chunk": "ops-key",
+          "score": 0.31761556
+        },
+        {
+          "chunk": "web-cache",
+          "score": 0.21948775
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.19615227
+        },
+        {
+          "chunk": "auth-password",
+          "score": 0.15716671
+        },
+        {
+          "chunk": "auth-signature",
+          "score": 0.13806355
+        }
+      ]
+    },
+    "f1342ec386d8699eff2f4842": {
+      "text": "How do irrigation and fertilizer improve rice farming?",
+      "hits": [
+        {
+          "chunk": "cloud-iaas",
+          "score": 0.15741285
+        },
+        {
+          "chunk": "cloud-paas",
+          "score": 0.09688332
+        },
+        {
+          "chunk": "cloud-saas",
+          "score": 0.08565274
+        },
+        {
+          "chunk": "ops-backup",
+          "score": 0.06783624
+        },
+        {
+          "chunk": "auth-password",
+          "score": 0.04149558
+        }
+      ]
+    },
+    "1e91cc66da1d7b12581cbcd0": {
+      "text": "Research and development",
+      "hits": [
+        {
+          "chunk": "cloud-saas",
+          "score": 0.23648274
+        },
+        {
+          "chunk": "cloud-paas",
+          "score": 0.22180198
+        },
+        {
+          "chunk": "cloud-iaas",
+          "score": 0.16197091
+        },
+        {
+          "chunk": "data-vector",
+          "score": 0.09854542
+        },
+        {
+          "chunk": "web-rate",
+          "score": 0.07665443
+        }
+      ]
+    },
+    "700856a6d95214c04c9775f0": {
+      "text": "Where are original PDFs stored? How long do access tokens remain valid?",
+      "hits": [
+        {
+          "chunk": "storage-original",
+          "score": 0.52362345
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.47097113
+        },
+        {
+          "chunk": "storage-chunks",
+          "score": 0.41693824
+        },
+        {
+          "chunk": "web-rate",
+          "score": 0.39457227
+        },
+        {
+          "chunk": "web-cache",
+          "score": 0.38143946
+        }
+      ]
+    },
+    "6c5db42ec07400eba9022039": {
+      "text": "Where are original PDFs stored",
+      "hits": [
+        {
+          "chunk": "storage-original",
+          "score": 0.65561434
+        },
+        {
+          "chunk": "storage-chunks",
+          "score": 0.42679462
+        },
+        {
+          "chunk": "storage-delete",
+          "score": 0.40677524
+        },
+        {
+          "chunk": "data-mongo",
+          "score": 0.33647748
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.2768611
+        }
+      ]
+    },
+    "cd5860221c3cb2f978b7dd10": {
+      "text": "How long do access tokens remain valid",
+      "hits": [
+        {
+          "chunk": "auth-expiry",
+          "score": 0.6831997
+        },
+        {
+          "chunk": "web-cache",
+          "score": 0.48715234
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.46348848
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.43354685
+        },
+        {
+          "chunk": "web-csrf",
+          "score": 0.33813154
+        }
+      ]
+    },
+    "fb33a6c8e7371178926adeca": {
+      "text": "How long are refresh tokens stored; what is the JWT signing-key rotation policy?",
+      "hits": [
+        {
+          "chunk": "web-cache",
+          "score": 0.52263948
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.51488219
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.48568306
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.44049484
+        },
+        {
+          "chunk": "auth-signature",
+          "score": 0.41688781
+        }
+      ]
+    },
+    "eb77e4797672f1b10fef2313": {
+      "text": "How long are refresh tokens stored",
+      "hits": [
+        {
+          "chunk": "web-cache",
+          "score": 0.57489462
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.56060282
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.42251781
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.39955439
+        },
+        {
+          "chunk": "ops-backup",
+          "score": 0.36198294
+        }
+      ]
+    },
+    "6a1a33b85cd3cbe7699d95f6": {
+      "text": "what is the JWT signing-key rotation policy",
+      "hits": [
+        {
+          "chunk": "auth-signature",
+          "score": 0.56693804
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.44389651
+        },
+        {
+          "chunk": "web-csrf",
+          "score": 0.37592244
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.29282235
+        },
+        {
+          "chunk": "web-cache",
+          "score": 0.24306082
+        }
+      ]
+    },
+    "9cba2dd03deb67837360c4ad": {
+      "text": "Explain JWT signatures and rice irrigation.",
+      "hits": [
+        {
+          "chunk": "auth-signature",
+          "score": 0.45187106
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.28882037
+        },
+        {
+          "chunk": "web-csrf",
+          "score": 0.28447178
+        },
+        {
+          "chunk": "cloud-iaas",
+          "score": 0.15044865
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.11739731
+        }
+      ]
+    },
+    "dfa8b8e3488f121cf4adddd2": {
+      "text": "JWT signatures",
+      "hits": [
+        {
+          "chunk": "auth-signature",
+          "score": 0.7171274
+        },
+        {
+          "chunk": "web-csrf",
+          "score": 0.49323121
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.35100393
+        },
+        {
+          "chunk": "ops-session",
+          "score": 0.30421892
+        },
+        {
+          "chunk": "auth-expiry",
+          "score": 0.26142062
+        }
+      ]
+    },
+    "d3f18286bc1096717fa0d216": {
+      "text": "rice irrigation",
+      "hits": [
+        {
+          "chunk": "cloud-iaas",
+          "score": 0.12476901
+        },
+        {
+          "chunk": "cloud-saas",
+          "score": 0.06703853
+        },
+        {
+          "chunk": "cloud-paas",
+          "score": 0.06216167
+        },
+        {
+          "chunk": "ops-backup",
+          "score": 0.03721603
+        },
+        {
+          "chunk": "auth-password",
+          "score": 0.02988824
+        }
+      ]
+    },
+    "f27930f319186beda459f97f": {
+      "text": "Compare what the customer manages in IaaS and the lunar habitat.",
+      "hits": [
+        {
+          "chunk": "cloud-iaas",
+          "score": 0.26397895
+        },
+        {
+          "chunk": "cloud-saas",
+          "score": 0.251822
+        },
+        {
+          "chunk": "cloud-paas",
+          "score": 0.18646061
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.1507669
+        },
+        {
+          "chunk": "ops-key",
+          "score": 0.1417984
+        }
+      ]
+    },
+    "26a5b249e81e8bf2cac9665c": {
+      "text": "Compare what the customer manages in the lunar habitat",
+      "hits": [
+        {
+          "chunk": "cloud-saas",
+          "score": 0.24452777
+        },
+        {
+          "chunk": "cloud-iaas",
+          "score": 0.23993073
+        },
+        {
+          "chunk": "cloud-paas",
+          "score": 0.18658185
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.12797214
+        },
+        {
+          "chunk": "ops-backup",
+          "score": 0.09655256
+        }
+      ]
+    },
+    "4c8de2572d1c68bec750e545": {
+      "text": "Where is application metadata stored; which algorithm stores password hashes?",
+      "hits": [
+        {
+          "chunk": "auth-password",
+          "score": 0.45132195
+        },
+        {
+          "chunk": "data-mongo",
+          "score": 0.43481806
+        },
+        {
+          "chunk": "storage-original",
+          "score": 0.29936064
+        },
+        {
+          "chunk": "ops-backup",
+          "score": 0.26752173
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.26739452
+        }
+      ]
+    },
+    "d41800f5b0b35417f281563f": {
+      "text": "Where is application metadata stored",
+      "hits": [
+        {
+          "chunk": "data-mongo",
+          "score": 0.46044868
+        },
+        {
+          "chunk": "storage-original",
+          "score": 0.34753221
+        },
+        {
+          "chunk": "cloud-paas",
+          "score": 0.30074844
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.29295248
+        },
+        {
+          "chunk": "ops-backup",
+          "score": 0.26866493
+        }
+      ]
+    },
+    "2dbb95ceda48199dcb9eac61": {
+      "text": "which algorithm stores password hashes",
+      "hits": [
+        {
+          "chunk": "auth-password",
+          "score": 0.45244727
+        },
+        {
+          "chunk": "data-mongo",
+          "score": 0.2882832
+        },
+        {
+          "chunk": "data-vector",
+          "score": 0.2768868
+        },
+        {
+          "chunk": "ops-backup",
+          "score": 0.1896801
+        },
+        {
+          "chunk": "ops-backup-south",
+          "score": 0.16654526
+        }
+      ]
+    }
+  }
+}
