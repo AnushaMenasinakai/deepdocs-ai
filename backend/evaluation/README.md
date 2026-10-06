@@ -182,3 +182,55 @@ Non-required means outside the explicit expected evidence set, not automatically
 Default output names are exclusively `phase15a-multi-query.json/.md`; `--measure` also refreshes only `phase15a_rankings.json`. `--output` must remain inside the repository. Historical reports are fingerprinted and are never targets. The query-rules/dataset fingerprints must match for replay. Reports have no timestamp; ordinary replay is exactly deterministic. Fresh floating-point inference can vary slightly across runtime/hardware versions; rounded scores and recorded model revision support inspection without brittle universal exact-score assertions.
 
 Production runtime and frontend files are unchanged. Primary 0.50, secondary 0.30, per-query production top-k 5, budget 12000, MiniLM/384, citations, semantic search, and history remain intact. No Phase 15B implementation/design is recommended from these results. Future work would require a separately authorized experiment and held-out examples, including partial-support hazards; this benchmark does not establish universal quality. No live answer quality, semantic entailment, latency/currency cost, or multilingual/general NLP coverage was measured. No new model, dependency, BM25, hybrid search, reranker, LLM decomposition/judge, public evaluation endpoint, or Phase 16 was added.
+
+## Phase 16A: second-stage relevance audit (model unavailable)
+
+**Recommendation C — FURTHER EVALUATION REQUIRED.** No suitable local cross-encoder was found in the inspected project and configured/default Hugging Face caches. The only cached model is the existing `sentence-transformers/all-MiniLM-L6-v2` bi-encoder. Installed `sentence-transformers==6.1.0` and `torch==2.14.0` provide libraries, not pretrained reranker weights. Attaching an untrained classifier to the bi-encoder would not constitute a valid experiment. No model was downloaded, loaded, or evaluated for reranking; no GPU/CPU inference device was used.
+
+The hypothesis remains untested: joint question/passage scoring might separate supporting evidence from merely related text. Model-based work stopped at the availability check. The audit covers known caches, not an unrestricted search of personal files or the entire disk. No `.env` is read by this tooling.
+
+Artifacts:
+
+- [Audit report and individual case analysis](reports/phase16a-reranking.md).
+- [Machine-readable audit](reports/phase16a-reranking.json).
+- `reranking.py`: pure injected-scorer interface and policy/metric mechanics, tested with explicitly synthetic scalar scores only.
+- `phase16a.py`: offline, model-free historical replay and cache inventory; writes only Phase16 report filenames.
+
+### What was reproduced
+
+The exact original validated top-five candidate sets are replayed from the committed measured MiniLM reports. No new retrieval or query decomposition occurs. All eight answerable false negatives already contain **all required evidence within five**; they fail the primary cosine gate, not candidate recall or context packing. The existing unsupported false positives remain refresh-token retention and signing-key rotation: the corpus contains access-token expiry/signature verification, not those policies.
+
+Baseline remains Hit@1 95.45%, Hit@3/5 100%, MRR@5 0.97727, TP/TN/FP/FN 14/11/2/8, precision 0.875, recall 0.63636, F1 0.73684, complete evidence 14/22, and multi-chunk complete 4/5. The report contains every original candidate/cosine/required-evidence label for all 35 cases, detailed eight-FN/two-FP tables, all thirteen unsupported decisions, and separate ten-case Phase15 safety replay. No current result is represented as a reranker measurement.
+
+There are **175 benchmark pairs and 50 separate safety pairs available**, at most five per question; **zero reranker pairs were scored**. Reranker model, device, latency, distributions, thresholds, ranking changes, corrected/recovered cases, and experimental completeness are `null`/not measured. They are not zero-valued quality results. No useful/harmful reranking example can be asserted yet.
+
+### Declared experiment mechanics, not production policy
+
+The scorer contract accepts only `(question, passage)` pairs and returns exactly one finite real scalar per candidate. It cannot return or invent identities. Candidate count is bounded at five; malformed/duplicate candidates, booleans, nonnumeric values, NaN, infinity, and wrong-length score output are rejected. Original cosine/provenance stay intact. Scores sort descending with original rank as the stable tie-breaker. Candidate membership is preserved, so Hit@5 must be invariant; promotion/demotion counts distinguish required and non-required evidence.
+
+Policies reserved for a future authorized model measurement:
+
+- **A:** existing production 0.50 primary / 0.30 evidence baseline.
+- **B:** a model-specific reranker threshold opens the gate; all qualifying passages, not just the winner, remain eligible in reranked order.
+- **C:** B plus the original strongest cosine >=0.50. This deliberately conservative intersection cannot recover original primary false negatives; it tests false-positive suppression and evidence selection separately.
+
+No threshold was guessed without knowing the model's score semantics. The pure sweep accepts at most 41 explicitly supplied thresholds in the scorer's own space. Fake unit-test thresholds are not proposed operating points. Distributions separately cover required answerable evidence, non-required answerable passages, and unsupported-query candidates, with min/max/mean/median/p10/p90. Scores are relevance signals, **not calibrated probabilities or factual confidence**; no cosine-plus-reranker arithmetic is used.
+
+Complete-chunk context packing retains trusted fields and the 12000-character serialized budget. It reports gate acceptance separately from usable-context/provider eligibility, since a passing gate can still leave no fitting evidence. Tests cover multipage retention, skipped oversized chunks, exact budget boundaries, and added non-required/removed required evidence. Such tests establish implementation behavior, not model quality or semantic entailment.
+
+Before any measured result, adoption criteria remain: recover >=4/8 FNs, correct >=1/2 FPs, <=1 new original-benchmark FP, target >=18/22 complete evidence, >=4/5 multi completeness, precision >=0.875, recall above 14/22, bounded context, deterministic offline behavior, and measured/reviewed computational cost. There is no candidate to assess against these criteria yet. No Phase16B implementation plan is proposed under recommendation C.
+
+### Reproduction and boundaries
+
+```powershell
+.\backend\.venv\Scripts\python.exe -B backend/evaluation/phase16a.py
+.\backend\.venv\Scripts\python.exe -B -m pytest backend/tests/test_reranking_evaluation.py -q -p no:cacheprovider
+.\backend\.venv\Scripts\python.exe -B -m pytest backend/tests/test_evaluation.py backend/tests/test_evidence_policy.py backend/tests/test_query_decomposition.py backend/tests/test_multi_query_evaluation.py -q -p no:cacheprovider
+.\backend\.venv\Scripts\python.exe -B -m pytest backend/tests -q -p no:cacheprovider
+```
+
+The audit runner blocks socket connections; it has no model-loader or live-provider path. Report quality data replay deterministically; cache inventory intentionally reflects the inspected environment. Tests pin replay to the recorded inventory and verify historical report/production fingerprints. Ordinary tests never need a model download or network. No historical Phase11/13/15 reports are written.
+
+If a suitable model becomes available later, its suitability, native score behavior, revision, truncation behavior, and local inference cost still need measurement under an explicitly authorized experiment. A classification-head architecture alone is not proof that a model is trained for relevance. The existing cache check flags potential candidates for review but does not auto-run them.
+
+Phase14 citations remain downstream of final evidence selection: only the unchanged server mapping may assign IDs and source metadata. No scorer may invent filenames/pages/citations; history remains a snapshot and never becomes context. Production primary 0.50, secondary 0.30, top-k 5, budget 12000, MiniLM/384, single-query retrieval, frontend, and citations are unchanged. No cloud services, Gemini judge, BM25/hybrid retrieval, production reranker, new dependency, or Phase17 work was added.

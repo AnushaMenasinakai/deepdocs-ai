@@ -1,0 +1,4153 @@
+{
+  "phase": "16A",
+  "dataset_version": "1.0.0",
+  "recommendation": "C. FURTHER EVALUATION REQUIRED",
+  "status": "model_based_experiment_not_run",
+  "blocker": "No suitable local cross-encoder found in inspected cache locations; model-based experiment stopped without download.",
+  "environment": {
+    "libraries": {
+      "sentence-transformers": "6.1.0",
+      "torch": "2.14.0"
+    },
+    "roots": [
+      {
+        "location": "project_embedding_cache",
+        "exists": true,
+        "models": [
+          {
+            "name": "sentence-transformers/all-MiniLM-L6-v2",
+            "architectures": [
+              "BertModel"
+            ],
+            "weights_present": true,
+            "tokenizer_present": true,
+            "potential_sequence_scorer": false
+          }
+        ]
+      },
+      {
+        "location": "project_model_cache",
+        "exists": false,
+        "models": []
+      },
+      {
+        "location": "huggingface_hub",
+        "exists": false,
+        "models": []
+      }
+    ],
+    "suitable_model_verified": false,
+    "potential_candidates_found": false,
+    "scope": "Known project and configured/default Hugging Face caches only; no whole-disk search"
+  },
+  "adoption_criteria": {
+    "minimum_recovered_false_negatives": 4,
+    "minimum_corrected_false_positives": 1,
+    "maximum_new_false_positives": 1,
+    "minimum_complete_evidence": 18,
+    "minimum_multi_chunk_complete": 4,
+    "minimum_precision": 0.875,
+    "recall_must_exceed": 0.6363636363636364,
+    "maximum_context_characters": 12000,
+    "deterministic_offline": true,
+    "compute_cost": "Must be measured and reviewed; not assessable without a local model"
+  },
+  "baseline": {
+    "case_count": 35,
+    "candidate_pairs_available": 175,
+    "ranking": {
+      "answerable_count": 22,
+      "unsupported_count": 13,
+      "no_valid_hit_count": 0,
+      "hit_at_1": 0.9545454545454546,
+      "hit_at_3": 1.0,
+      "hit_at_5": 1.0,
+      "mrr": 0.9772727272727273,
+      "all_evidence_at_5": 1.0
+    },
+    "decision": {
+      "tp": 14,
+      "tn": 11,
+      "fp": 2,
+      "fn": 8,
+      "precision": 0.875,
+      "recall": 0.6363636363636364,
+      "f1": 0.7368421052631579
+    },
+    "complete_evidence": 14,
+    "multi_complete": 4,
+    "context": {
+      "average_chunks_accepted": 3.9375,
+      "maximum_chunks": 5,
+      "average_serialized_characters_accepted": 1280.25,
+      "maximum_serialized_characters": 1725,
+      "budget_affected": []
+    },
+    "cases": [
+      {
+        "id": "direct-signature",
+        "question": "How does the server detect a modified JWT?",
+        "category": "direct",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "authentication-guide.pdf",
+            "page": 1
+          }
+        ],
+        "top_cosine": 0.62515331,
+        "accepted": true,
+        "required_evidence_present_at_5": true,
+        "complete": true,
+        "context_count": 5,
+        "context_characters": 1616,
+        "context_sources": [
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3
+          },
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.62515331,
+            "document": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "09c500657eb4519c0baa01b2",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.42049938,
+            "document": "web-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "c634b131a4df000c861a1bcc",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.39812872,
+            "document": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "400060c43aa435810d1e339a",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.3654262,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.30509447,
+            "document": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "a8b956494a1bea153de5dfbd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "direct-expiry",
+        "question": "How long does an access token remain valid?",
+        "category": "direct",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "authentication-guide.pdf",
+            "page": 2
+          }
+        ],
+        "top_cosine": 0.70177221,
+        "accepted": true,
+        "required_evidence_present_at_5": true,
+        "complete": true,
+        "context_count": 5,
+        "context_characters": 1581,
+        "context_sources": [
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3
+          },
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.70177221,
+            "document": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "a8b956494a1bea153de5dfbd",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.49766336,
+            "document": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "e1a3bed48f3a218e79603049",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.4792042,
+            "document": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "400060c43aa435810d1e339a",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.44290268,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.34699727,
+            "document": "web-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "c634b131a4df000c861a1bcc",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "direct-password",
+        "question": "Which algorithm stores password hashes?",
+        "category": "direct",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "authentication-guide.pdf",
+            "page": 3
+          }
+        ],
+        "top_cosine": 0.44279455,
+        "accepted": false,
+        "required_evidence_present_at_5": true,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.44279455,
+            "document": "authentication-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "d5ee05c5d2ea1513e64b50db",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.28860458,
+            "document": "data-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "3464af0207581c12d76ff58e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.25276707,
+            "document": "data-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "5f3a6a03352f70d52031842e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.17411221,
+            "document": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "e9458a9cdd76a71daeec0fc2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.16049525,
+            "document": "storage-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "11181ebc9d2bd09df5e7098f",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Required evidence is in top five, but strongest cosine is below 0.50; not a candidate-recall or context-budget failure."
+      },
+      {
+        "id": "direct-upload",
+        "question": "What is the maximum PDF upload size?",
+        "category": "direct",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "storage-guide.pdf",
+            "page": 1
+          }
+        ],
+        "top_cosine": 0.54185322,
+        "accepted": true,
+        "required_evidence_present_at_5": true,
+        "complete": true,
+        "context_count": 3,
+        "context_characters": 1009,
+        "context_sources": [
+          {
+            "source_filename": "storage-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 3,
+            "page_end": 3
+          },
+          {
+            "source_filename": "storage-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.54185322,
+            "document": "storage-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "11181ebc9d2bd09df5e7098f",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.52924683,
+            "document": "web-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "09693660a01bc9f045a23eae",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.33722651,
+            "document": "storage-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "2d387ce59343d227172a0731",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.23141009,
+            "document": "storage-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "5c5aa6a195292541696317c5",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.19011965,
+            "document": "data-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "5f3a6a03352f70d52031842e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "direct-backup",
+        "question": "How often does North back up metadata?",
+        "category": "direct",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "operations-guide.pdf",
+            "page": 1
+          }
+        ],
+        "top_cosine": 0.65782418,
+        "accepted": true,
+        "required_evidence_present_at_5": true,
+        "complete": true,
+        "context_count": 2,
+        "context_characters": 636,
+        "context_sources": [
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.65782418,
+            "document": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "e9458a9cdd76a71daeec0fc2",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.65649495,
+            "document": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "c801d6371880711788e3b79b",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.29776715,
+            "document": "data-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "3464af0207581c12d76ff58e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.26586694,
+            "document": "web-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "09693660a01bc9f045a23eae",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.21694903,
+            "document": "storage-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "11181ebc9d2bd09df5e7098f",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "para-signature",
+        "question": "What stops someone editing a login token and passing it off as genuine?",
+        "category": "paraphrase",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "authentication-guide.pdf",
+            "page": 1
+          }
+        ],
+        "top_cosine": 0.41665697,
+        "accepted": false,
+        "required_evidence_present_at_5": true,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.41665697,
+            "document": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "09c500657eb4519c0baa01b2",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.40223454,
+            "document": "web-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "c634b131a4df000c861a1bcc",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.39186361,
+            "document": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "a8b956494a1bea153de5dfbd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.34184004,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.30985787,
+            "document": "authentication-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "d5ee05c5d2ea1513e64b50db",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Required evidence is in top five, but strongest cosine is below 0.50; not a candidate-recall or context-budget failure."
+      },
+      {
+        "id": "para-paas",
+        "question": "Which cloud offering lets developers deploy code without caring for the operating system?",
+        "category": "paraphrase",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "cloud-guide.pdf",
+            "page": 2
+          }
+        ],
+        "top_cosine": 0.59114677,
+        "accepted": true,
+        "required_evidence_present_at_5": true,
+        "complete": true,
+        "context_count": 3,
+        "context_characters": 993,
+        "context_sources": [
+          {
+            "source_filename": "cloud-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "cloud-guide.pdf",
+            "page_start": 3,
+            "page_end": 3
+          },
+          {
+            "source_filename": "cloud-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.59114677,
+            "document": "cloud-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "1b5a5c4559c1b17551cbf2aa",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.37356678,
+            "document": "cloud-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "1e03748dbde06f16bb9cc1bd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.30608018,
+            "document": "cloud-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "1cd01ecd13f89e97370a6181",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.14707056,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.10037136,
+            "document": "data-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "5f3a6a03352f70d52031842e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "para-owner",
+        "question": "Can a different account discover my Knowledge Base by guessing its identifier?",
+        "category": "paraphrase",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "authentication-guide.pdf",
+            "page": 4
+          }
+        ],
+        "top_cosine": 0.34289047,
+        "accepted": false,
+        "required_evidence_present_at_5": true,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.34289047,
+            "document": "authentication-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "d76f06f040f19e2c070888a7",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.27867466,
+            "document": "authentication-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "d5ee05c5d2ea1513e64b50db",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.19856192,
+            "document": "data-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "3464af0207581c12d76ff58e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.17556605,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.17418029,
+            "document": "data-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "5f3a6a03352f70d52031842e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Required evidence is in top five, but strongest cosine is below 0.50; not a candidate-recall or context-budget failure."
+      },
+      {
+        "id": "para-ocr",
+        "question": "Can the system read words from a scan that contains pictures but no selectable text?",
+        "category": "paraphrase",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "storage-guide.pdf",
+            "page": 2
+          }
+        ],
+        "top_cosine": 0.4801318,
+        "accepted": false,
+        "required_evidence_present_at_5": true,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.4801318,
+            "document": "storage-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "2d387ce59343d227172a0731",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.23136444,
+            "document": "data-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "5f3a6a03352f70d52031842e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.1907771,
+            "document": "storage-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "5c5aa6a195292541696317c5",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.15502933,
+            "document": "data-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "3464af0207581c12d76ff58e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.13416093,
+            "document": "web-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "09693660a01bc9f045a23eae",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Required evidence is in top five, but strongest cosine is below 0.50; not a candidate-recall or context-budget failure."
+      },
+      {
+        "id": "para-history",
+        "question": "Will an earlier response be remembered automatically when I ask something new?",
+        "category": "paraphrase",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "data-guide.pdf",
+            "page": 3
+          }
+        ],
+        "top_cosine": 0.36147529,
+        "accepted": false,
+        "required_evidence_present_at_5": true,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.36147529,
+            "document": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "e1a3bed48f3a218e79603049",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.34304364,
+            "document": "data-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "84f98a057eb5b61bf352f745",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.14792566,
+            "document": "data-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "3464af0207581c12d76ff58e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.14194255,
+            "document": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "a8b956494a1bea153de5dfbd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.11561224,
+            "document": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "400060c43aa435810d1e339a",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Required evidence is in top five, but strongest cosine is below 0.50; not a candidate-recall or context-budget failure."
+      },
+      {
+        "id": "multi-storage",
+        "question": "Where are PDF originals kept, and where are their embedding vectors kept?",
+        "category": "multi_chunk",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "storage-guide.pdf",
+            "page": 1
+          },
+          {
+            "document": "data-guide.pdf",
+            "page": 2
+          }
+        ],
+        "top_cosine": 0.52978851,
+        "accepted": true,
+        "required_evidence_present_at_5": true,
+        "complete": true,
+        "context_count": 5,
+        "context_characters": 1698,
+        "context_sources": [
+          {
+            "source_filename": "storage-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "data-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "storage-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "storage-guide.pdf",
+            "page_start": 3,
+            "page_end": 3
+          },
+          {
+            "source_filename": "data-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.52978851,
+            "document": "storage-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "11181ebc9d2bd09df5e7098f",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.42890173,
+            "document": "data-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "3464af0207581c12d76ff58e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.41915743,
+            "document": "storage-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "2d387ce59343d227172a0731",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.38950052,
+            "document": "storage-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "5c5aa6a195292541696317c5",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.32490101,
+            "document": "data-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "5f3a6a03352f70d52031842e",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "multi-cloud",
+        "question": "Compare what the customer manages in IaaS and PaaS.",
+        "category": "multi_chunk",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "cloud-guide.pdf",
+            "page": 1
+          },
+          {
+            "document": "cloud-guide.pdf",
+            "page": 2
+          }
+        ],
+        "top_cosine": 0.27171542,
+        "accepted": false,
+        "required_evidence_present_at_5": true,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.27171542,
+            "document": "cloud-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "1cd01ecd13f89e97370a6181",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.26971811,
+            "document": "cloud-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "1e03748dbde06f16bb9cc1bd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.15951189,
+            "document": "authentication-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "d5ee05c5d2ea1513e64b50db",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.11960169,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.1170026,
+            "document": "cloud-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "1b5a5c4559c1b17551cbf2aa",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Required evidence is in top five, but strongest cosine is below 0.50; not a candidate-recall or context-budget failure."
+      },
+      {
+        "id": "multi-token",
+        "question": "How are token tampering and expired access handled?",
+        "category": "multi_chunk",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "authentication-guide.pdf",
+            "page": 1
+          },
+          {
+            "document": "authentication-guide.pdf",
+            "page": 2
+          }
+        ],
+        "top_cosine": 0.58086475,
+        "accepted": true,
+        "required_evidence_present_at_5": true,
+        "complete": true,
+        "context_count": 5,
+        "context_characters": 1600,
+        "context_sources": [
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3
+          },
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.58086475,
+            "document": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "a8b956494a1bea153de5dfbd",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.44285604,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.42214915,
+            "document": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "e1a3bed48f3a218e79603049",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.38093384,
+            "document": "web-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "c634b131a4df000c861a1bcc",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.36325441,
+            "document": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "09c500657eb4519c0baa01b2",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "multi-deletion",
+        "question": "What happens to document vectors and old answers when a PDF is deleted?",
+        "category": "multi_chunk",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "storage-guide.pdf",
+            "page": 3
+          },
+          {
+            "document": "data-guide.pdf",
+            "page": 3
+          }
+        ],
+        "top_cosine": 0.62864603,
+        "accepted": true,
+        "required_evidence_present_at_5": true,
+        "complete": true,
+        "context_count": 5,
+        "context_characters": 1725,
+        "context_sources": [
+          {
+            "source_filename": "storage-guide.pdf",
+            "page_start": 3,
+            "page_end": 3
+          },
+          {
+            "source_filename": "storage-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "storage-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "data-guide.pdf",
+            "page_start": 3,
+            "page_end": 3
+          },
+          {
+            "source_filename": "data-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.62864603,
+            "document": "storage-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "5c5aa6a195292541696317c5",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.43748395,
+            "document": "storage-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "2d387ce59343d227172a0731",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.41084373,
+            "document": "storage-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "11181ebc9d2bd09df5e7098f",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.36453979,
+            "document": "data-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "84f98a057eb5b61bf352f745",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.33204861,
+            "document": "data-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "3464af0207581c12d76ff58e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "multi-backup",
+        "question": "Compare North and South backup frequency and retention.",
+        "category": "multi_chunk",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "operations-guide.pdf",
+            "page": 1
+          },
+          {
+            "document": "operations-guide.pdf",
+            "page": 4
+          }
+        ],
+        "top_cosine": 0.58553876,
+        "accepted": true,
+        "required_evidence_present_at_5": true,
+        "complete": true,
+        "context_count": 2,
+        "context_characters": 636,
+        "context_sources": [
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.58553876,
+            "document": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "c801d6371880711788e3b79b",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.49540719,
+            "document": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "e9458a9cdd76a71daeec0fc2",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.242977,
+            "document": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "e1a3bed48f3a218e79603049",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.20383999,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.19709113,
+            "document": "data-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "84f98a057eb5b61bf352f745",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "unsupported-refresh",
+        "question": "How long are refresh tokens stored?",
+        "category": "related_unsupported",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.57503199,
+        "accepted": true,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 5,
+        "context_characters": 1598,
+        "context_sources": [
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.57503199,
+            "document": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "e1a3bed48f3a218e79603049",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.56038844,
+            "document": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "a8b956494a1bea153de5dfbd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.42335443,
+            "document": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "400060c43aa435810d1e339a",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.40537517,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.36208191,
+            "document": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "e9458a9cdd76a71daeec0fc2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Accepted topical similarity does not establish support for the requested fact/policy."
+      },
+      {
+        "id": "unsupported-rotation",
+        "question": "How often does this server rotate its JWT signing secret?",
+        "category": "related_unsupported",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.51616776,
+        "accepted": true,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 5,
+        "context_characters": 1626,
+        "context_sources": [
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.51616776,
+            "document": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "09c500657eb4519c0baa01b2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.43592272,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.39635071,
+            "document": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "400060c43aa435810d1e339a",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.37295361,
+            "document": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "a8b956494a1bea153de5dfbd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.33616833,
+            "document": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "e1a3bed48f3a218e79603049",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Accepted topical similarity does not establish support for the requested fact/policy."
+      },
+      {
+        "id": "unsupported-region",
+        "question": "Which geographic region hosts the MongoDB cluster?",
+        "category": "related_unsupported",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.44434452,
+        "accepted": false,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.44434452,
+            "document": "data-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "3464af0207581c12d76ff58e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.41171932,
+            "document": "storage-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "11181ebc9d2bd09df5e7098f",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.37122503,
+            "document": "authentication-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "d76f06f040f19e2c070888a7",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.26865392,
+            "document": "storage-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "5c5aa6a195292541696317c5",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.12897785,
+            "document": "data-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "5f3a6a03352f70d52031842e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "unsupported-price",
+        "question": "What monthly price does the PaaS provider charge?",
+        "category": "related_unsupported",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.1881938,
+        "accepted": false,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.1881938,
+            "document": "web-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "09693660a01bc9f045a23eae",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.17039699,
+            "document": "cloud-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "1e03748dbde06f16bb9cc1bd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.12860814,
+            "document": "cloud-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "1cd01ecd13f89e97370a6181",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.09403967,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.09274698,
+            "document": "authentication-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "d5ee05c5d2ea1513e64b50db",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "unsupported-recovery",
+        "question": "What is the measured recovery time after a North outage?",
+        "category": "related_unsupported",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.44002135,
+        "accepted": false,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.44002135,
+            "document": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "e9458a9cdd76a71daeec0fc2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.34379051,
+            "document": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "c801d6371880711788e3b79b",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.27449171,
+            "document": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "400060c43aa435810d1e339a",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.22039307,
+            "document": "web-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "09693660a01bc9f045a23eae",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.19668879,
+            "document": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "a8b956494a1bea153de5dfbd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "unrelated-rice",
+        "question": "When should rice fields be irrigated?",
+        "category": "unrelated",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.15710584,
+        "accepted": false,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.15710584,
+            "document": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "e9458a9cdd76a71daeec0fc2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.12189094,
+            "document": "cloud-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "1cd01ecd13f89e97370a6181",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.11921649,
+            "document": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "c801d6371880711788e3b79b",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.09992295,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.06197089,
+            "document": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "e1a3bed48f3a218e79603049",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "unrelated-bread",
+        "question": "How much yeast should I add to sourdough bread?",
+        "category": "unrelated",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.10990535,
+        "accepted": false,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.10990535,
+            "document": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "e9458a9cdd76a71daeec0fc2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.10464543,
+            "document": "authentication-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "d76f06f040f19e2c070888a7",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.07634074,
+            "document": "web-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "09693660a01bc9f045a23eae",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.07029532,
+            "document": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "c801d6371880711788e3b79b",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.01065771,
+            "document": "storage-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "11181ebc9d2bd09df5e7098f",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "unrelated-moon",
+        "question": "How many moons orbit Neptune?",
+        "category": "unrelated",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.08359429,
+        "accepted": false,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.08359429,
+            "document": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "c801d6371880711788e3b79b",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.06300842,
+            "document": "web-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "09693660a01bc9f045a23eae",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.06006256,
+            "document": "cloud-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "1b5a5c4559c1b17551cbf2aa",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.05957766,
+            "document": "data-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "5f3a6a03352f70d52031842e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.04769741,
+            "document": "data-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "3464af0207581c12d76ff58e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "unrelated-piano",
+        "question": "How should I tune a grand piano?",
+        "category": "unrelated",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.05855029,
+        "accepted": false,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.05855029,
+            "document": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "e9458a9cdd76a71daeec0fc2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.03324994,
+            "document": "data-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "5f3a6a03352f70d52031842e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": -0.01031443,
+            "document": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "c801d6371880711788e3b79b",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": -0.01604807,
+            "document": "cloud-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "1e03748dbde06f16bb9cc1bd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": -0.04704909,
+            "document": "cloud-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "1b5a5c4559c1b17551cbf2aa",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "unrelated-bird",
+        "question": "Why do swallows migrate south?",
+        "category": "unrelated",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.15400278,
+        "accepted": false,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.15400278,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.13324219,
+            "document": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "c801d6371880711788e3b79b",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.08680548,
+            "document": "data-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "84f98a057eb5b61bf352f745",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.07182296,
+            "document": "authentication-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "d5ee05c5d2ea1513e64b50db",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.06778449,
+            "document": "storage-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "11181ebc9d2bd09df5e7098f",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "ambiguous-expiration",
+        "question": "When does it expire?",
+        "category": "ambiguous",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.45293337,
+        "accepted": false,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.45293337,
+            "document": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "a8b956494a1bea153de5dfbd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.35572368,
+            "document": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "e1a3bed48f3a218e79603049",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.27208015,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.24983526,
+            "document": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "400060c43aa435810d1e339a",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.18823683,
+            "document": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "e9458a9cdd76a71daeec0fc2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "ambiguous-best",
+        "question": "Which service is the best?",
+        "category": "ambiguous",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.32897553,
+        "accepted": false,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.32897553,
+            "document": "cloud-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "1e03748dbde06f16bb9cc1bd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.24954985,
+            "document": "cloud-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "1cd01ecd13f89e97370a6181",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.22747907,
+            "document": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "c801d6371880711788e3b79b",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.19500522,
+            "document": "web-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "09693660a01bc9f045a23eae",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.19012439,
+            "document": "cloud-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "1b5a5c4559c1b17551cbf2aa",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "ambiguous-safety",
+        "question": "Is everything secure?",
+        "category": "ambiguous",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.20144689,
+        "accepted": false,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.20144689,
+            "document": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "09c500657eb4519c0baa01b2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.14945864,
+            "document": "authentication-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "d5ee05c5d2ea1513e64b50db",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.12326025,
+            "document": "cloud-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "1cd01ecd13f89e97370a6181",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.07524178,
+            "document": "cloud-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "1b5a5c4559c1b17551cbf2aa",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.06351647,
+            "document": "web-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "c634b131a4df000c861a1bcc",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "ambiguous-data",
+        "question": "Where is application metadata stored?",
+        "category": "ambiguous",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "data-guide.pdf",
+            "page": 1
+          }
+        ],
+        "top_cosine": 0.47693742,
+        "accepted": false,
+        "required_evidence_present_at_5": true,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.47693742,
+            "document": "data-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "3464af0207581c12d76ff58e",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.35370438,
+            "document": "storage-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "11181ebc9d2bd09df5e7098f",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.32550393,
+            "document": "cloud-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "1b5a5c4559c1b17551cbf2aa",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.30025573,
+            "document": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "c801d6371880711788e3b79b",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.28046075,
+            "document": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "e9458a9cdd76a71daeec0fc2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Required evidence is in top five, but strongest cosine is below 0.50; not a candidate-recall or context-budget failure."
+      },
+      {
+        "id": "ambiguous-remember",
+        "question": "Does the next question use my past answers?",
+        "category": "ambiguous",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "data-guide.pdf",
+            "page": 3
+          }
+        ],
+        "top_cosine": 0.34939177,
+        "accepted": false,
+        "required_evidence_present_at_5": true,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.34939177,
+            "document": "data-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "84f98a057eb5b61bf352f745",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.14381718,
+            "document": "data-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "3464af0207581c12d76ff58e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.13214717,
+            "document": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "e1a3bed48f3a218e79603049",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.12910506,
+            "document": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "c801d6371880711788e3b79b",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.12112999,
+            "document": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "e9458a9cdd76a71daeec0fc2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Required evidence is in top five, but strongest cosine is below 0.50; not a candidate-recall or context-budget failure."
+      },
+      {
+        "id": "disambig-session",
+        "question": "How long can the North dashboard sit idle before closing its session?",
+        "category": "disambiguation",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "operations-guide.pdf",
+            "page": 2
+          }
+        ],
+        "top_cosine": 0.71190484,
+        "accepted": true,
+        "required_evidence_present_at_5": true,
+        "complete": true,
+        "context_count": 2,
+        "context_characters": 650,
+        "context_sources": [
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.71190484,
+            "document": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "400060c43aa435810d1e339a",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.31303162,
+            "document": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "a8b956494a1bea153de5dfbd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.269679,
+            "document": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "e9458a9cdd76a71daeec0fc2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.24921819,
+            "document": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "c801d6371880711788e3b79b",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.2412943,
+            "document": "web-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "09693660a01bc9f045a23eae",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "disambig-api",
+        "question": "When does a South automation API key expire?",
+        "category": "disambiguation",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "operations-guide.pdf",
+            "page": 3
+          }
+        ],
+        "top_cosine": 0.75694749,
+        "accepted": true,
+        "required_evidence_present_at_5": true,
+        "complete": true,
+        "context_count": 5,
+        "context_characters": 1593,
+        "context_sources": [
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3
+          },
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4
+          },
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.75694749,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.425856,
+            "document": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "a8b956494a1bea153de5dfbd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.39769757,
+            "document": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "c801d6371880711788e3b79b",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.39457418,
+            "document": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "e1a3bed48f3a218e79603049",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.34843261,
+            "document": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "400060c43aa435810d1e339a",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "disambig-south",
+        "question": "How many days does South retain metadata backups?",
+        "category": "disambiguation",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "operations-guide.pdf",
+            "page": 4
+          }
+        ],
+        "top_cosine": 0.8221439,
+        "accepted": true,
+        "required_evidence_present_at_5": true,
+        "complete": true,
+        "context_count": 5,
+        "context_characters": 1601,
+        "context_sources": [
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3
+          },
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "storage-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.8221439,
+            "document": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "c801d6371880711788e3b79b",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.6608317,
+            "document": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "e9458a9cdd76a71daeec0fc2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.3663186,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.32793317,
+            "document": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "e1a3bed48f3a218e79603049",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.30659507,
+            "document": "storage-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "11181ebc9d2bd09df5e7098f",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "disambig-csrf",
+        "question": "Which token protects browser forms from cross-site request forgery?",
+        "category": "disambiguation",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "web-guide.pdf",
+            "page": 1
+          }
+        ],
+        "top_cosine": 0.66394385,
+        "accepted": true,
+        "required_evidence_present_at_5": true,
+        "complete": true,
+        "context_count": 4,
+        "context_characters": 1285,
+        "context_sources": [
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.66394385,
+            "document": "web-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "c634b131a4df000c861a1bcc",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.44614254,
+            "document": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "09c500657eb4519c0baa01b2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.3915508,
+            "document": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "a8b956494a1bea153de5dfbd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.32017692,
+            "document": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "e1a3bed48f3a218e79603049",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.2908003,
+            "document": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "400060c43aa435810d1e339a",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "disambig-rate",
+        "question": "How many requests per minute does the public status endpoint allow?",
+        "category": "disambiguation",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "web-guide.pdf",
+            "page": 3
+          }
+        ],
+        "top_cosine": 0.7904385,
+        "accepted": true,
+        "required_evidence_present_at_5": true,
+        "complete": true,
+        "context_count": 2,
+        "context_characters": 637,
+        "context_sources": [
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 3,
+            "page_end": 3
+          },
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.7904385,
+            "document": "web-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "09693660a01bc9f045a23eae",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.3521568,
+            "document": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "a8b956494a1bea153de5dfbd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.27116515,
+            "document": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "400060c43aa435810d1e339a",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.23731989,
+            "document": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "e1a3bed48f3a218e79603049",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.18164878,
+            "document": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "e9458a9cdd76a71daeec0fc2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      }
+    ]
+  },
+  "safety_baseline": {
+    "case_count": 10,
+    "candidate_pairs_available": 50,
+    "ranking": {
+      "answerable_count": 4,
+      "unsupported_count": 6,
+      "no_valid_hit_count": 0,
+      "hit_at_1": 1.0,
+      "hit_at_3": 1.0,
+      "hit_at_5": 1.0,
+      "mrr": 1.0,
+      "all_evidence_at_5": 0.75
+    },
+    "decision": {
+      "tp": 3,
+      "tn": 5,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0.75,
+      "recall": 0.75,
+      "f1": 0.75
+    },
+    "complete_evidence": 2,
+    "multi_complete": 0,
+    "context": {
+      "average_chunks_accepted": 5,
+      "maximum_chunks": 5,
+      "average_serialized_characters_accepted": 1629.25,
+      "maximum_serialized_characters": 1649,
+      "budget_affected": []
+    },
+    "cases": [
+      {
+        "id": "safety-related-signature",
+        "question": "How does JWT authentication work and why is its signature checked?",
+        "category": "phase15_safety",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "authentication-guide.pdf",
+            "page": 1
+          }
+        ],
+        "top_cosine": 0.78077547,
+        "accepted": true,
+        "required_evidence_present_at_5": true,
+        "complete": true,
+        "context_count": 5,
+        "context_characters": 1600,
+        "context_sources": [
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3
+          },
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.78077547,
+            "document": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "09c500657eb4519c0baa01b2",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.58447189,
+            "document": "web-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "c634b131a4df000c861a1bcc",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.36916514,
+            "document": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "a8b956494a1bea153de5dfbd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.36634224,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.32430349,
+            "document": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "e1a3bed48f3a218e79603049",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "safety-three-topics",
+        "question": "Explain JWT authentication, MongoDB storage, and cloud service models.",
+        "category": "phase15_safety",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "authentication-guide.pdf",
+            "page": 1
+          },
+          {
+            "document": "data-guide.pdf",
+            "page": 1
+          },
+          {
+            "document": "cloud-guide.pdf",
+            "page": 1
+          },
+          {
+            "document": "cloud-guide.pdf",
+            "page": 2
+          },
+          {
+            "document": "cloud-guide.pdf",
+            "page": 3
+          }
+        ],
+        "top_cosine": 0.54308439,
+        "accepted": true,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 5,
+        "context_characters": 1649,
+        "context_sources": [
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "data-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3
+          },
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 4,
+            "page_end": 4
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.54308439,
+            "document": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "09c500657eb4519c0baa01b2",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.39806764,
+            "document": "data-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "3464af0207581c12d76ff58e",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.3871888,
+            "document": "web-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "c634b131a4df000c861a1bcc",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.36032124,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.34768783,
+            "document": "authentication-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "d76f06f040f19e2c070888a7",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "safety-unsupported-rotation",
+        "question": "Explain JWT signing-key rotation and emergency key revocation.",
+        "category": "phase15_safety",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.49870881,
+        "accepted": false,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.49870881,
+            "document": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "09c500657eb4519c0baa01b2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.44664222,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.34991216,
+            "document": "web-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "c634b131a4df000c861a1bcc",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.30417271,
+            "document": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "e1a3bed48f3a218e79603049",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.27825058,
+            "document": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "400060c43aa435810d1e339a",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "safety-unrelated-conjunction",
+        "question": "How do irrigation and fertilizer improve rice farming?",
+        "category": "phase15_safety",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.15741285,
+        "accepted": false,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.15741285,
+            "document": "cloud-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "1cd01ecd13f89e97370a6181",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.09688332,
+            "document": "cloud-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "1b5a5c4559c1b17551cbf2aa",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.08565274,
+            "document": "cloud-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "1e03748dbde06f16bb9cc1bd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.06783624,
+            "document": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "e9458a9cdd76a71daeec0fc2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.04149558,
+            "document": "authentication-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "d5ee05c5d2ea1513e64b50db",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "safety-single-concept",
+        "question": "Research and development",
+        "category": "phase15_safety",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.23648274,
+        "accepted": false,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.23648274,
+            "document": "cloud-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "1e03748dbde06f16bb9cc1bd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.22180198,
+            "document": "cloud-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "1b5a5c4559c1b17551cbf2aa",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.16197091,
+            "document": "cloud-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "1cd01ecd13f89e97370a6181",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.09854542,
+            "document": "data-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "5f3a6a03352f70d52031842e",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.07665443,
+            "document": "web-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "09693660a01bc9f045a23eae",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "safety-explicit-questions",
+        "question": "Where are original PDFs stored? How long do access tokens remain valid?",
+        "category": "phase15_safety",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "storage-guide.pdf",
+            "page": 1
+          },
+          {
+            "document": "authentication-guide.pdf",
+            "page": 2
+          }
+        ],
+        "top_cosine": 0.52362345,
+        "accepted": true,
+        "required_evidence_present_at_5": true,
+        "complete": true,
+        "context_count": 5,
+        "context_characters": 1642,
+        "context_sources": [
+          {
+            "source_filename": "storage-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          },
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "storage-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 3,
+            "page_end": 3
+          },
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.52362345,
+            "document": "storage-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "11181ebc9d2bd09df5e7098f",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.47097113,
+            "document": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "a8b956494a1bea153de5dfbd",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.41693824,
+            "document": "storage-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "2d387ce59343d227172a0731",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.39457227,
+            "document": "web-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "09693660a01bc9f045a23eae",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.38143946,
+            "document": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "e1a3bed48f3a218e79603049",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "safety-semicolon-unsupported",
+        "question": "How long are refresh tokens stored; what is the JWT signing-key rotation policy?",
+        "category": "phase15_safety",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.52263948,
+        "accepted": true,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 5,
+        "context_characters": 1626,
+        "context_sources": [
+          {
+            "source_filename": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3
+          },
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2
+          },
+          {
+            "source_filename": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1
+          }
+        ],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.52263948,
+            "document": "web-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "e1a3bed48f3a218e79603049",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.51488219,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.48568306,
+            "document": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "a8b956494a1bea153de5dfbd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.44049484,
+            "document": "operations-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "400060c43aa435810d1e339a",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.41688781,
+            "document": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "09c500657eb4519c0baa01b2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Accepted topical similarity does not establish support for the requested fact/policy."
+      },
+      {
+        "id": "safety-mixed-supported-unsupported",
+        "question": "Explain JWT signatures and rice irrigation.",
+        "category": "phase15_safety",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.45187106,
+        "accepted": false,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.45187106,
+            "document": "authentication-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "09c500657eb4519c0baa01b2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.28882037,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.28447178,
+            "document": "web-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "c634b131a4df000c861a1bcc",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.15044865,
+            "document": "cloud-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "1cd01ecd13f89e97370a6181",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.11739731,
+            "document": "authentication-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "a8b956494a1bea153de5dfbd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "safety-comparison-unsupported",
+        "question": "Compare what the customer manages in IaaS and the lunar habitat.",
+        "category": "phase15_safety",
+        "answerable": false,
+        "expected_evidence": [],
+        "top_cosine": 0.26397895,
+        "accepted": false,
+        "required_evidence_present_at_5": false,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.26397895,
+            "document": "cloud-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "1cd01ecd13f89e97370a6181",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.251822,
+            "document": "cloud-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "1e03748dbde06f16bb9cc1bd",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.18646061,
+            "document": "cloud-guide.pdf",
+            "page_start": 2,
+            "page_end": 2,
+            "chunk_id": "1b5a5c4559c1b17551cbf2aa",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.1507669,
+            "document": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "c801d6371880711788e3b79b",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.1417984,
+            "document": "operations-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "2c69bc9111c27110a9b9a797",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Baseline decision preserved; second-stage behavior not measured."
+      },
+      {
+        "id": "safety-semicolon-supported",
+        "question": "Where is application metadata stored; which algorithm stores password hashes?",
+        "category": "phase15_safety",
+        "answerable": true,
+        "expected_evidence": [
+          {
+            "document": "data-guide.pdf",
+            "page": 1
+          },
+          {
+            "document": "authentication-guide.pdf",
+            "page": 3
+          }
+        ],
+        "top_cosine": 0.45132195,
+        "accepted": false,
+        "required_evidence_present_at_5": true,
+        "complete": false,
+        "context_count": 0,
+        "context_characters": 2,
+        "context_sources": [],
+        "budget_excluded": 0,
+        "candidates": [
+          {
+            "original_rank": 1,
+            "cosine": 0.45132195,
+            "document": "authentication-guide.pdf",
+            "page_start": 3,
+            "page_end": 3,
+            "chunk_id": "d5ee05c5d2ea1513e64b50db",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 2,
+            "cosine": 0.43481806,
+            "document": "data-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "3464af0207581c12d76ff58e",
+            "required": true,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 3,
+            "cosine": 0.29936064,
+            "document": "storage-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "11181ebc9d2bd09df5e7098f",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 4,
+            "cosine": 0.26752173,
+            "document": "operations-guide.pdf",
+            "page_start": 1,
+            "page_end": 1,
+            "chunk_id": "e9458a9cdd76a71daeec0fc2",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          },
+          {
+            "original_rank": 5,
+            "cosine": 0.26739452,
+            "document": "operations-guide.pdf",
+            "page_start": 4,
+            "page_end": 4,
+            "chunk_id": "c801d6371880711788e3b79b",
+            "required": false,
+            "reranker_score": null,
+            "reranker_rank": null
+          }
+        ],
+        "reranker_decision": null,
+        "reranker_complete_evidence": null,
+        "diagnosis": "Required evidence is in top five, but strongest cosine is below 0.50; not a candidate-recall or context-budget failure."
+      }
+    ]
+  },
+  "policies_proposed": {
+    "A": "Unchanged cosine 0.50 primary / 0.30 evidence; production context builder",
+    "B": "Any reranker score >= model-specific threshold; keep all qualifying candidates in reranked order",
+    "C": "B AND original strongest cosine >=0.50; conservative control, cannot recover original gate false negatives"
+  },
+  "thresholds_evaluated": [],
+  "reranker_model": null,
+  "device_used": null,
+  "pairs_scored": 0,
+  "inference_seconds": null,
+  "average_reranking_seconds": null,
+  "reranked_metrics": null,
+  "score_distributions": null,
+  "candidate_policies": [],
+  "historical_report_sha256": {
+    "fixture.json": "d8c5295ca7d07ace96e37cfdfa7dc54dafb76aad8389c6977abe4b10db9ef51d",
+    "fixture.md": "72af67adf6eeca0ca69e2951704b3180a184f20c3e96a0c5843bcd55fc172147",
+    "local-model.json": "d934000d1d912c10219cf2ccfb5b882269086fcb2c010ca17b6923a45ea3e501",
+    "local-model.md": "f36e1b5dc652ef4a388513df14ffe70d4910423e501129061691e31ff972efc2",
+    "phase13-comparison.json": "8879ee134930b4106df9ffec23a51ebd691d29353e7a19a7805f1169ccf6e989",
+    "phase13-comparison.md": "6e9e143875c92d8ce7eddb15fc0c3c99ede11bfb733b2f36ea0ba98f96d2141d",
+    "phase15a-multi-query.json": "f08b4b8ce8d957e0081df88b9499c3a6a13140dba319f18a33d69d03ed49254f",
+    "phase15a-multi-query.md": "b309dd5e46453e2678df4bdb36c3877c20bf52f6722741ffd3c8bf5a6d6e8aa5"
+  },
+  "production_sha256": {
+    "retrieval.py": "dba01e1352112702fac236cb8cd7b6cd9e613cf32b032f3de8e45fd31c19d3e6",
+    "vector_store.py": "e6f887e49320ea8e3a77f56af04e6dfc4962830dd490dfdcac35795fa9411d24",
+    "rag.py": "1ef31e66d2843c0a90d4d8470138f77ae66e8ef48c7d02b459223ec1e70e14b6",
+    "rag_context.py": "ac01002405ce6b92884101b757491fab52bf19e4049b5ba1485a34c55bf338fc",
+    "rag_citations.py": "76ff07111430e52a18916300b3f6b408af8e5c4df911d76898d773435c6e0b16",
+    "rag_routes.py": "d3153fd00a337872dfdfcde8a28b93fba1f9bb6e22b5808df77f8d14d085f7b5",
+    "gemini_provider.py": "b9896395a08371e86aaf8617461c6b5b335c60b361dca7541a85c1d69f288d6d",
+    "config.py": "2c5fc9cc2631186718775dbde806ddaed5b4d8b50aa0466d6412dd0ad77bb4cb",
+    "requirements.txt": "9dfc3021f3626935a98c575a6ed68edb397b66fde49cca19518c64cc29461bec"
+  },
+  "unsupported_rationales": {
+    "unsupported-refresh": "Corpus describes access-token expiration, not refresh-token retention; access and refresh tokens are distinct.",
+    "unsupported-rotation": "Corpus describes signature verification with a configured secret, not signing-key rotation; other session/API-key timings are distractors."
+  },
+  "limitations": [
+    "No measured second-stage scores, ranking changes, threshold calibration, recovered cases, or inference cost.",
+    "Unit-test fake scalar scores verify mechanics only and are never benchmark results.",
+    "Cross-encoder relevance is not calibrated probability, factual confidence, or proof that every question part is supported.",
+    "Non-required candidates are not automatically harmful; ground truth does not label every possible supporting passage.",
+    "No Phase16B design without measured adoption evidence; no public endpoint or production integration."
+  ]
+}
