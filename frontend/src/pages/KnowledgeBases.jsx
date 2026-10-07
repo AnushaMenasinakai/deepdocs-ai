@@ -3,13 +3,17 @@ import Header from '../components/Header.jsx'
 import Icon from '../components/Icon.jsx'
 import KnowledgeBaseForm from '../components/KnowledgeBaseForm.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { listKnowledgeBases, createKnowledgeBase, updateKnowledgeBase, deleteKnowledgeBase } from '../services/api.js'
+import { browseKnowledgeBases, createKnowledgeBase, updateKnowledgeBase, deleteKnowledgeBase } from '../services/api.js'
 
-const ordered = items => [...items].sort((a, b) =>
-  Date.parse(b.updated_at) - Date.parse(a.updated_at) || b.id.localeCompare(a.id))
+import { ManagementControls, ManagementPagination, useManagementQuery } from '../components/ManagementControls.jsx'
+const SORTS = ['updated_at', 'created_at', 'name']
 
 export default function KnowledgeBases() {
   const { logout } = useAuth()
+  const view = useManagementQuery('updated_at', SORTS)
+  const { query, waiting, change } = view
+  const [meta, setMeta] = useState({ page: 1, total: 0, total_pages: 0 })
+  const mutation = useRef(null)
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -29,9 +33,13 @@ export default function KnowledgeBases() {
     request.current = controller
     setLoading(true)
     setLoadError('')
+    if (waiting) return
     try {
-      const data = await listKnowledgeBases(controller.signal)
-      if (!controller.signal.aborted) setItems(ordered(data))
+      const data = await browseKnowledgeBases(query, controller.signal)
+      if (!controller.signal.aborted) {
+        if (query.page > Math.max(1, data.total_pages)) { change({ page: Math.max(1, data.total_pages) }, true); return }
+        setItems(data.items); setMeta(data)
+      }
     } catch (error) {
       if (controller.signal.aborted) return
       if (error.status === 401) logout()
@@ -39,12 +47,14 @@ export default function KnowledgeBases() {
     } finally {
       if (!controller.signal.aborted) setLoading(false)
     }
-  }, [logout])
+  }, [logout, query, waiting, change])
 
   useEffect(() => {
     load()
     return () => request.current?.abort()
   }, [load])
+
+  useEffect(() => () => mutation.current?.abort(), [])
 
   function close() {
     setEditor(null)
@@ -71,22 +81,21 @@ export default function KnowledgeBases() {
     setBusy(true)
     setActionError('')
     const controller = new AbortController()
-    request.current = controller
+    mutation.current = controller
     try {
       if (deleting) {
         await deleteKnowledgeBase(deleting.id, controller.signal)
         if (controller.signal.aborted) return
-        setItems(current => current.filter(item => item.id !== deleting.id))
         setNotice('Knowledge Base deleted.')
       } else {
-        const saved = editor.item
-          ? await updateKnowledgeBase(editor.item.id, data, controller.signal)
-          : await createKnowledgeBase(data, controller.signal)
+        await (editor.item
+          ? updateKnowledgeBase(editor.item.id, data, controller.signal)
+          : createKnowledgeBase(data, controller.signal))
         if (controller.signal.aborted) return
-        setItems(current => ordered([...current.filter(item => item.id !== saved.id), saved]))
         setNotice(editor.item ? 'Knowledge Base updated.' : 'Knowledge Base created.')
       }
       close()
+      await load()
     } catch (error) {
       if (controller.signal.aborted) return
       if (error.status === 401) logout()
@@ -120,21 +129,23 @@ export default function KnowledgeBases() {
         <button className="kb-danger" disabled={busy} onClick={() => mutate()}>{busy ? 'Deleting…' : 'Confirm deletion'}</button>
       </div>
     </section>}
-    {loading ? <section className="panel kb-state" role="status">Loading your Knowledge Bases…</section>
+    <ManagementControls state={view} disabled={editing || busy} />
+    <ManagementPagination meta={meta} loading={loading || waiting} change={change} disabled={editing || busy || Boolean(loadError)} />
+    {loading && items.length === 0 ? <section className="panel kb-state" role="status">Loading your Knowledge Bases…</section>
       : loadError ? <section className="panel kb-state"><p role="alert">{loadError}</p><button className="session-button" onClick={load}>Try again</button></section>
       : items.length === 0 ? <section className="panel empty-state">
         <span className="empty-icon"><Icon name="library" size={32} /></span>
-        <h2>Your knowledge starts with a collection</h2>
-        <p>Create your first Knowledge Base for project references, course notes, or research. Then add PDFs from the Documents page.</p>
+        <h2>{query.search ? 'No matching Knowledge Bases' : 'Your knowledge starts with a collection'}</h2>
+        <p>{query.search ? 'Try another name or clear your search.' : 'Create your first Knowledge Base for project references, course notes, or research. Then add PDFs from the Documents page.'}</p>
       </section>
-      : <div className="kb-grid">{items.map(item => <article className="panel kb-card" key={item.id}>
+      : <div className="kb-grid" aria-busy={loading || waiting}>{items.map(item => <article className="panel kb-card" key={item.id}>
         <span className="feature-icon"><Icon name="library" size={22} /></span>
         <h2>{item.name}</h2>
         <p className="kb-description">{item.description || 'No description added.'}</p>
         <p className="kb-updated">Updated <time dateTime={item.updated_at}>{new Date(item.updated_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</time></p>
         <div className="kb-actions">
-          <button className="session-button" aria-label={'Edit ' + item.name} disabled={editing || busy} onClick={event => open('edit', item, event)}>Edit</button>
-          <button className="session-button kb-delete-link" aria-label={'Delete ' + item.name} disabled={editing || busy} onClick={event => open('delete', item, event)}>Delete</button>
+          <button className="session-button" aria-label={'Edit ' + item.name} disabled={editing || busy || loading || waiting} onClick={event => open('edit', item, event)}>Edit</button>
+          <button className="session-button kb-delete-link" aria-label={'Delete ' + item.name} disabled={editing || busy || loading || waiting} onClick={event => open('delete', item, event)}>Delete</button>
         </div>
       </article>)}</div>}
   </>

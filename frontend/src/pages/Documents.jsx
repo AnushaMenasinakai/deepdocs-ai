@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import Header from '../components/Header.jsx'
 import Icon from '../components/Icon.jsx'
 import DocumentUpload, { fileSize } from '../components/DocumentUpload.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { listKnowledgeBases, listDocuments, uploadDocument, deleteDocument } from '../services/api.js'
+import { listKnowledgeBases, browseDocuments, uploadDocument, deleteDocument } from '../services/api.js'
 
-const ordered = items => [...items].sort((a, b) =>
-  Date.parse(b.created_at) - Date.parse(a.created_at) || b.id.localeCompare(a.id))
+import { ManagementControls, ManagementPagination, useManagementQuery } from '../components/ManagementControls.jsx'
+const SORTS = ['created_at', 'updated_at', 'filename']
 
 // Keyed by selection: old requests and UI state cannot cross collection boundaries.
 function DocumentCollection({ base, onBusy, onRefreshBases }) {
   const { logout } = useAuth()
+  const view = useManagementQuery('created_at', SORTS, true)
+  const { query, waiting, change } = view
+  const [meta, setMeta] = useState({ page: 1, total: 0, total_pages: 0 })
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
@@ -33,9 +36,13 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
     listRequest.current = controller
     setLoading(true)
     setLoadError(null)
+    if (waiting) return
     try {
-      const data = await listDocuments(base.id, controller.signal)
-      if (!controller.signal.aborted && active.current) setItems(ordered(data))
+      const data = await browseDocuments(base.id, query, controller.signal)
+      if (!controller.signal.aborted && active.current) {
+        if (query.page > Math.max(1, data.total_pages)) { change({ page: Math.max(1, data.total_pages) }, true); return }
+        setItems(data.items); setMeta(data)
+      }
     } catch (error) {
       if (controller.signal.aborted || !active.current) return
       if (error.status === 401) logout()
@@ -43,7 +50,7 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
     } finally {
       if (!controller.signal.aborted && active.current) setLoading(false)
     }
-  }, [base.id, logout])
+  }, [base.id, logout, query, waiting, change])
 
   useEffect(() => {
     active.current = true
@@ -76,9 +83,8 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
     mutation.current = controller
     try {
       if (file) {
-        const saved = await uploadDocument(base.id, file, controller.signal)
+        await uploadDocument(base.id, file, controller.signal)
         if (controller.signal.aborted || !active.current) return false
-        setItems(current => ordered([...current.filter(item => item.id !== saved.id), saved]))
         setNotice('PDF uploaded.')
       } else {
         await deleteDocument(deleting.id, controller.signal)
@@ -87,6 +93,7 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
         closeDelete()
         setNotice('Document deleted.')
       }
+      await load()
       return true
     } catch (error) {
       if (controller.signal.aborted || !active.current) return false
@@ -116,9 +123,11 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
     <div role="status" aria-live="polite">{notice && <p className="auth-success">{notice}</p>}</div>
     <DocumentUpload busy={locked || loading || Boolean(loadError)} uploading={busy === 'upload'} error={uploadError} onUpload={mutate} onChange={() => setUploadError('')} />
     <div className="kb-toolbar document-list-heading">
-      <div><h2 ref={heading} tabIndex={-1}>Documents in {base.name}</h2><p className="kb-muted">Original files · Processing status (separate from vector indexing)</p></div>
+      <div><h2 ref={heading} tabIndex={-1}>Documents in {base.name}</h2><p className="kb-muted">Original files · Indexed reflects last-confirmed vector synchronization</p></div>
       <button className="session-button" disabled={locked || loading} onClick={load}>Refresh documents</button>
     </div>
+    <ManagementControls state={view} documents disabled={locked} />
+    <ManagementPagination meta={meta} loading={loading || waiting} change={change} disabled={locked || Boolean(loadError)} />
     {deleting && <section className="panel kb-editor kb-delete" aria-labelledby="document-delete-title">
       <h2 id="document-delete-title">Delete document?</h2>
       <p>Delete <strong>{deleting.filename}</strong>? The original PDF and its metadata will be removed. This cannot be undone.</p>
@@ -128,23 +137,23 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
         <button className="kb-danger" disabled={Boolean(busy)} onClick={() => mutate()}>{busy === 'delete' ? 'Deleting…' : 'Confirm deletion'}</button>
       </div>
     </section>}
-    {loading ? <section className="panel kb-state" role="status">Loading documents…</section>
+    {loading && items.length === 0 ? <section className="panel kb-state" role="status">Loading documents…</section>
       : loadError ? <section className="panel kb-state">
         <p role="alert">{loadError.message}</p>
         <button className="session-button" onClick={loadError.status === 404 ? onRefreshBases : load}>{loadError.status === 404 ? 'Refresh Knowledge Bases' : 'Try again'}</button>
       </section>
       : items.length === 0 ? <section className="panel empty-state">
         <span className="empty-icon"><Icon name="document" size={32} /></span>
-        <h2>No documents here yet</h2><p>Choose a PDF above to add your first document to this Knowledge Base.</p>
+        <h2>{query.search || query.status !== 'all' ? 'No matching documents' : 'No documents here yet'}</h2><p>{query.search || query.status !== 'all' ? 'Try another filename or clear your filters.' : 'Choose a PDF above to add your first document to this Knowledge Base.'}</p>
       </section>
-      : <div className="document-list">{items.map(item => <article key={item.id} className="panel document-card">
+      : <div className="document-list" aria-busy={loading || waiting}>{items.map(item => <article key={item.id} className="panel document-card">
         <span className="feature-icon document"><Icon name="document" size={24} /></span>
         <div className="document-info">
           <h3>{item.filename}</h3>
           <p>{fileSize(item.file_size)} <span aria-hidden="true">·</span> Added <time dateTime={item.created_at}>{new Date(item.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</time></p>
-          <span className="document-status">{({ uploaded: 'Uploaded', processing: 'Processing', processed: 'Processed', failed: 'Failed' })[item.status] || 'Status unavailable'}</span>
+          <span className="document-status">{item.failed ? 'Failed' : item.indexed ? 'Indexed' : ({ uploaded: 'Uploaded', processing: 'Processing', processed: 'Processed', failed: 'Failed' })[item.status] || 'Status unavailable'}</span>
         </div>
-        <button className="session-button kb-delete-link" disabled={locked} aria-label={'Delete ' + item.filename} onClick={event => {
+        <button className="session-button kb-delete-link" disabled={locked || loading || waiting} aria-label={'Delete ' + item.filename} onClick={event => {
           returnFocus.current = event.currentTarget
           setNotice('')
           setDeleteError('')
@@ -157,7 +166,8 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
 export default function Documents() {
   const { logout } = useAuth()
   const [bases, setBases] = useState([])
-  const [selected, setSelected] = useState('')
+  const [url, setUrl] = useSearchParams()
+  const selected = bases.some(item => item.id === url.get('kb')) ? url.get('kb') : bases[0]?.id || ''
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -175,7 +185,6 @@ export default function Documents() {
       const data = await listKnowledgeBases(controller.signal)
       if (controller.signal.aborted) return
       setBases(data)
-      setSelected(current => data.some(base => base.id === current) ? current : data[0]?.id || '')
     } catch (failure) {
       if (controller.signal.aborted) return
       if (failure.status === 401) logout()
@@ -211,7 +220,8 @@ export default function Documents() {
         <div className="document-selector">
           <label htmlFor="document-base">Knowledge Base</label>
           <select id="document-base" value={selected} disabled={busy} onChange={event => {
-            setSelected(event.target.value)
+            const id = event.target.value
+            setUrl(current => { const next = new URLSearchParams(current); next.set('kb', id); next.set('page', '1'); return next })
             setNotice('')
           }}>{bases.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
         </div>

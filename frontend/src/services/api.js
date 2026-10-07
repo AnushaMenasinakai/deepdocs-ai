@@ -96,6 +96,38 @@ async function knowledgeBaseRequest(method, id, data, signal) {
 }
 
 export const listKnowledgeBases = (signal) => knowledgeBaseRequest('get', null, undefined, signal)
+// Explicit paginated management APIs preserve legacy array callers/Ask selectors.
+async function browseRequest(url, params, signal, documents = false) {
+  let response
+  try {
+    response = await api.get(url, { params, signal, headers: { Authorization: 'Bearer ' + getAccessToken() } })
+  } catch (error) {
+    if (axios.isCancel(error)) throw error
+    const safe = new Error(error.response?.status === 404 ? 'This Knowledge Base is no longer available.' : 'Unable to load results. Please try again.')
+    safe.status = error.response?.status
+    throw safe
+  }
+  const data = response.data
+  const invalid = () => { throw new Error('We could not read the results. Please try again.') }
+  if (response.status !== 200 || !data || !Array.isArray(data.items) ||
+    !Number.isSafeInteger(data.page) || data.page < 1 || !Number.isSafeInteger(data.limit) || data.limit < 1 || data.limit > 100 ||
+    !Number.isSafeInteger(data.total) || data.total < 0 || data.total_pages !== Math.ceil(data.total / data.limit) ||
+    data.items.length > data.limit || data.items.length > data.total) invalid()
+  const items = data.items.map(item => {
+    if (!item || typeof item.id !== 'string' || !item.id ||
+      !['created_at', 'updated_at'].every(key => typeof item[key] === 'string' && Number.isFinite(Date.parse(item[key])))) invalid()
+    if (documents) {
+      if (typeof item.filename !== 'string' || !item.filename || typeof item.indexed !== 'boolean' || typeof item.failed !== 'boolean' ||
+        !Number.isSafeInteger(item.file_size) || item.file_size < 0 || !['uploaded', 'processing', 'processed', 'failed'].includes(item.status)) invalid()
+      return Object.fromEntries(['id', 'filename', 'status', 'indexed', 'failed', 'file_size', 'created_at', 'updated_at'].map(key => [key, item[key]]))
+    }
+    if (typeof item.name !== 'string' || !item.name || (item.description != null && typeof item.description !== 'string')) invalid()
+    return { id: item.id, name: item.name, description: item.description, created_at: item.created_at, updated_at: item.updated_at }
+  })
+  return { items, page: data.page, limit: data.limit, total: data.total, total_pages: data.total_pages }
+}
+export const browseKnowledgeBases = (params, signal) => browseRequest('/api/knowledge-bases/browse', params, signal)
+export const browseDocuments = (id, params, signal) => browseRequest('/api/knowledge-bases/' + encodeURIComponent(id) + '/documents/browse', params, signal, true)
 export const createKnowledgeBase = (data, signal) => knowledgeBaseRequest('post', null, data, signal)
 export const updateKnowledgeBase = (id, data, signal) => knowledgeBaseRequest('patch', id, data, signal)
 export const deleteKnowledgeBase = (id, signal) => knowledgeBaseRequest('delete', id, undefined, signal)

@@ -2,7 +2,9 @@
 from contextlib import contextmanager
 from datetime import timezone
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, Query
+from typing import Annotated
+from management import DocumentQuery, DocumentPage, browse
 from pymongo.errors import PyMongoError
 from starlette.datastructures import UploadFile
 from starlette.formparsers import MultiPartParser, MultiPartException
@@ -125,6 +127,17 @@ async def list_owned(
     with safe_errors():
         found(await knowledge_bases.get_knowledge_base(database, owner_id, base_id), "Knowledge Base")
         return await documents.list_documents(database, owner_id, base_id)
+
+
+@router.get("/api/knowledge-bases/{knowledge_base_id}/documents/browse", response_model=DocumentPage)
+async def browse_owned(
+    knowledge_base_id: str, query: Annotated[DocumentQuery, Query()],
+    current_user=Depends(get_current_user), database=Depends(get_database),
+):
+    owner, base = ObjectId(current_user.id), parse_id(knowledge_base_id)
+    with safe_errors():
+        found(await knowledge_bases.get_knowledge_base(database, owner, base), "Knowledge Base")
+        return await browse(database, owner, query, base)
 
 
 @router.get("/api/documents/{document_id}", response_model=DocumentResponse)

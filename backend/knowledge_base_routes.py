@@ -1,7 +1,8 @@
 """Authenticated Knowledge Base CRUD; ownership is always server-derived."""
 from contextlib import contextmanager
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Response, Query
+from typing import Annotated
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import PyMongoError
 from auth import get_current_user
@@ -9,6 +10,7 @@ from database import get_database
 from user_schemas import UserResponse
 from knowledge_base_schemas import KnowledgeBaseCreate, KnowledgeBaseUpdate, KnowledgeBaseResponse
 import knowledge_bases
+from management import KnowledgeBaseQuery, KnowledgeBasePage, browse
 
 router = APIRouter(prefix="/api/knowledge-bases", tags=["Knowledge Bases"])
 
@@ -52,6 +54,16 @@ async def list_owned(
 ):
     with safe_database_errors():
         return await knowledge_bases.list_knowledge_bases(database, ObjectId(current_user.id))
+
+
+@router.get("/browse", response_model=KnowledgeBasePage)
+async def browse_owned(
+    query: Annotated[KnowledgeBaseQuery, Query()],
+    current_user: UserResponse = Depends(get_current_user),
+    database: AsyncDatabase = Depends(get_database),
+):
+    with safe_database_errors():
+        return await browse(database, ObjectId(current_user.id), query)
 
 
 @router.get("/{knowledge_base_id}", response_model=KnowledgeBaseResponse)

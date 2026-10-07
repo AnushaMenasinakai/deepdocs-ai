@@ -448,3 +448,15 @@ h1 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; font-weight: 650;
 }
 .source-number { flex-shrink: 0; font-weight: 700; color: #176b60; }
 .answer-claims .answer-text + .answer-text { margin-top: 1rem; }
+
+/* Management browsing controls share the existing teal/neutral visual language. */
+.management-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; padding: 20px; margin: 20px 0 14px; }
+.management-controls > div { min-width: 0; flex: 1 1 140px; }
+.management-controls .management-search { flex: 3 1 240px; }
+.management-controls label { display: block; font-size: 12px; font-weight: 600; color: #355b4d; margin-bottom: 8px; }
+.management-controls input, .management-controls select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 42px; padding: 10px; border: 1px solid #cdded5; border-radius: 7px; background: white; color: #213d31; font: inherit; font-size: 14px; }
+.management-controls input:focus-visible, .management-controls select:focus-visible { outline: 2px solid #21796a; outline-offset: 2px; }
+.management-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0 22px; }
+.management-pagination p { font-size: 13px; color: #61766c; }
+[aria-busy="true"].kb-grid, [aria-busy="true"].document-list { opacity: .65; }
+@media (max-width: 600px) { .management-controls { padding: 16px; } .management-controls .management-search { flex-basis: 100%; } .management-pagination .kb-actions { width: 100%; justify-content: space-between; } }

@@ -26,6 +26,7 @@ const fixture = () => ({knowledge_base_count:7,document_count:12,indexed_documen
     if(state.network)return route.abort();
     return route.fulfill({status,json:status===200?data:{detail:'PRIVATE'},headers});
    }
+   if(path==='/api/knowledge-bases/browse')return route.fulfill({json:{items:[],page:1,limit:20,total:0,total_pages:0},headers});
    if(path==='/api/knowledge-bases')return route.fulfill({json:[],headers});
    throw Error('Unexpected route: '+path);
   });

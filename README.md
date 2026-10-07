@@ -481,3 +481,50 @@ node frontend/tests/history.browser.cjs
 Browser scripts accept `PLAYWRIGHT_MODULE` and `FRONTEND_TEST_URL`; all backend/provider responses are mocked. Tests never need Gemini, Atlas, Cloud Qdrant, or model downloads. Synthetic screenshots remain ignored under `.verification`.
 
 Manual live verification remains necessary: repeat the direct JWT, paraphrased JWT, unsupported signing-key rotation, unrelated irrigation, and three-topic JWT/MongoDB/cloud questions. Compare each cited claim against the actual PDF page text, especially multi-source claims. Verify new history after reload, an old pre-citation record, history deletion, keyboard focus, and mobile rendering. Live response reliability under the unchanged 1024-output-token cap and semantic accuracy are not established by mocked tests; truncated structured responses fail safely. Do not use an online provider merely to run regressions.
+
+## Phase 17A — management browsing
+
+Knowledge Bases and Documents now use server-side name/filename search, allowlisted sorting, and pagination. These are literal management searches, not semantic or chunk-text search. The existing array list endpoints remain unchanged for compatibility; in particular, Ask and Documents still load every owned Knowledge Base into their selectors rather than silently stopping at 20. Dashboard aggregation, Ask/history/citations, and all production RAG settings are unchanged.
+
+Authenticated management endpoints:
+
+- `GET /api/knowledge-bases/browse`
+- `GET /api/knowledge-bases/{knowledge_base_id}/documents/browse`
+
+Both return `{items, page, limit, total, total_pages}`. Items retain the existing public KB/document fields; document browse items additionally expose `indexed` and `failed` booleans derived from authoritative stored state. No owner IDs, internal vector state, paths, or credentials are exposed. Document browsing checks KB ownership before the database query; foreign KBs return the existing safe 404.
+
+| Parameter | Behavior |
+| --- | --- |
+| `search` | Trimmed, case-insensitive substring match on KB `name` or document `original_filename`; maximum 200 trimmed characters. Empty means no search. Regex punctuation is escaped and matched literally. |
+| `page` | Positive whole number, default 1, maximum 1,000,000. |
+| `limit` | Positive whole number, default 20, range 1–100. |
+| KB `sort` | `updated_at` (default), `created_at`, `name`. |
+| Document `sort` | `created_at` (default), `updated_at`, `filename`. No computed status sort. |
+| `order` | `desc` (default) or `asc`; `_id` provides the same-direction deterministic tie-break. Name sorting uses MongoDB's normal binary ordering, independently of case-insensitive search. |
+| Document `status` | `all` (default), `indexed`, `processing`, `failed`. |
+
+Invalid/unknown parameters use the existing sanitized 422 response. Out-of-range pages return an empty item list with accurate totals; an empty collection has `total_pages: 0`. The UI presents that as Page 1 of 1.
+
+**Status definitions:** Indexed uses exactly the Dashboard's last-confirmed synchronization expression: processed document, active chunk generation/count matching successful embedding and vector-index metadata, matching model/dimension, valid indexed timestamp/target collection, and no active operation. It is not a live Qdrant check and does not mean merely that an embedding exists. Processing means the stored document processing state is `processing`. Failed means document processing, embedding generation, or vector indexing is `failed`. These independent categories follow Dashboard semantics. When multiple fields disagree, a Failed badge takes precedence over Indexed and processing labels. Uploaded and Processed remain visible under All.
+
+**Database work and limitations:** A single owner-scoped aggregation uses `$match`, allowlisted `$sort`, and `$facet` for total count plus `$skip`/`$limit` items (at most 100), with a five-second database time limit. Documents additionally make one KB ownership read. No per-item queries or full-collection Python pagination are used. No indexes are added: existing `(owner_id, updated_at desc, _id desc)` KB and `(owner_id, knowledge_base_id, created_at desc, _id desc)` document indexes support the default ordering and its reverse. Additional name/date sorts and computed status filters can require scoped scans/sorts. Unanchored case-insensitive substring matching is **not** fully index-efficient. Deep offset pages and total counts can be expensive; timeouts return a safe retryable error. Stable tie-breaking is not snapshot pagination: concurrent inserts/deletes/edits can move items between requests. Future index additions should follow observed workloads rather than speculative indexes for every combination.
+
+**UI behavior:** Search is debounced for 300 ms. Search/status/sort changes reset page to 1. URL query parameters preserve browsing state across refresh/back/forward; Documents also stores the selected KB as `kb`. Previous/Next controls show result/page counts and disable unavailable/pending actions. Abort signals and guarded updates prevent old responses from replacing current results; KB switching remounts the document collection. Background updates retain existing cards with a busy state and “Updating results…”; initial loading, initial empty, no-match, and safe error/retry states are distinct. Clear filters clears search/status while retaining sort. Successful create/edit/upload/delete refreshes the server list, preserving filters and ordering; uploads are not forcibly inserted into a filtered page. An impossible page after deletion is replaced with the last valid page. Controls are labeled, keyboard usable, have visible focus, and wrap on mobile; async page status is announced and no new motion is introduced.
+
+Offline checks (existing Python/Playwright installations; Vite running on port 5176):
+
+```powershell
+.\backend\.venv\Scripts\python.exe -B -m pytest backend/tests/test_management.py -q
+.\backend\.venv\Scripts\python.exe -B -m pytest backend/tests -q
+node frontend/tests/management.browser.cjs
+node frontend/tests/knowledge-bases.browser.cjs
+node frontend/tests/documents.browser.cjs
+node frontend/tests/auth.browser.cjs
+node frontend/tests/dashboard.browser.cjs
+node frontend/tests/ask.browser.cjs
+node frontend/tests/history.browser.cjs
+node frontend/tests/citations.browser.cjs
+npm.cmd --prefix frontend run build
+```
+
+Browser scripts accept `PLAYWRIGHT_MODULE` and `FRONTEND_TEST_URL`. All API traffic is intercepted using synthetic fixtures; no real backend/cloud verification is implied. Management tests cover URL state, debounce/stale requests, >20-KB selector compatibility, filter-aware upload refresh, last-page deletion, safe rendering, and 1440/768/390 overflow checks. Live manual verification should compare real counts/filter states, including newly uploaded PDFs and last-confirmed Indexed metadata, against the current account before committing.
