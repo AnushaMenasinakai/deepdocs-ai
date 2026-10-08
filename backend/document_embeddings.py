@@ -1,27 +1,53 @@
 """Persist validated chunk vectors; publish generation-scoped MongoDB state last."""
+import asyncio
 from datetime import datetime, timezone
-from document_operations import claim_document, release_document
+from bson import ObjectId
+from document_operations import claim_document, release_document, DocumentBusy
 from document_processing import inspect_chunks
 from embeddings import EmbeddingFailure, embed_batches
 from vector_store import get_vector_store, cleanup_document_vectors, VectorFailure
 
 
-async def generate_embeddings(database, owner_id, document_id, settings):
-    document, token = await claim_document(database, owner_id, document_id)
+class RequiresProcessing(EmbeddingFailure):
+    """Typed eligibility failure; bulk callers must not parse exception messages."""
+
+    def __init__(self, message="Process this document before generating embeddings."):
+        super().__init__(message, 409)
+
+
+def require_processed_generation(document):
+    if document.get("status") != "processed" or not isinstance(document.get("chunk_generation"), ObjectId):
+        raise RequiresProcessing()
+
+
+async def generate_embeddings(database, owner_id, document_id, settings, expected_knowledge_base_id=None):
+    if expected_knowledge_base_id is not None:
+        # Read-only early rejection for clearly ineligible bulk selections. This
+        # is not authorization for the mutation: the claim repeats the full scope.
+        snapshot = await database.get_collection("documents").find_one({
+            "_id": document_id, "owner_id": owner_id,
+            "knowledge_base_id": expected_knowledge_base_id,
+        })
+        if snapshot is None:
+            return None
+        if "_operation" in snapshot:
+            raise DocumentBusy()
+        require_processed_generation(snapshot)
+    document, token = await claim_document(database, owner_id, document_id, expected_knowledge_base_id)
     if document is None:
         return None
     docs = database.get_collection("documents")
     claimed = {"_id": document_id, "owner_id": owner_id, "_operation": token}
     started = False
     completed = False
+    cancelled = False
     vector_state = document.get("vector_index", {})
     store = None
     try:
-        if document.get("status") != "processed" or not document.get("chunk_generation"):
-            raise EmbeddingFailure("Process this document before generating embeddings.", 409)
+        require_processed_generation(document)
         chunks = await inspect_chunks(database, owner_id, document_id)
         if not chunks:
-            raise EmbeddingFailure("This document has no active chunks to embed.", 409)
+            raise RequiresProcessing("This document has no active chunks to embed.")
         if [chunk["chunk_index"] for chunk in chunks] != list(range(len(chunks))):
             raise EmbeddingFailure("Document chunks are temporarily unavailable.")
         generation = document["chunk_generation"]
@@ -73,6 +99,13 @@ async def generate_embeddings(database, owner_id, document_id, settings):
                 "embedding_model": settings.model_name, "embedding_dimension": dimension,
                 "status": "generated", "vector_store": "qdrant",
                 "collection_name": store.collection, "vector_status": "indexed"}
+    except asyncio.CancelledError:
+        # Never turn cancellation into a normal failure/success response. Once
+        # writes may have started, retain the existing claim/state for recovery;
+        # an interrupted remote write has an uncertain outcome. Before writes,
+        # the finally block releases the claim. No automatic expiry or retry.
+        cancelled = True
+        raise
     except Exception as error:
         if started:
             try:
@@ -89,4 +122,10 @@ async def generate_embeddings(database, owner_id, document_id, settings):
         raise EmbeddingFailure() from None
     finally:
         if not started and not completed:
-            await release_document(database, owner_id, document_id, token)
+            try:
+                await release_document(database, owner_id, document_id, token)
+            except Exception:
+                if not cancelled:
+                    raise
+                # Preserve cancellation even if unlocking fails. The retained
+                # claim requires recovery, not a fabricated batch failure report.

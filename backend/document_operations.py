@@ -6,10 +6,12 @@ class DocumentBusy(ValueError):
     pass
 
 
-async def claim_document(database, owner_id, document_id):
+async def claim_document(database, owner_id, document_id, expected_knowledge_base_id=None):
     collection = database.get_collection("documents")
     token = ObjectId()
     owned = {"_id": document_id, "owner_id": owner_id}
+    if expected_knowledge_base_id is not None:
+        owned["knowledge_base_id"] = expected_knowledge_base_id
     document = await collection.find_one_and_update(
         {**owned, "_operation": {"$exists": False}},
         {"$set": {"_operation": token}},

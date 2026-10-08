@@ -25,6 +25,8 @@ from vector_store import VectorFailure, get_vector_store
 from document_operations import claim_document, release_document
 import document_embeddings
 from document_schemas import EmbeddingResponse
+from document_schemas import BulkDeleteRequest, BulkDeleteResponse, BulkReindexRequest, BulkReindexResponse
+import document_bulk
 
 router = APIRouter(tags=["Documents"])
 UPLOAD_SCHEMA = {"requestBody": {"required": True, "content": {}}}
@@ -157,6 +159,19 @@ async def delete(
     return Response(status_code=204)
 
 
+@router.post("/api/knowledge-bases/{knowledge_base_id}/documents/bulk-delete",
+             response_model=BulkDeleteResponse, response_model_exclude_none=True)
+async def bulk_delete(
+    knowledge_base_id: str, data: BulkDeleteRequest,
+    current_user=Depends(get_current_user), database=Depends(get_database),
+    storage=Depends(get_document_storage),
+):
+    owner, base = ObjectId(current_user.id), parse_id(knowledge_base_id)
+    with safe_errors():
+        found(await knowledge_bases.get_knowledge_base(database, owner, base), "Knowledge Base")
+        return await document_bulk.delete_documents(database, storage, owner, base, data.document_ids)
+
+
 def processing_settings():
     try:
         return load_processing_settings()
@@ -211,6 +226,19 @@ async def generate_embeddings(
         return found(await document_embeddings.generate_embeddings(
             database, ObjectId(current_user.id), parse_id(document_id), settings,
         ))
+
+
+@router.post("/api/knowledge-bases/{knowledge_base_id}/documents/bulk-reindex",
+             response_model=BulkReindexResponse, response_model_exclude_none=True)
+async def bulk_reindex(
+    knowledge_base_id: str, data: BulkReindexRequest,
+    current_user=Depends(get_current_user), database=Depends(get_database),
+    settings=Depends(embedding_settings),
+):
+    owner, base = ObjectId(current_user.id), parse_id(knowledge_base_id)
+    with safe_errors():
+        found(await knowledge_bases.get_knowledge_base(database, owner, base), "Knowledge Base")
+        return await document_bulk.reindex_documents(database, owner, base, data.document_ids, settings)
 
 
 @router.get("/api/health/qdrant")

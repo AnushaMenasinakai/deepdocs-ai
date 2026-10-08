@@ -90,8 +90,10 @@ async def find_document(database, owner_id, document_id):
     )
 
 
-async def delete_document(database, storage, owner_id, document_id):
-    document, token = await claim_document(database, owner_id, document_id)
+async def delete_document(database, storage, owner_id, document_id, expected_knowledge_base_id=None):
+    document, token = await claim_document(
+        database, owner_id, document_id, expected_knowledge_base_id,
+    )
     if document is None:
         return False
     deleted = False

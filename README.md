@@ -528,3 +528,61 @@ npm.cmd --prefix frontend run build
 ```
 
 Browser scripts accept `PLAYWRIGHT_MODULE` and `FRONTEND_TEST_URL`. All API traffic is intercepted using synthetic fixtures; no real backend/cloud verification is implied. Management tests cover URL state, debounce/stale requests, >20-KB selector compatibility, filter-aware upload refresh, last-page deletion, safe rendering, and 1440/768/390 overflow checks. Live manual verification should compare real counts/filter states, including newly uploaded PDFs and last-confirmed Indexed metadata, against the current account before committing.
+
+## Phase 17B, Part 1 — backend bulk document deletion
+
+`POST /api/knowledge-bases/{knowledge_base_id}/documents/bulk-delete` requires the existing JWT authentication and an owned Knowledge Base. The strict JSON body is `{"document_ids":["<document-id>"]}`: 1–100 ObjectId strings, no unknown fields. IDs are canonicalized to lowercase; duplicates (including differently cased copies) are rejected. Malformed requests return sanitized 422 before deletion starts. Missing and foreign Knowledge Bases share the existing 404 response.
+
+Documents are processed **sequentially in request order**, using the existing `documents.delete_document()` cleanup service. An optional expected KB scope is applied inside the atomic document claim and its busy check. A missing document, foreign-owner document, or document in another KB produces the same `not_found` result without mutation. An existing operation claim produces `busy`; it is never stolen or expired.
+
+Completed batch reports use HTTP 200, including mixed outcomes:
+
+```json
+{
+  "operation": "delete",
+  "requested": 3,
+  "succeeded": 1,
+  "failed": 1,
+  "not_attempted": 1,
+  "results": [
+    {"document_id": "<id-1>", "outcome": "succeeded"},
+    {"document_id": "<id-2>", "outcome": "failed", "code": "service_unavailable"},
+    {"document_id": "<id-3>", "outcome": "not_attempted"}
+  ]
+}
+```
+
+Per-item failure codes are restricted to `not_found`, `busy`, and `service_unavailable`. Not-found/busy items do not stop the batch. A known vector, database, filesystem, or timeout failure stops execution: the current item is failed and every remaining ID is explicitly not attempted. Infrastructure failure before execution uses the existing safe 503 handling. Null codes are omitted. Results contain no exception text, storage locations, vector internals, or credentials.
+
+Cleanup order and recovery behavior remain authoritative in the single-delete service: claim, invalidate vector metadata, clean vectors, remove PDF, clean chunks, release KB reservation, delete document metadata. There is no transaction across these systems and no rollback of earlier successes. A failed item may already be partially cleaned; a lost response can leave the client uncertain whether deletion completed. Refresh before retrying, and do not automatically replay a whole batch. Existing missing-file retry behavior is preserved. Cancellation is propagated rather than converted into a false completion report; existing claim recovery limitations remain, with no lock-expiry mechanism added. Ask history snapshots are untouched.
+
+Offline verification: run `backend/tests/test_document_bulk.py`, the existing document/processing/embedding/vector tests, and the complete backend suite using the existing Python environment. Bulk tests use temporary synthetic files and a fake vector client; no model downloads or live services are required. This section documents **Part 1 (delete)**; Part 2 is below. Frontend selection/bulk controls are documented in Part 3 below. RAG, retrieval, citation validation, and production settings are unchanged.
+
+## Phase 17B, Part 2 — backend bulk re-indexing
+
+`POST /api/knowledge-bases/{knowledge_base_id}/documents/bulk-reindex` accepts the same strict `{"document_ids":["<document-id>"]}` body, with **1–5 documents** rather than 100. It inherits Part 1's ObjectId canonicalization, duplicate rejection, unknown-field rejection, authenticated KB ownership checks, safe errors, and request-ordered report format. The response uses `"operation":"reindex"`. HTTP 200 describes a completed report, not universal success.
+
+Re-indexing is **synchronous and sequential**: existing successfully processed active chunks → regenerated embeddings → rebuilt Qdrant vectors → successful metadata publication. It never calls PDF processing, extraction, or chunk creation. It reuses `document_embeddings.generate_embeddings()` for chunk inspection, embedding batches, vector validation, destination validation, cleanup, deterministic point IDs, upsert/count verification, and generation-guarded publication. No new embedding implementation, parallel execution, worker, queue, or automatic retry is added.
+
+Eligibility requires `status=processed`, a valid ObjectId chunk generation, and active chunks accepted by the existing indexing validation. Uploaded-only, processing-failed, or missing/invalid-generation documents return `requires_processing`; no automatic processing occurs. Clearly ineligible scoped documents are rejected by a read-only preflight, with busy claims taking precedence. Authorization and eligibility are rechecked at/after the atomic owner + KB + document claim, so the preflight is never permission to mutate a subsequently changed resource. Chunk inspection happens under that claim; an empty valid chunk set returns `requires_processing` and releases it without changing embedding/vector metadata. Inconsistent chunk counts/order are sanitized service failures, not silently repaired data.
+
+Results use `succeeded`, `failed`, or `not_attempted`. Safe failure codes are `not_found`, `busy`, `requires_processing`, and `service_unavailable`. Missing, foreign-owner, and wrong-KB documents remain indistinguishable. Not-found/busy/requires-processing items allow subsequent items to run. A model, vector, database, or other recognized service failure stops execution and explicitly marks all remaining IDs not attempted. No vectors, model/cache details, collection configuration, or raw exception text are included in the report.
+
+**Availability and recovery:** re-indexing is duplicate-safe, but is not zero-downtime. The operation claim excludes the document from retrieval and old vectors may be removed before replacement finishes. Existing failed-state and retry cleanup behavior is preserved; partial Qdrant points may remain until retry/recovery, without successful indexing metadata. Previous successful items are not rolled back. Cancellation propagates rather than becoming a normal batch result. Before writes begin, the service attempts to release its claim; if that release fails, cancellation is preserved and recovery is required. After writes may have begun, existing state/claim is retained for recovery rather than guessing the outcome. If publication already committed before acknowledgement was cancelled, successful metadata remains intact. Cancellation/lost responses therefore require inspection before retry; there is no automatic lock expiry. A five-document cap bounds count, not total duration.
+
+Run `backend/tests/test_bulk_reindex.py` together with Part 1 tests, existing document/processing/embedding/vector/search tests, and the complete backend suite. Tests fake inference/vector IO, check that processing is never invoked, and cover scope races, repeated indexing, result ordering, shared failures, and cancellation before writes, after writes, during unlock, and after publication. No live services are required. This section covers the backend only; Part 3 below documents the frontend integration.
+
+
+## Phase 17B, Part 3 — page-scoped document actions
+
+Documents now supports individual checkboxes, an indeterminate **Select current page** checkbox, a selected count, and Clear selection. Selection includes only IDs from the currently displayed authoritative browse response—never all matching records across pages. Selected IDs are local UI state and are not added to URLs. Search input (including the debounce interval), status/sort/order/page/KB changes invalidate selection. Explicit refresh, upload refresh, and completed mutations also clear it. Retained cards from an older query cannot be selected or acted on while the next result is loading.
+
+Both bulk actions require confirmation of a frozen selection snapshot. Delete supports at most 100 documents, matching the server page maximum. Re-index supports at most 5; above that limit its button is disabled with an explanation, and requests are never silently split. Re-index regenerates embeddings/vectors from existing processed chunks and **does not process or re-extract PDFs**. The backend determines eligibility and reports unprocessed documents as `requires_processing`. Its execution remains synchronous/sequential, and replacement may temporarily make documents unavailable to retrieval.
+
+During submission, selection, upload, single delete, browsing controls, and conflicting bulk actions are disabled. A synchronous pending guard prevents duplicate requests. Completed reports show either concise complete success or explicit succeeded/failed/not-attempted counts with safe filename-based explanations. HTTP 200 alone is not treated as indexing success. The UI validates operation, requested IDs/order, allowed outcomes/codes, stop semantics, and all counts before rendering. It refreshes authoritative server state after confirmed results, clears submitted selection, and reuses last-valid-page recovery after deletions. No failed or unattempted items are automatically retried or reselected.
+
+Lost, timed-out, or malformed responses show an uncertain-outcome message and require a document refresh before selection or further document mutations. There is no automatic replay. These two bulk calls use a bounded five-minute client timeout to accommodate synchronous work; timeout, browser navigation, or abort does **not** prove the backend stopped or rolled back. Scope changes/unmount abort local requests and discard stale results. Cancellation/recovery limitations from Parts 1–2 still apply.
+
+Checkboxes have filename-specific labels, controls are keyboard operable with visible focus, the page checkbox exposes native indeterminate state, and confirmations/status reports use existing accessible page patterns. Filename/error rendering is React text. Controls wrap at 1440/768/390 layouts, and no new animation or dependencies are introduced. Existing Ask/history/citations, Dashboard, RAG settings, and unpaginated KB selectors remain unchanged.
+
+Offline frontend check: `node frontend/tests/document-bulk.browser.cjs`, with Vite running and the existing `PLAYWRIGHT_MODULE`/`FRONTEND_TEST_URL` settings. Run the existing auth, KB, Documents, management, Dashboard, Ask, history, and citation browser suites, the production frontend build, and the complete backend suite as regressions. Tests intercept all API calls and use synthetic records; they do not establish live Atlas/Qdrant verification. Before committing, manually verify a small owned batch, partial outcomes, processed versus uploaded re-index eligibility, page recovery, and refreshed server status against the real application.

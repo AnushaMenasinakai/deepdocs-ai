@@ -174,6 +174,50 @@ export function uploadDocument(knowledgeBaseId, file, signal) {
 export const deleteDocument = (documentId, signal) =>
   documentRequest('delete', '/api/documents/' + encodeURIComponent(documentId), undefined, signal)
 
+async function bulkDocumentRequest(knowledgeBaseId, documentIds, operation, signal) {
+  const validId = value => typeof value === 'string' && /^[a-f0-9]{24}$/i.test(value)
+  const limit = operation === 'delete' ? 100 : 5
+  if (!validId(knowledgeBaseId) || !Array.isArray(documentIds) || documentIds.length < 1 ||
+      documentIds.length > limit || !documentIds.every(validId)) {
+    throw new Error('Select valid documents from the current page within the action limit.')
+  }
+  const ids = documentIds.map(id => id.toLowerCase())
+  if (new Set(ids).size !== ids.length) throw new Error('Select each document only once.')
+  let response
+  try {
+    response = await api.post('/api/knowledge-bases/' + encodeURIComponent(knowledgeBaseId) + '/documents/bulk-' + operation,
+      { document_ids: ids }, { signal, timeout: 300000, headers: { Authorization: 'Bearer ' + getAccessToken() } })
+  } catch (error) {
+    if (axios.isCancel(error)) throw error
+    const status = error.response?.status
+    const safe = new Error(status === 401 ? 'Your session has expired. Please sign in again.'
+      : status === 404 ? 'This Knowledge Base is no longer available. Refresh your collections.'
+      : status === 422 ? 'The selection could not be submitted. Refresh the list and select documents again.'
+      : 'We could not confirm the bulk operation. Some documents may have changed. Refresh the list before deciding whether to try again.')
+    safe.status = status
+    throw safe
+  }
+  const data = response.data
+  const invalid = () => { throw new Error('We could not confirm the bulk results. Some documents may have changed. Refresh the list before deciding whether to try again.') }
+  if (response.status !== 200 || !data || data.operation !== operation || data.requested !== ids.length ||
+      !Array.isArray(data.results) || data.results.length !== ids.length) invalid()
+  const codes = ['not_found', 'busy', 'service_unavailable', ...(operation === 'reindex' ? ['requires_processing'] : [])]
+  let stopped = false
+  const results = data.results.map((item, index) => {
+    if (!item || item.document_id !== ids[index] || !['succeeded', 'failed', 'not_attempted'].includes(item.outcome)) invalid()
+    if (item.outcome === 'failed' ? !codes.includes(item.code) : item.code != null) invalid()
+    if ((stopped && item.outcome !== 'not_attempted') || (!stopped && item.outcome === 'not_attempted')) invalid()
+    if (item.code === 'service_unavailable') stopped = true
+    return { document_id: item.document_id, outcome: item.outcome, code: item.code }
+  })
+  const counts = Object.fromEntries(['succeeded', 'failed', 'not_attempted'].map(key => [key, results.filter(item => item.outcome === key).length]))
+  if (Object.keys(counts).some(key => data[key] !== counts[key])) invalid()
+  return { operation, requested: ids.length, ...counts, results }
+}
+
+export const bulkDeleteDocuments = (id, ids, signal) => bulkDocumentRequest(id, ids, 'delete', signal)
+export const bulkReindexDocuments = (id, ids, signal) => bulkDocumentRequest(id, ids, 'reindex', signal)
+
 
 export async function askKnowledgeBase(knowledgeBaseId, question, signal) {
   let response

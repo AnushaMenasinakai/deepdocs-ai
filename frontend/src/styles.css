@@ -449,6 +449,17 @@ h1 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; font-weight: 650;
 .source-number { flex-shrink: 0; font-weight: 700; color: #176b60; }
 .answer-claims .answer-text + .answer-text { margin-top: 1rem; }
 
+.document-bulk-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 18px; }
+.document-check { display: inline-flex; align-items: center; gap: 9px; font-size: 14px; }
+.document-check input, .document-row-check { width: 18px; height: 18px; flex-shrink: 0; accent-color: #21796a; }
+.document-check input:focus-visible, .document-row-check:focus-visible { outline: 2px solid #21796a; outline-offset: 3px; }
+.document-bulk-bar { width: 100%; min-width: 0; padding: 18px; }
+.document-bulk-bar p, .document-bulk-result p { margin: 0 0 12px; }
+.document-bulk-bar .kb-actions { flex-wrap: wrap; margin-bottom: 12px; }
+.document-bulk-result { padding: 18px; margin-bottom: 18px; overflow-wrap: anywhere; }
+.document-bulk-result li { margin: 10px 0; }
+@media (max-width: 600px) { .document-bulk-bar .kb-actions > button { flex: 1 1 140px; } }
+
 /* Management browsing controls share the existing teal/neutral visual language. */
 .management-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; padding: 20px; margin: 20px 0 14px; }
 .management-controls > div { min-width: 0; flex: 1 1 140px; }

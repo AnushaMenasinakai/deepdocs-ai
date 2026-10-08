@@ -3,8 +3,9 @@ import { Link, useSearchParams } from 'react-router-dom'
 import Header from '../components/Header.jsx'
 import Icon from '../components/Icon.jsx'
 import DocumentUpload, { fileSize } from '../components/DocumentUpload.jsx'
+import DocumentBulk from '../components/DocumentBulk.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { listKnowledgeBases, browseDocuments, uploadDocument, deleteDocument } from '../services/api.js'
+import { listKnowledgeBases, browseDocuments, uploadDocument, deleteDocument, bulkDeleteDocuments, bulkReindexDocuments } from '../services/api.js'
 
 import { ManagementControls, ManagementPagination, useManagementQuery } from '../components/ManagementControls.jsx'
 const SORTS = ['created_at', 'updated_at', 'filename']
@@ -14,6 +15,13 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
   const { logout } = useAuth()
   const view = useManagementQuery('created_at', SORTS, true)
   const { query, waiting, change } = view
+  const queryKey = JSON.stringify(query)
+  const selectionKey = queryKey + ':' + view.search
+  const [loadedKey, setLoadedKey] = useState(null)
+  const [selection, setSelection] = useState({ key: '', ids: [] })
+  const [confirmation, setConfirmation] = useState(null)
+  const [bulkResult, setBulkResult] = useState(null)
+  const [bulkError, setBulkError] = useState('')
   const [meta, setMeta] = useState({ page: 1, total: 0, total_pages: 0 })
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -28,6 +36,7 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
   const pending = useRef(false)
   const active = useRef(true)
   const returnFocus = useRef(null)
+  const restoreBulkFocus = useRef(false)
   const heading = useRef(null)
 
   const load = useCallback(async () => {
@@ -36,12 +45,14 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
     listRequest.current = controller
     setLoading(true)
     setLoadError(null)
+    setSelection({ key: '', ids: [] })
+    setBulkError('')
     if (waiting) return
     try {
       const data = await browseDocuments(base.id, query, controller.signal)
       if (!controller.signal.aborted && active.current) {
         if (query.page > Math.max(1, data.total_pages)) { change({ page: Math.max(1, data.total_pages) }, true); return }
-        setItems(data.items); setMeta(data)
+        setItems(data.items); setMeta(data); setLoadedKey(JSON.stringify(query))
       }
     } catch (error) {
       if (controller.signal.aborted || !active.current) return
@@ -61,6 +72,19 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
       mutation.current?.abort()
     }
   }, [load])
+
+  useEffect(() => {
+    setSelection({ key: '', ids: [] })
+    setConfirmation(null)
+  }, [selectionKey])
+  useEffect(() => () => onBusy(false), [onBusy])
+  useEffect(() => {
+    if (!confirmation && restoreBulkFocus.current) {
+      restoreBulkFocus.current = false
+      const origin = returnFocus.current
+      ;(origin?.isConnected && !origin.disabled ? origin : heading.current)?.focus()
+    }
+  }, [confirmation])
 
   function closeDelete() {
     setDeleting(null)
@@ -118,16 +142,65 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
     }
   }
 
-  const locked = Boolean(busy || deleting)
+  const currentPage = !loading && !waiting && !loadError && loadedKey === queryKey
+  const selectedIds = currentPage && selection.key === selectionKey ? selection.ids.filter(id => items.some(item => item.id === id)) : []
+  const visibleConfirmation = confirmation?.key === selectionKey && currentPage ? confirmation : null
+  const locked = Boolean(busy || deleting || visibleConfirmation)
+
+  function openBulk(operation, event) {
+    if (!currentPage || locked || pending.current || selectedIds.length === 0 || (operation === 'reindex' && selectedIds.length > 5)) return
+    returnFocus.current = event.currentTarget
+    setBulkError(''); setBulkResult(null); setNotice('')
+    setConfirmation({ key: selectionKey, operation, items: items.filter(item => selectedIds.includes(item.id)).map(({ id, filename }) => ({ id, filename })) })
+  }
+
+  function closeBulk() {
+    restoreBulkFocus.current = true
+    setConfirmation(null)
+  }
+
+  async function submitBulk() {
+    if (pending.current || !visibleConfirmation) return
+    const snapshot = visibleConfirmation
+    pending.current = true
+    setBusy('bulk'); onBusy(true)
+    const controller = new AbortController()
+    mutation.current = controller
+    try {
+      const action = snapshot.operation === 'delete' ? bulkDeleteDocuments : bulkReindexDocuments
+      const result = await action(base.id, snapshot.items.map(item => item.id), controller.signal)
+      if (controller.signal.aborted || !active.current) return
+      setBulkResult({ ...result, results: result.results.map((item, index) => ({ ...item, filename: snapshot.items[index].filename })) })
+      closeBulk()
+      setSelection({ key: '', ids: [] })
+      await load()
+    } catch (error) {
+      if (controller.signal.aborted || !active.current) return
+      closeBulk()
+      setSelection({ key: '', ids: [] })
+      setLoadedKey(null)
+      if (error.status === 401) logout()
+      else setBulkError(error.message)
+      // An uncertain response is not permission to replay. Refresh is explicit.
+    } finally {
+      pending.current = false
+      if (active.current) { setBusy(''); onBusy(false) }
+    }
+  }
   return <>
     <div role="status" aria-live="polite">{notice && <p className="auth-success">{notice}</p>}</div>
-    <DocumentUpload busy={locked || loading || Boolean(loadError)} uploading={busy === 'upload'} error={uploadError} onUpload={mutate} onChange={() => setUploadError('')} />
+    <DocumentUpload busy={locked || !currentPage} uploading={busy === 'upload'} error={uploadError} onUpload={mutate} onChange={() => setUploadError('')} />
     <div className="kb-toolbar document-list-heading">
       <div><h2 ref={heading} tabIndex={-1}>Documents in {base.name}</h2><p className="kb-muted">Original files · Indexed reflects last-confirmed vector synchronization</p></div>
       <button className="session-button" disabled={locked || loading} onClick={load}>Refresh documents</button>
     </div>
     <ManagementControls state={view} documents disabled={locked} />
     <ManagementPagination meta={meta} loading={loading || waiting} change={change} disabled={locked || Boolean(loadError)} />
+    <DocumentBulk count={selectedIds.length} total={items.length} disabled={locked || !currentPage}
+      onSelectPage={checked => { if (currentPage && !locked) setSelection({ key: selectionKey, ids: checked ? items.map(item => item.id) : [] }) }}
+      onClear={() => setSelection({ key: '', ids: [] })} onOpen={openBulk}
+      confirmation={visibleConfirmation} onCancel={closeBulk} onConfirm={submitBulk}
+      busy={busy === 'bulk'} result={bulkResult} error={bulkError} />
     {deleting && <section className="panel kb-editor kb-delete" aria-labelledby="document-delete-title">
       <h2 id="document-delete-title">Delete document?</h2>
       <p>Delete <strong>{deleting.filename}</strong>? The original PDF and its metadata will be removed. This cannot be undone.</p>
@@ -147,13 +220,18 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
         <h2>{query.search || query.status !== 'all' ? 'No matching documents' : 'No documents here yet'}</h2><p>{query.search || query.status !== 'all' ? 'Try another filename or clear your filters.' : 'Choose a PDF above to add your first document to this Knowledge Base.'}</p>
       </section>
       : <div className="document-list" aria-busy={loading || waiting}>{items.map(item => <article key={item.id} className="panel document-card">
+        <input className="document-row-check" type="checkbox" aria-label={'Select ' + item.filename}
+          disabled={locked || !currentPage} checked={selectedIds.includes(item.id)} onChange={event => {
+            if (!currentPage || locked) return
+            setSelection({ key: selectionKey, ids: event.target.checked ? [...selectedIds, item.id] : selectedIds.filter(id => id !== item.id) })
+          }} />
         <span className="feature-icon document"><Icon name="document" size={24} /></span>
         <div className="document-info">
           <h3>{item.filename}</h3>
           <p>{fileSize(item.file_size)} <span aria-hidden="true">·</span> Added <time dateTime={item.created_at}>{new Date(item.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</time></p>
           <span className="document-status">{item.failed ? 'Failed' : item.indexed ? 'Indexed' : ({ uploaded: 'Uploaded', processing: 'Processing', processed: 'Processed', failed: 'Failed' })[item.status] || 'Status unavailable'}</span>
         </div>
-        <button className="session-button kb-delete-link" disabled={locked || loading || waiting} aria-label={'Delete ' + item.filename} onClick={event => {
+        <button className="session-button kb-delete-link" disabled={locked || !currentPage} aria-label={'Delete ' + item.filename} onClick={event => {
           returnFocus.current = event.currentTarget
           setNotice('')
           setDeleteError('')
