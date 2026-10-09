@@ -21,6 +21,7 @@ def require_processed_generation(document):
 
 
 async def generate_embeddings(database, owner_id, document_id, settings, expected_knowledge_base_id=None):
+    docs = database.get_collection("documents")
     if expected_knowledge_base_id is not None:
         # Read-only early rejection for clearly ineligible bulk selections. This
         # is not authorization for the mutation: the claim repeats the full scope.
@@ -36,7 +37,6 @@ async def generate_embeddings(database, owner_id, document_id, settings, expecte
     document, token = await claim_document(database, owner_id, document_id, expected_knowledge_base_id)
     if document is None:
         return None
-    docs = database.get_collection("documents")
     claimed = {"_id": document_id, "owner_id": owner_id, "_operation": token}
     started = False
     completed = False

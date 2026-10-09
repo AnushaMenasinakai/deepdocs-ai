@@ -2,13 +2,19 @@
 import asyncio
 from datetime import datetime, timezone
 from bson import ObjectId
+from bson import BSON
+from bson.errors import InvalidDocument
+from pymongo.errors import PyMongoError
 from fastapi.concurrency import run_in_threadpool
 from document_schemas import DocumentResponse
 from document_storage import StorageCleanupError
 from document_operations import claim_document, release_document
 from vector_store import cleanup_document_vectors
+from upload_safety import UploadUncertain, require_acknowledged, verify, check_cancellation
+from upload_safety import SaveLifetime, observe_save_result
 
 ORDER = [("created_at", -1), ("_id", -1)]
+SAVE_CANCEL_WAIT_SECONDS = 5
 
 
 async def ensure_document_indexes(database):
@@ -43,36 +49,90 @@ async def release_reservation(database, owner_id, base_id, document_id):
 
 async def upload_document(database, storage, owner_id, base_id, upload, max_bytes):
     document_id = ObjectId()
+    bases = database.get_collection("knowledge_bases")
+    docs = database.get_collection("documents")
+    require_acknowledged(bases)
+    require_acknowledged(docs)
+    scope = {"_id": base_id, "owner_id": owner_id}
     # Atomic reservation conflicts with a concurrent conditional KB deletion.
-    base = await database.get_collection("knowledge_bases").find_one_and_update(
-        {"_id": base_id, "owner_id": owner_id},
-        {"$addToSet": {"_document_ids": document_id}, "$inc": {"_document_revision": 1}},
-    )
+    try:
+        base = await bases.find_one_and_update(scope,
+            {"$addToSet": {"_document_ids": document_id}, "$inc": {"_document_revision": 1}})
+    except asyncio.CancelledError:
+        raise
+    except (PyMongoError, OSError, TimeoutError):
+        base = await verify(bases, scope)
+        reservations = base.get("_document_ids")
+        if not isinstance(reservations, list) or document_id not in reservations:
+            raise UploadUncertain() from None
+    check_cancellation()
     if base is None:
         return None
     stored = None
+    insertion_attempted = False
+    write = None
+    save_uncertain = False
     try:
-        write = asyncio.create_task(run_in_threadpool(storage.save, upload, document_id, max_bytes))
+        lifetime = SaveLifetime(upload)
+        upload._deepdocs_save_lifetime = lifetime
+        write = asyncio.create_task(run_in_threadpool(lifetime.run, storage.save, upload, document_id, max_bytes))
+        upload._deepdocs_save_task = write
+        write.add_done_callback(observe_save_result)
         try:
             stored = await asyncio.shield(write)
-        except asyncio.CancelledError:
+        except asyncio.CancelledError as cancellation:
             # A cancelled await does not stop a filesystem worker thread. Wait
             # for its result before compensation or closing the upload stream.
-            stored = await write
+            # Shield this second await too. If cancellation repeats, the route
+            # defers stream closure to worker completion and retains resources.
+            save_uncertain = True
+            try:
+                async with asyncio.timeout(SAVE_CANCEL_WAIT_SECONDS):
+                    stored = await asyncio.shield(write)
+                save_uncertain = False
+            except BaseException:
+                raise cancellation from None
             raise
+        check_cancellation()
         now = datetime.now(timezone.utc)
         document = {
             "_id": document_id, "knowledge_base_id": base_id, "owner_id": owner_id,
             **stored, "status": "uploaded", "created_at": now, "updated_at": now,
         }
-        await database.get_collection("documents").insert_one(document)
+        # A known local serialization rejection occurs before insertion dispatch
+        # and is safe to compensate. Driver/server errors are not such proof.
+        try:
+            BSON.encode(document)
+        except InvalidDocument:
+            raise UploadUncertain() from None
+        insertion_attempted = True
+        try:
+            await docs.insert_one(document)
+        except asyncio.CancelledError:
+            raise
+        except (PyMongoError, OSError, TimeoutError):
+            confirmed = await verify(docs, {"_id": document_id, "owner_id": owner_id, "knowledge_base_id": base_id})
+            # Lifecycle state and timestamps may legitimately change after commit.
+            if any(confirmed.get(key) != value for key, value in stored.items()):
+                raise UploadUncertain() from None
+            document = confirmed
+        check_cancellation()
     except BaseException as error:
+        if insertion_attempted or save_uncertain or (write is not None and not write.done()):
+            # Absence/error/cancellation is not proof a remote insert or local
+            # worker cannot still finish. Never compensate these uncertain cases.
+            raise
         # Retain the reservation if file cleanup fails: KB deletion stays blocked.
         if isinstance(error, StorageCleanupError):
             raise
-        if stored:
-            await run_in_threadpool(storage.delete, {"_id": document_id, **stored})
-        await release_reservation(database, owner_id, base_id, document_id)
+        try:
+            if stored:
+                await run_in_threadpool(storage.delete, {"_id": document_id, **stored})
+            await release_reservation(database, owner_id, base_id, document_id)
+        except Exception:
+            if isinstance(error, asyncio.CancelledError):
+                raise error from None
+            raise
         raise
     return public_document(document)
 

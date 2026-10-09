@@ -17,16 +17,16 @@ async def ensure_chunk_indexes(database):
 
 
 async def process_document(database, storage, owner_id, document_id, settings):
-    document, token = await claim_document(database, owner_id, document_id)
-    if document is None:
-        return None
     docs = database.get_collection("documents")
     chunks = database.get_collection("document_chunks")
     owned = {"document_id": document_id, "owner_id": owner_id}
-    claimed = {"_id": document_id, "owner_id": owner_id, "_operation": token}
     generation = ObjectId()
     promotion_started = False
     activated = False
+    document, token = await claim_document(database, owner_id, document_id)
+    if document is None:
+        return None
+    claimed = {"_id": document_id, "owner_id": owner_id, "_operation": token}
     try:
         await docs.update_one(claimed, {"$set": {
             "status": "processing", "processing_error": None,

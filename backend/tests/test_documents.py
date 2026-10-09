@@ -222,13 +222,13 @@ class DocumentTests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(calls, 0)
         self.assert_no_files()
 
-    async def test_insert_failure_compensates_file_and_reservation(self):
+    async def test_uncertain_insert_preserves_file_and_reservation(self):
         self.docs.failure = ConnectionFailure("private-driver-path")
         status, body, _ = await request("POST", self.path, PDF)
         self.assertEqual(status, 503)
         self.assertNotIn("private-driver-path", json.dumps(body))
-        self.assert_no_files()
-        self.assertFalse(self.bases.documents[self.base_id]["_document_ids"])
+        self.assertEqual(len(list(self.root.glob("*.pdf"))), 1)
+        self.assertTrue(self.bases.documents[self.base_id]["_document_ids"])
 
     async def test_write_failure_never_inserts_and_cleans_partial_file(self):
         with patch("document_storage.Path.open", side_effect=OSError("private-filesystem-path")):
@@ -410,8 +410,9 @@ class DocumentTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("private-setting", json.dumps(body))
 
     async def test_failed_upload_cleanup_retains_kb_reservation(self):
-        self.docs.failure = ConnectionFailure("private-insert")
-        with patch.object(self.storage, "delete", side_effect=OSError("private-cleanup")):
+        from bson.errors import InvalidDocument
+        with patch("documents.BSON.encode", side_effect=InvalidDocument("private-local-rejection")), \
+                patch.object(self.storage, "delete", side_effect=OSError("private-cleanup")):
             self.assertEqual((await request("POST", self.path, PDF))[0], 503)
         self.docs.failure = None
         self.assertTrue(self.bases.documents[self.base_id]["_document_ids"])

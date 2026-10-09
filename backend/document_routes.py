@@ -28,6 +28,7 @@ from document_schemas import EmbeddingResponse
 from document_schemas import BulkDeleteRequest, BulkDeleteResponse, BulkReindexRequest, BulkReindexResponse
 import document_bulk
 from document_inspection import inspect_operation
+from upload_safety import close_upload_form
 from document_schemas import OperationStatusResponse
 
 router = APIRouter(tags=["Documents"])
@@ -120,7 +121,7 @@ async def upload(
                 database, storage, owner_id, base_id, form["file"], settings.max_upload_bytes,
             ), "Knowledge Base")
         finally:
-            await form.close()
+            await close_upload_form(form)
 
 
 @router.get("/api/knowledge-bases/{knowledge_base_id}/documents", response_model=list[DocumentResponse])
