@@ -5,6 +5,15 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from bson import ObjectId
 
 
+class OperationStatusResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    document_id: str
+    operation_state: Literal["idle", "claimed_unknown"]
+    document_state: Literal["uploaded", "processing", "processed", "indexed", "failed", "unknown"]
+    attention: Literal["none", "needs_processing", "needs_reindex", "outcome_uncertain", "requires_review"]
+    recommended_action: Literal["none", "process", "reindex", "refresh", "contact_support"]
+
+
 class BulkDeleteRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     document_ids: list[str] = Field(min_length=1, max_length=100)

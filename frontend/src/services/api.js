@@ -174,6 +174,42 @@ export function uploadDocument(knowledgeBaseId, file, signal) {
 export const deleteDocument = (documentId, signal) =>
   documentRequest('delete', '/api/documents/' + encodeURIComponent(documentId), undefined, signal)
 
+export async function inspectDocumentOperation(documentId, signal) {
+  if (typeof documentId !== 'string' || !/^[a-f0-9]{24}$/i.test(documentId)) {
+    throw new Error('This inspection request is invalid. Refresh the document list.')
+  }
+  let response
+  try {
+    response = await api.get('/api/documents/' + encodeURIComponent(documentId) + '/operation-status', {
+      signal, headers: { Authorization: 'Bearer ' + getAccessToken() },
+    })
+  } catch (error) {
+    if (axios.isCancel(error)) throw error
+    const status = error.response?.status
+    const safe = new Error(status === 401 ? 'Your session has expired. Please sign in again.'
+      : status === 404 ? 'This document is no longer available.'
+      : status === 422 ? 'This inspection request is invalid. Refresh the document list.'
+      : status === 503 ? 'Status inspection is temporarily unavailable. Try inspecting again later.'
+      : 'Unable to inspect this document. Check your connection and try inspecting again.')
+    safe.status = status
+    throw safe
+  }
+  const data = response.data
+  const enums = {
+    operation_state: ['idle', 'claimed_unknown'],
+    document_state: ['uploaded', 'processing', 'processed', 'indexed', 'failed', 'unknown'],
+    attention: ['none', 'needs_processing', 'needs_reindex', 'outcome_uncertain', 'requires_review'],
+    recommended_action: ['none', 'process', 'reindex', 'refresh', 'contact_support'],
+  }
+  if (response.status !== 200 || !data || data.document_id !== documentId.toLowerCase() ||
+      Object.entries(enums).some(([key, values]) => !values.includes(data[key])) ||
+      (data.operation_state === 'claimed_unknown' && (data.attention !== 'outcome_uncertain' ||
+        data.recommended_action !== 'refresh' || data.document_state === 'indexed'))) {
+    throw new Error('We could not read the status inspection. Try inspecting again.')
+  }
+  return Object.fromEntries(['document_id', ...Object.keys(enums)].map(key => [key, data[key]]))
+}
+
 async function bulkDocumentRequest(knowledgeBaseId, documentIds, operation, signal) {
   const validId = value => typeof value === 'string' && /^[a-f0-9]{24}$/i.test(value)
   const limit = operation === 'delete' ? 100 : 5

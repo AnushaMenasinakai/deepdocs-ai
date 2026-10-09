@@ -4,6 +4,7 @@ import Header from '../components/Header.jsx'
 import Icon from '../components/Icon.jsx'
 import DocumentUpload, { fileSize } from '../components/DocumentUpload.jsx'
 import DocumentBulk from '../components/DocumentBulk.jsx'
+import DocumentInspection from '../components/DocumentInspection.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { listKnowledgeBases, browseDocuments, uploadDocument, deleteDocument, bulkDeleteDocuments, bulkReindexDocuments } from '../services/api.js'
 
@@ -22,6 +23,8 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
   const [confirmation, setConfirmation] = useState(null)
   const [bulkResult, setBulkResult] = useState(null)
   const [bulkError, setBulkError] = useState('')
+  const [inspection, setInspection] = useState(null)
+  const inspectionOrigin = useRef(null)
   const [meta, setMeta] = useState({ page: 1, total: 0, total_pages: 0 })
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -44,6 +47,7 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
     const controller = new AbortController()
     listRequest.current = controller
     setLoading(true)
+    setInspection(null)
     setLoadError(null)
     setSelection({ key: '', ids: [] })
     setBulkError('')
@@ -96,6 +100,7 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
 
   async function mutate(file) {
     if (pending.current || loading || loadError) return false
+    setInspection(null)
     pending.current = true
     const kind = file ? 'upload' : 'delete'
     setBusy(kind)
@@ -161,6 +166,7 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
 
   async function submitBulk() {
     if (pending.current || !visibleConfirmation) return
+    setInspection(null)
     const snapshot = visibleConfirmation
     pending.current = true
     setBusy('bulk'); onBusy(true)
@@ -201,6 +207,14 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
       onClear={() => setSelection({ key: '', ids: [] })} onOpen={openBulk}
       confirmation={visibleConfirmation} onCancel={closeBulk} onConfirm={submitBulk}
       busy={busy === 'bulk'} result={bulkResult} error={bulkError} />
+    {inspection?.key === selectionKey && currentPage && !busy && <DocumentInspection
+      key={inspection.item.id} document={inspection.item} onClose={() => {
+        setInspection(null)
+        requestAnimationFrame(() => {
+          const origin = inspectionOrigin.current
+          if (active.current) (origin?.isConnected && !origin.disabled ? origin : heading.current)?.focus()
+        })
+      }} />}
     {deleting && <section className="panel kb-editor kb-delete" aria-labelledby="document-delete-title">
       <h2 id="document-delete-title">Delete document?</h2>
       <p>Delete <strong>{deleting.filename}</strong>? The original PDF and its metadata will be removed. This cannot be undone.</p>
@@ -231,6 +245,10 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
           <p>{fileSize(item.file_size)} <span aria-hidden="true">·</span> Added <time dateTime={item.created_at}>{new Date(item.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</time></p>
           <span className="document-status">{item.failed ? 'Failed' : item.indexed ? 'Indexed' : ({ uploaded: 'Uploaded', processing: 'Processing', processed: 'Processed', failed: 'Failed' })[item.status] || 'Status unavailable'}</span>
         </div>
+        <button className="session-button" disabled={locked || !currentPage} aria-label={'Inspect status for ' + item.filename} onClick={event => {
+          inspectionOrigin.current = event.currentTarget
+          setInspection({ key: selectionKey, item })
+        }}>Inspect status</button>
         <button className="session-button kb-delete-link" disabled={locked || !currentPage} aria-label={'Delete ' + item.filename} onClick={event => {
           returnFocus.current = event.currentTarget
           setNotice('')

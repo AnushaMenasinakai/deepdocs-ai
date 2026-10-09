@@ -586,3 +586,33 @@ Lost, timed-out, or malformed responses show an uncertain-outcome message and re
 Checkboxes have filename-specific labels, controls are keyboard operable with visible focus, the page checkbox exposes native indeterminate state, and confirmations/status reports use existing accessible page patterns. Filename/error rendering is React text. Controls wrap at 1440/768/390 layouts, and no new animation or dependencies are introduced. Existing Ask/history/citations, Dashboard, RAG settings, and unpaginated KB selectors remain unchanged.
 
 Offline frontend check: `node frontend/tests/document-bulk.browser.cjs`, with Vite running and the existing `PLAYWRIGHT_MODULE`/`FRONTEND_TEST_URL` settings. Run the existing auth, KB, Documents, management, Dashboard, Ask, history, and citation browser suites, the production frontend build, and the complete backend suite as regressions. Tests intercept all API calls and use synthetic records; they do not establish live Atlas/Qdrant verification. Before committing, manually verify a small owned batch, partial outcomes, processed versus uploaded re-index eligibility, page recovery, and refreshed server status against the real application.
+
+## Phase 18B, Part 1 — read-only operation inspection
+
+`GET /api/documents/{document_id}/operation-status` requires JWT authentication and document ownership. Invalid IDs return 422; missing and foreign documents return the same 404; database failures return sanitized 503 responses. It uses one bounded owner-scoped MongoDB aggregation, without acquiring or releasing a claim. It does not access Qdrant, PDF storage, chunks, or KB reservations, and triggers no mutations or recovery.
+
+The explicit response contains only `document_id`, `operation_state`, `document_state`, `attention`, and `recommended_action`. Example: `{"document_id":"<id>","operation_state":"idle","document_state":"uploaded","attention":"needs_processing","recommended_action":"process"}`.
+
+| Metadata snapshot | Document state | Attention | Recommended action |
+|---|---|---|---|
+| Any existing claim, including legacy or malformed tokens | Recorded lifecycle state, or unknown; never Indexed | outcome_uncertain | refresh |
+| Unclaimed, matching the exact Dashboard/management Indexed expression | indexed | none | none |
+| Unclaimed uploaded document without generation/index activity | uploaded | needs_processing | process |
+| Processed with valid generation/count metadata, not indexed | processed | needs_reindex | reindex |
+| Processed generation with embedding/vector failure | failed | needs_reindex | reindex |
+| Document status failed | failed | requires_review | contact_support |
+| Missing/inconsistent metadata or unlocked in-progress state | unknown | requires_review | contact_support |
+
+`operation_state` is `idle` only when `_operation` is absent; otherwise it is `claimed_unknown`. A claim may represent ongoing work or an outcome requiring verification. Its age does not establish abandonment, and inspection never recommends retrying a claimed document. Document-level failure can also mean incomplete deletion, so it conservatively recommends review rather than guessing that processing should be retried.
+
+This is a point-in-time metadata view, not a certificate of live vector contents, PDF existence, active-chunk integrity, worker liveness, or recovery eligibility. Even an `idle` response may become stale immediately; mutation endpoints retain their existing claim and eligibility checks. Suggested process/reindex actions are workflow guidance, not automatic execution or permission to bypass those checks. No tokens, errors, private configuration, or storage paths are returned. Existing vector-status and management behavior is unchanged. Recovery, automatic unlocking, and Phase 18 completion are not implemented.
+
+Offline tests: `python -B -m pytest backend/tests/test_operation_inspection.py -q -p no:cacheprovider`, followed by the complete backend suite. No live services or model downloads are required.
+
+### Phase 18B, Part 2 — document inspection panel
+
+Each visible document now has an **Inspect status** action. The read-only panel shows its name, recorded document state, operation state, attention, and advisory next action. The receipt timestamp uses the user's device clock and is explicitly a point-in-time snapshot, not a server observation timestamp or live-health guarantee. A claimed/uncertain result warns against retrying or deleting until verified; no unlock, recovery, or automatic retry controls are provided.
+
+Inspection uses the existing authenticated client and validates the public response before displaying it. Loading/re-inspection clears the prior snapshot; errors use safe wording, and expired authentication follows existing sign-out behavior. **Inspect again** performs one explicit read; there is no polling. Opening another document, changing the management view/Knowledge Base, refreshing the list, starting a mutation, or leaving the page invalidates the old panel/request. Inspection itself does not change selection, management URL state, or document data. Source names and messages are rendered as React text.
+
+The panel has a labeled region, keyboard focus on opening, focus return on explicit close, loading/status announcements, and responsive wrapping. Offline coverage: `node frontend/tests/document-inspection.browser.cjs` using the existing Vite/Playwright browser-test setup. Manual authenticated verification against the real application is still required; Phase 18B is not declared complete by these mocked checks.

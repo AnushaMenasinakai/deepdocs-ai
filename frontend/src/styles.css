@@ -320,6 +320,12 @@ h1 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; font-weight: 650;
 .document-info p { font-size: 12px; color: #697d72; margin: 6px 0 9px; }
 .document-status { display: inline-block; border: 1px solid #cfe3d5; border-radius: 5px; background: #edf6ef; color: #326a47; padding: 3px 8px; font-size: 11px; }
 .document-card button:disabled { opacity: .55; cursor: not-allowed; }
+.document-inspection dl { display: grid; gap: 16px; margin: 20px 0; }
+.document-inspection dt { font-weight: 600; margin-bottom: 5px; }
+.document-inspection dd { margin: 0; line-height: 1.6; }
+.document-inspection p { margin: 12px 0; line-height: 1.6; }
+.document-inspection h2:focus-visible { outline: 3px solid #168980; outline-offset: 4px; }
+.document-inspection .kb-actions { flex-wrap: wrap; }
 @media (max-width: 600px) {
   .document-upload { padding: 20px; }
   .document-selector select { font-size: 16px; }

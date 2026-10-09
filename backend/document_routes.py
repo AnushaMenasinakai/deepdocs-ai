@@ -27,6 +27,8 @@ import document_embeddings
 from document_schemas import EmbeddingResponse
 from document_schemas import BulkDeleteRequest, BulkDeleteResponse, BulkReindexRequest, BulkReindexResponse
 import document_bulk
+from document_inspection import inspect_operation
+from document_schemas import OperationStatusResponse
 
 router = APIRouter(tags=["Documents"])
 UPLOAD_SCHEMA = {"requestBody": {"required": True, "content": {}}}
@@ -272,3 +274,9 @@ async def vector_status(document_id: str, current_user=Depends(get_current_user)
                     "stored_vector_count": count, "synchronized": synchronized}
         finally:
             await release_document(database, owner, identifier, token)
+
+
+@router.get("/api/documents/{document_id}/operation-status", response_model=OperationStatusResponse)
+async def operation_status(document_id: str, current_user=Depends(get_current_user), database=Depends(get_database)):
+    with safe_errors():
+        return found(await inspect_operation(database, ObjectId(current_user.id), parse_id(document_id)))

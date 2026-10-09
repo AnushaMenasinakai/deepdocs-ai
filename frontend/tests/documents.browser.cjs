@@ -195,7 +195,7 @@ const fixture={name:'notes.pdf',mimeType:'application/pdf',buffer:Buffer.from('%
    await ready();await pick();
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
    await page.screenshot({path:'E:/deepdocs-ai/.verification/documents-'+width+'.png',fullPage:true});
-   await page.locator('.document-card button').click();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   await page.locator('.document-card').getByRole('button',{name:/^Delete /}).click();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
    await button('Cancel').click();
   },width);
   console.log('TOTAL: '+passed+' document browser scenarios passed.');
