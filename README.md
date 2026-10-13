@@ -717,3 +717,23 @@ operation or completion log. Phase 18B inspection remains unchanged. No migratio
 history collection, indexes, heartbeat, automatic recovery, or expiry is added.
 Timestamps and recorded stages never prove worker liveness or authorize recovery.
 These diagnostics do not improve the deployment's crash/failover guarantees.
+
+## Phase 18C-C, Part 2A - processing diagnostic checkpoints
+
+PDF processing explicitly acquires a `processing` claim. Five coarse checkpoints
+record intent: `extraction`, `chunk_insertion`, `vector_cleanup`, `activation`,
+and `obsolete_cleanup`. Each records the preceding acknowledged stage using the
+existing token/schema/sequence guard and expected KB scope. Local sequence advances
+only after an acknowledged diagnostic update. There are no per-page/chunk writes.
+
+A diagnostic stage is intended work, not evidence that it was dispatched or
+completed. An unconfirmed checkpoint stops subsequent stages and retains the
+claim; cancellation propagates without failed-state compensation. Proven local
+extraction failure still publishes the existing safe failure state and releases.
+Successful activation and fixed-generation cleanup retain their existing semantics;
+the final exact-token release removes claim and diagnostics together, without a
+separate diagnostic completion write. Other lifecycle integrations remain deferred.
+
+Required checkpoint writes add failure boundaries and may retain a claim even
+before chunk insertion. This is deliberate under uncertain acknowledgement, not
+proof of abandonment. Metadata is not a heartbeat, lease, or recovery authorization.

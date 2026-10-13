@@ -3,7 +3,7 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 from bson import ObjectId
-from document_operations import claim_document, release_document
+from document_operations import claim_document, release_document, record_operation_stage
 from pdf_processing import extract_chunks, ProcessingFailure
 from vector_store import cleanup_document_vectors
 
@@ -27,7 +27,7 @@ async def process_document(database, storage, owner_id, document_id, settings):
     docs = database.get_collection("documents")
     chunks = database.get_collection("document_chunks")
     generation = ObjectId()
-    document, token = await claim_document(database, owner_id, document_id)
+    document, token = await claim_document(database, owner_id, document_id, operation_type="processing")
     if document is None:
         return None
     owned = {"document_id": document_id, "owner_id": owner_id,
@@ -41,6 +41,20 @@ async def process_document(database, storage, owner_id, document_id, settings):
     activation = {**claimed, "chunk_generation": previous if had_generation
                   else {"$exists": False}}
     phase = "initialization"
+    sequence = 0
+
+    async def record(stage, acknowledged):
+        nonlocal sequence, phase
+        # A diagnostic write is itself uncertain until acknowledged. It must
+        # never enter the local extraction failure-and-release path.
+        phase = "diagnostic"
+        sequence = await record_operation_stage(
+            database, owner_id, document_id, token, sequence, stage,
+            expected_knowledge_base_id=document["knowledge_base_id"],
+            last_acknowledged_stage=acknowledged,
+        )
+        await processing_checkpoint()
+
     try:
         await processing_checkpoint()
         result = await docs.update_one(claimed, {"$set": {
@@ -51,6 +65,7 @@ async def process_document(database, storage, owner_id, document_id, settings):
         }})
         if result.matched_count != 1:
             raise ProcessingFailure("Processing requires service review.", 503)
+        await record("extraction", "claimed")
         phase = "local_extraction"
         # Synchronous PyMuPDF: no detached worker or concurrent parser execution.
         path = storage.processing_path(document)
@@ -62,12 +77,15 @@ async def process_document(database, storage, owner_id, document_id, settings):
             "source_filename": document["original_filename"], "generation": generation,
             "created_at": now, **value,
         } for value in values]
+        await record("chunk_insertion", "extraction")
         phase = "chunk_insertion"  # Set before dispatch; errors are uncertain.
         await chunks.insert_many(staged, ordered=True)
         await processing_checkpoint()
+        await record("vector_cleanup", "chunk_insertion")
         phase = "vector_cleanup"
         await cleanup_document_vectors(document)
         await processing_checkpoint()
+        await record("activation", "vector_cleanup")
         phase = "activation"
         changes = {
             "status": "processed", "chunk_generation": generation,
@@ -80,6 +98,7 @@ async def process_document(database, storage, owner_id, document_id, settings):
             raise ProcessingFailure("Processing requires service review.", 503)
         document.update(changes)
         await processing_checkpoint()
+        await record("obsolete_cleanup", "activation")
         phase = "obsolete_cleanup"
         if isinstance(previous, ObjectId) and previous != generation:
             await chunks.delete_many({**owned, "generation": previous})

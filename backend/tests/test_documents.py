@@ -32,6 +32,13 @@ PUBLIC = {"id", "knowledge_base_id", "filename", "content_type", "file_size", "s
 
 
 class Collection(MemoryCollection):
+    def matching(self, query):
+        # Model dotted diagnostic CAS predicates used by production processing.
+        nested = {k: v for k, v in query.items() if k.startswith("_operation_meta.")}
+        rows = super().matching({k: v for k, v in query.items() if k not in nested})
+        return [row for row in rows if isinstance(row.get("_operation_meta"), dict)
+                and all(row["_operation_meta"].get(k.split(".", 1)[1]) == v for k, v in nested.items())] if nested else rows
+
     async def find_one_and_update(self, query, update, **kwargs):
         matches = self.matching(query)
         if not matches:
@@ -51,7 +58,11 @@ class Collection(MemoryCollection):
         return SimpleNamespace(deleted_count=len(matches))
 
     def apply(self, document, update):
-        document.update(copy.deepcopy(update.get("$set", {})))
+        for key, value in update.get("$set", {}).items():
+            if key.startswith("_operation_meta."):
+                document["_operation_meta"][key.split(".", 1)[1]] = copy.deepcopy(value)
+            else:
+                document[key] = copy.deepcopy(value)
         for key in update.get("$unset", {}):
             document.pop(key, None)
         for key, value in update.get("$addToSet", {}).items():
