@@ -8,7 +8,7 @@ from pymongo.errors import PyMongoError
 from fastapi.concurrency import run_in_threadpool
 from document_schemas import DocumentResponse
 from document_storage import StorageCleanupError
-from document_operations import claim_document, release_document
+from document_operations import claim_document, release_document, record_operation_stage
 from vector_store import cleanup_document_vectors
 from upload_safety import UploadUncertain, require_acknowledged, verify, check_cancellation
 from upload_safety import SaveLifetime, observe_save_result
@@ -157,7 +157,7 @@ async def deletion_checkpoint():
 
 async def delete_document(database, storage, owner_id, document_id, expected_knowledge_base_id=None):
     document, token = await claim_document(
-        database, owner_id, document_id, expected_knowledge_base_id,
+        database, owner_id, document_id, expected_knowledge_base_id, operation_type="deletion",
     )
     if document is None:
         return False
@@ -165,6 +165,20 @@ async def delete_document(database, storage, owner_id, document_id, expected_kno
     # acknowledged destructive step can leave an incomplete deletion lifecycle.
     dispatched = False
     cancelled = False
+    sequence = 0
+    diagnostic_uncertain = False
+
+    async def record(stage, acknowledged):
+        nonlocal sequence, diagnostic_uncertain
+        diagnostic_uncertain = True
+        sequence = await record_operation_stage(
+            database, owner_id, document_id, token, sequence, stage,
+            expected_knowledge_base_id=document["knowledge_base_id"],
+            last_acknowledged_stage=acknowledged,
+        )
+        await deletion_checkpoint()
+        diagnostic_uncertain = False
+
     try:
         await deletion_checkpoint()
         base_id = document["knowledge_base_id"]
@@ -172,7 +186,9 @@ async def delete_document(database, storage, owner_id, document_id, expected_kno
                    "knowledge_base_id": base_id, "_operation": token}
         # Pure path validation before destructive dispatch; delete revalidates it.
         storage.reference(document)
+        acknowledged = "claimed"
         if document.get("vector_index", {}).get("collection_name"):
+            await record("vector_invalidation", acknowledged)
             dispatched = True  # Invalidation may commit despite a lost response.
             result = await database.get_collection("documents").update_one(
                 claimed,
@@ -181,17 +197,23 @@ async def delete_document(database, storage, owner_id, document_id, expected_kno
             if result.matched_count != 1:
                 raise PyMongoError("Document deletion requires service review.")
             await deletion_checkpoint()
+            await record("vector_deletion", "vector_invalidation")
             await cleanup_document_vectors(document)
             await deletion_checkpoint()
+            acknowledged = "vector_deletion"
+        await record("pdf_deletion", acknowledged)
         dispatched = True  # A cancelled await does not stop the filesystem worker.
         await run_in_threadpool(storage.delete, document)
         await deletion_checkpoint()
+        await record("chunk_deletion", "pdf_deletion")
         await database.get_collection("document_chunks").delete_many(
             {"document_id": document_id, "owner_id": owner_id, "knowledge_base_id": base_id}
         )
         await deletion_checkpoint()
+        await record("reservation_release", "chunk_deletion")
         await release_reservation(database, owner_id, base_id, document_id)
         await deletion_checkpoint()
+        await record("metadata_deletion", "reservation_release")
         result = await database.get_collection("documents").delete_one(claimed)
         if result.deleted_count != 1:
             raise PyMongoError("Document deletion outcome could not be confirmed.")
@@ -203,7 +225,7 @@ async def delete_document(database, storage, owner_id, document_id, expected_kno
     finally:
         # No compensation or failed-state publication after dispatch. The claim
         # remains unless final metadata deletion itself committed. Never replay.
-        if not dispatched:
+        if not dispatched and not diagnostic_uncertain:
             try:
                 await release_document(database, owner_id, document_id, token)
             except Exception:

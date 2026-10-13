@@ -22,13 +22,13 @@ from pdf_processing import ProcessingFailure
 from config import load_processing_settings, load_embedding_settings
 from embeddings import EmbeddingFailure
 from vector_store import VectorFailure, get_vector_store
-from document_operations import claim_document, release_document
+from document_operations import claim_document, release_document, record_operation_stage
 import document_embeddings
 from document_schemas import EmbeddingResponse
 from document_schemas import BulkDeleteRequest, BulkDeleteResponse, BulkReindexRequest, BulkReindexResponse
 import document_bulk
 from document_inspection import inspect_operation
-from upload_safety import close_upload_form
+from upload_safety import close_upload_form, check_cancellation
 from document_schemas import OperationStatusResponse
 
 router = APIRouter(tags=["Documents"])
@@ -255,17 +255,28 @@ async def qdrant_health():
 async def vector_status(document_id: str, current_user=Depends(get_current_user), database=Depends(get_database)):
     owner, identifier = ObjectId(current_user.id), parse_id(document_id)
     with safe_errors():
-        document, token = await claim_document(database, owner, identifier)
+        document, token = await claim_document(database, owner, identifier, operation_type="vector_inspection")
         found(document)
+        uncertain = True
         try:
+            await record_operation_stage(
+                database, owner, identifier, token, 0, "inspection",
+                expected_knowledge_base_id=document["knowledge_base_id"],
+                last_acknowledged_stage="claimed",
+            )
+            check_cancellation()
+            uncertain = False
             state = document.get("vector_index", {})
             count = 0
             current_count = 0
             if state.get("collection_name"):
                 store = get_vector_store()
                 store.check_target(state)
+                uncertain = True
                 count = await store.count(document, collection=state["collection_name"])
                 current_count = await store.count(document, document.get("chunk_generation"), state["collection_name"])
+                check_cancellation()
+                uncertain = False
             expected = document.get("chunk_count", 0)
             synchronized = (state.get("status") == "indexed" and document.get("status") == "processed"
                             and state.get("chunk_generation") == document.get("chunk_generation")
@@ -274,7 +285,10 @@ async def vector_status(document_id: str, current_user=Depends(get_current_user)
                     "collection_name": state.get("collection_name"), "expected_chunk_count": expected,
                     "stored_vector_count": count, "synchronized": synchronized}
         finally:
-            await release_document(database, owner, identifier, token)
+            # An uncertain diagnostic or interrupted remote inspection retains
+            # its claim. No metadata repair or remote mutation is performed.
+            if not uncertain:
+                await release_document(database, owner, identifier, token)
 
 
 @router.get("/api/documents/{document_id}/operation-status", response_model=OperationStatusResponse)

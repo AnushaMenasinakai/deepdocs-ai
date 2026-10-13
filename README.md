@@ -762,3 +762,30 @@ cleanup write after publication uncertainty. Legacy retained claims stay protect
 These required diagnostic writes add availability boundaries; retained claims may
 need service review. Synchronous encoding remains non-interruptible until it returns.
 No heartbeat, lease, automatic recovery, expiration, or crash/failover guarantee is added.
+
+## Phase 18C-C, Part 2C - deletion and vector-inspection diagnostics
+
+Deletion acquires a `deletion` claim. For documents with recorded vectors, intent
+checkpoints follow the existing cleanup order: `vector_invalidation`,
+`vector_deletion`, `pdf_deletion`, `chunk_deletion`, `reservation_release`, then
+`metadata_deletion`. Documents without recorded vectors skip the first two stages.
+Each checkpoint records only the preceding acknowledged work, with exact-token,
+owner, KB, schema and monotonically advancing sequence guards. No per-chunk or
+per-vector diagnostics are written. Successful final deletion removes the document,
+claim and diagnostics together; no completion write follows it.
+
+The existing `/vector-status` path acquires a `vector_inspection` claim and records
+one `inspection` intent checkpoint. It retains its existing count reads and response
+shape, with no repairs or vector mutations. Safe completion atomically releases the
+claim and diagnostics. An uncertain diagnostic write or interrupted/failed remote
+count inspection conservatively retains the claim, so a transient read failure can
+require service review. No extra finalization checkpoint or Qdrant calls are added.
+The separate Phase 18B `/operation-status` read-only endpoint remains unchanged.
+
+Diagnostic acknowledgement loss stops downstream work without replay or unlock.
+Deletion retains its claim after destructive dispatch, including cancellation while
+a filesystem worker may still run. Proven local path-validation failure before
+diagnostic/destructive dispatch retains the existing safe release behavior.
+Legacy claims stay protected. These fields are not worker liveness, heartbeats,
+leases, or recovery authorization. No expiry, force unlock, or automatic recovery
+is introduced; partial deletion and crash/failover limitations remain.

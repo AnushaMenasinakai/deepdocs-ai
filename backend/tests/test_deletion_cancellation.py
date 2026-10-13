@@ -77,6 +77,8 @@ class DeletionCancellationTests(unittest.IsolatedAsyncioTestCase):
                     original = getattr(target, method)
                     arrived, pending = asyncio.Event(), []
                     async def remote(*args, **kwargs):
+                        if stage == 'invalidation' and '_operation_meta.stage' in args[1].get('$set', {}):
+                            return await original(*args, **kwargs)
                         pending.append((copy.deepcopy(args), copy.deepcopy(kwargs)))
                         if mode == 'ack_loss':
                             await original(*args, **kwargs)
