@@ -692,3 +692,28 @@ incomplete. Read-only operation inspection reports retained claims as uncertain.
 This does not provide crash recovery, automatic unlocking, or a transaction across
 MongoDB, Qdrant and storage. Partial cleanup and released reservations may remain after
 interruption, and deployment failover guarantees are not certified.
+
+## Phase 18C-C, Part 1 - atomic operation metadata foundation
+
+New claims preserve the scalar `_operation` ObjectId and atomically initialize a
+bounded `_operation_meta` sibling: schema version 1, matching token, allowlisted
+type (default `unknown`), UTC start/recording times, `claimed` stage, sequence 0,
+null acknowledged stage/error category, and `in_progress` outcome. Diagnostic
+fields are excluded from the business-state snapshot returned to claim callers.
+
+The internal stage helper accepts only allowlisted stage/outcome/error values and
+matches document, owner, optional expected KB, exact claim and metadata tokens,
+schema version, and expected sequence. It advances the sequence without upsert.
+Mismatch or uncertain acknowledgement returns a sanitized internal service error;
+there is no replay, unlock, or inference of non-commit. Cancellation propagates.
+Acquisition verification additionally checks the matching metadata token/version.
+The release helper removes claim and diagnostics in one exact-token update.
+
+Legacy claims remain protected, including missing/malformed metadata. New claims
+replace stale diagnostics atomically. No lifecycle checkpoint calls or public
+response changes are included yet. Existing inline indexing completion writes
+still remove only the claim; any remaining diagnostics are stale, not an active
+operation or completion log. Phase 18B inspection remains unchanged. No migration,
+history collection, indexes, heartbeat, automatic recovery, or expiry is added.
+Timestamps and recorded stages never prove worker liveness or authorize recovery.
+These diagnostics do not improve the deployment's crash/failover guarantees.
