@@ -183,7 +183,7 @@ class ProcessingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await self.inspect(body))[1], original)
         self.assertEqual(self.docs.documents[ObjectId(body["id"])]["status"], "failed")
 
-    async def test_partial_insert_failure_is_invisible_and_cleaned(self):
+    async def test_partial_insert_uncertainty_is_invisible_and_retained(self):
         body = await self.make_document()
         await self.process(body)
         _, original, _ = await self.inspect(body)
@@ -197,8 +197,9 @@ class ProcessingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(status, 503)
         self.assertNotIn("private-driver", str(error))
         self.assertEqual((await self.inspect(body))[1], original)
-        self.assertEqual(len(self.chunks.documents), len(original))
-        self.assertEqual(self.docs.documents[ObjectId(body["id"])]["status"], "failed")
+        self.assertGreater(len(self.chunks.documents), len(original))
+        self.assertEqual(self.docs.documents[ObjectId(body["id"])]["status"], "processing")
+        self.assertIn("_operation", self.docs.documents[ObjectId(body["id"])])
 
     async def test_ambiguous_activation_retains_old_and_staged_data_locked(self):
         body = await self.make_document()
@@ -263,15 +264,17 @@ class ProcessingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await self.inspect(body))[0], 404)
         self.assertEqual((await request("DELETE", "/api/knowledge-bases/" + str(self.base_id)))[0], 204)
 
-    async def test_chunk_delete_failure_keeps_retryable_metadata(self):
+    async def test_chunk_delete_uncertainty_preserves_metadata_and_claim(self):
         body = await self.make_document()
         await self.process(body)
         original = self.chunks.delete_many
         self.chunks.delete_many = AsyncMock(side_effect=ConnectionFailure("private"))
         self.assertEqual((await request("DELETE", "/api/documents/" + body["id"]))[0], 503)
-        self.assertEqual(self.docs.documents[ObjectId(body["id"])]["status"], "failed")
+        self.assertEqual(self.docs.documents[ObjectId(body["id"])]["status"], "processed")
+        self.assertIn("_operation", self.docs.documents[ObjectId(body["id"])])
+        self.assertTrue(self.chunks.documents)
         self.chunks.delete_many = original
-        self.assertEqual((await request("DELETE", "/api/documents/" + body["id"]))[0], 204)
+        self.assertEqual((await request("DELETE", "/api/documents/" + body["id"]))[0], 409)
 
     async def test_extraction_safety_limits(self):
         body = await self.make_document(["Page one.", "Page two."])
@@ -297,13 +300,14 @@ class ProcessingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await self.process(body))[0], 503)
         self.assertEqual((await self.inspect(body))[1], original)
         self.chunks.insert_many = real_insert
-        self.assertEqual((await self.process(body))[0], 200)
+        self.chunks.delete_many.assert_not_awaited()
+        self.assertEqual((await self.process(body))[0], 409)
         _, current, _ = await self.inspect(body)
         self.assertEqual(len(current), len(original))
         self.assertGreater(len(self.chunks.documents), len(current))
         self.chunks.delete_many = real_delete
-        self.assertEqual((await request("DELETE", "/api/documents/" + body["id"]))[0], 204)
-        self.assertFalse(self.chunks.documents)
+        self.assertEqual((await request("DELETE", "/api/documents/" + body["id"]))[0], 409)
+        self.assertIn("_operation", self.docs.documents[ObjectId(body["id"])])
 
     async def test_chunk_generation_error_is_sanitized_and_keeps_previous_set(self):
         body = await self.make_document()

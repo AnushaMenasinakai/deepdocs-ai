@@ -288,14 +288,14 @@ class DocumentTests(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn(str(outside), json.dumps(response))
         record.update(original)
 
-    async def test_delete_io_failure_retains_metadata_for_retry(self):
+    async def test_delete_io_failure_retains_claim(self):
         body = await self.upload()
         with patch.object(self.storage, "delete", side_effect=OSError("private-detail")):
             self.assertEqual((await request("DELETE", "/api/documents/" + body["id"]))[0], 503)
         self.assertIn(ObjectId(body["id"]), self.docs.documents)
-        self.assertEqual((await request("DELETE", "/api/documents/" + body["id"]))[0], 204)
+        self.assertEqual((await request("DELETE", "/api/documents/" + body["id"]))[0], 409)
 
-    async def test_metadata_delete_failure_can_be_retried_with_missing_file(self):
+    async def test_metadata_delete_uncertainty_retains_claim_with_missing_file(self):
         body = await self.upload()
         original = self.docs.delete_one
         self.docs.delete_one = AsyncMock(side_effect=ConnectionFailure("private"))
@@ -303,7 +303,7 @@ class DocumentTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn(ObjectId(body["id"]), self.docs.documents)
         self.assert_no_files()
         self.docs.delete_one = original
-        self.assertEqual((await request("DELETE", "/api/documents/" + body["id"]))[0], 204)
+        self.assertEqual((await request("DELETE", "/api/documents/" + body["id"]))[0], 409)
 
     async def test_kb_conflict_until_documents_deleted_and_foreign_docs_do_not_block(self):
         body = await self.upload()

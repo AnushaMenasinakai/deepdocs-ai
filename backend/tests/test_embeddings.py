@@ -198,7 +198,8 @@ class EmbeddingTests(unittest.IsolatedAsyncioTestCase):
             status, value, _ = await self.embed(body)
         self.assertEqual(status, 503)
         self.assertNotIn("private", str(value))
-        self.assertEqual(self.docs.documents[ObjectId(body["id"])]["embedding"]["status"], "failed")
+        self.assertEqual(self.docs.documents[ObjectId(body["id"])]["embedding"]["status"], "generating")
+        self.assertIn("_operation", self.docs.documents[ObjectId(body["id"])])
 
     async def test_failed_retry_replaces_previous_success(self):
         body = await self.prepare()

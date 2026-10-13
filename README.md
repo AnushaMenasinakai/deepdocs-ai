@@ -642,3 +642,53 @@ Cancellation propagates during reservation, insertion, and verification without 
 These changes are **not full crash safety**. Crashes, delayed writes, lost responses, failover, or unavailable verification can retain orphan PDFs/reservations requiring review. Once closure has been requested, worker-side finalization survives event-loop shutdown, but hard process termination, a worker that never returns, or a failing stream close can prevent explicit finalization. A reservation left by an ambiguous acquisition may have no PDF yet. Primary/majority verification needs deployment support; global retry/read/write settings are unchanged, and deployment durability/failover guarantees are not certified. Intentionally repeated uploads remain separate requests. There is no automatic recovery, cleanup scan, or retry. Phase 18B inspection, claim lifecycle, frontend, and RAG behavior remain unchanged.
 
 Offline fault injection: `python -B -m pytest backend/tests/test_upload_safety.py backend/tests/test_documents.py -q -p no:cacheprovider`. Tests use fake MongoDB collections and temporary PDFs, including delayed commit, cancellation, and repeated cancellation during file saving. Live Atlas failover has not been tested.
+
+## Phase 18C-B, Part 1 — processing cancellation and generation safety
+
+Processing propagates cancellation unchanged. Cancellation checkpoints surround synchronous extraction and successive remote stages; PyMuPDF still runs synchronously, so it cannot be interrupted mid-call by normal event-loop cancellation. Cancellation retains the claim, including conservative retention before the first processing write. It does not publish an ordinary failure, compensate chunks, or automatically unlock.
+
+Processing tracks its stage before each mutation. An uncertain initial state write, chunk insertion, vector cleanup, activation, obsolete-chunk deletion, or unlock returns a sanitized service error without further compensation or release. Activation commitment determines the authoritative generation, including when its acknowledgement is lost; acknowledgement determines whether the caller can safely proceed. Activation is guarded by owner, KB, document, exact operation token, and the prior generation snapshot. A lost activation acknowledgement preserves potentially active data. No negative read is treated as evidence that a dispatched command cannot complete later.
+
+Successful cleanup targets only the prior authoritative ObjectId generation captured under the claim, with owner/KB/document scope. It never uses `generation != current`; future generations and unrelated resources cannot match the captured target. Other orphan generations are deliberately left for later review. Invalid prior-generation metadata prevents destructive cleanup and retains the claim. Uncertain cleanup completion also retains the claim, even after successful activation.
+
+A completed local extraction/validation failure, before chunk or vector dispatch, may publish the existing failed state and then release the exact token. Failure or cancellation during that publication/release stops further cleanup. Successful processing releases only after activation and the fixed-target cleanup finish. An uncertain unlock is not retried; it may already have committed.
+
+The existing vector helper is unchanged. Processing conservatively treats any error from that boundary as uncertain, including errors the helper does not distinguish from pre-dispatch configuration failures. This can retain more claims than strictly necessary. Retained claims block processing, indexing, and deletion and remain visible through Phase 18B inspection; this is not recovery eligibility or a new unlock mechanism. Crashes, delayed writes, and missing acknowledgements can still leave retained claims and inactive chunks. No complete crash recovery, automatic retry, or live-service verification is claimed.
+
+Offline tests: `backend/tests/test_processing_cancellation.py`, existing processing/vector tests, Phase 18C-A claim/upload tests, bulk/inspection tests, and the complete backend suite. Use the backend directory on `PYTHONPATH` when running individual test modules.
+
+## Phase 18C-B, Part 2 — indexing cancellation and write uncertainty
+
+Indexing tracks local validation, encoding, collection setup, prior-vector cleanup, target metadata, document-wide vector deletion, batch upserts, count verification, and final publication. A pending mutation is recorded before dispatch and cleared only after its acknowledged result passes the existing checks. The successful workflow, deterministic point IDs, vector validation, sequential batching, and count checks are unchanged. All indexing metadata writes now include owner, KB, document, exact token, and expected chunk generation.
+
+Transport errors, timeouts, incomplete acknowledgements, and cancellation during document-affecting mutations retain the claim and existing uncertainty. They do not publish definitive failed indexing metadata, replay commands, or independently unlock. Count errors/mismatches also retain the claim: a count is not proof that a previously uncertain command cannot finish later. The unchanged vector helper conservatively makes some pre-dispatch/configuration failures indistinguishable from uncertain mutation; those may retain a claim unnecessarily. Collection setup only creates/validates shared infrastructure and precedes document-vector mutation; its failure can still use the safe failed-state path when all preceding document writes were acknowledged.
+
+Completed local model/validation failures may preserve the existing failed-state behavior when no document mutation is outstanding. Failed-state publication and unlock remain atomic and token/generation scoped; if that write is uncertain, no second unlock is attempted. Cancellation propagates unchanged. Before mutation, exact-token release is attempted; after mutation starts, cancellation conservatively retains state. Encoding remains synchronous on the event-loop thread, with checkpoints between stages and batches rather than a new threadpool. A checkpoint cannot interrupt a native encode call mid-execution.
+
+Final indexed publication and claim removal remain one MongoDB update. A lost acknowledgement returns sanitized service failure without retry or failed-state compensation. If publication actually committed, indexed metadata and its atomic unlock remain intact. No positive-verification/resume path is added in this part. Cancellation after committed publication still propagates without undoing it. Bulk re-index preserves ordered `service_unavailable` and `not_attempted` outcomes; cancellation never launches the next item. The batch outcome reports request execution failure, not proof that remote vector writes failed.
+
+This is not full crash/failover recovery. Uncertainty can leave partial vectors and claims requiring review, and replacement remains non-zero-downtime. No negative read authorizes recovery, no automatic retries/unlocks are added, and real deployment failover/durability is not certified. No separate generation-specific vector deletion API was added. Phase 18B inspection, Phase 18C-A uploads/claims, Part 1 processing, public APIs, and RAG behavior are preserved.
+
+Offline coverage: `backend/tests/test_indexing_cancellation.py`, embedding/vector/bulk regressions, processing cancellation, claim/upload safety, inspection, and the complete backend suite. Synthetic fakes independently control dispatch, commit, acknowledgement loss, and delayed completion; no live services or model downloads are needed.
+
+
+## Phase 18C-B, Part 3A - deletion claim retention
+
+Deletion validates the PDF reference before mutation, then invalidates vector metadata,
+removes vectors, removes the PDF, removes scoped chunks, releases the KB reservation,
+and deletes exact-token document metadata. Once mutation dispatch begins, any error or
+cancellation retains the claim if the document still exists. No failed-state overwrite,
+automatic retry, compensation, or independent unlock follows uncertain deletion.
+Only failures before mutation dispatch can release the exact token safely.
+
+A cancelled filesystem await is not proof its thread stopped. The claim remains even
+if the worker later finishes; no duplicate deletion is launched. Cancellation propagates
+and bulk deletion stops before subsequent items. Service failures preserve ordered
+service_unavailable/not_attempted reports. Lost final metadata acknowledgement can mean
+the document is already gone; no replay is attempted. Conservative retention also covers
+completed local deletion failures after dispatch, because the whole lifecycle may be
+incomplete. Read-only operation inspection reports retained claims as uncertain.
+
+This does not provide crash recovery, automatic unlocking, or a transaction across
+MongoDB, Qdrant and storage. Partial cleanup and released reservations may remain after
+interruption, and deployment failover guarantees are not certified.

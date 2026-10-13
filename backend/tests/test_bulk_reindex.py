@@ -180,7 +180,7 @@ class BulkReindexTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("_operation", self.docs.documents[ObjectId(identifier)])
         self.assertEqual(self.model.batches, [])
 
-    async def test_shared_model_and_qdrant_failures_stop_and_are_retryable(self):
+    async def test_shared_failures_stop_and_only_local_model_failure_is_retryable(self):
         for stage in ("model", "qdrant"):
             with self.subTest(stage=stage):
                 broken, later = await self.prepared(), await self.prepared()
@@ -194,12 +194,16 @@ class BulkReindexTests(unittest.IsolatedAsyncioTestCase):
                     {"document_id": broken, "outcome": "failed", "code": "service_unavailable"},
                     {"document_id": later, "outcome": "not_attempted"}])
                 row = self.docs.documents[ObjectId(broken)]
-                self.assertEqual(row["embedding"]["status"], "failed")
-                self.assertEqual(row["vector_index"]["status"], "failed")
-                self.assertNotIn("_operation", row)
+                self.assertEqual(row["embedding"]["status"], "failed" if stage == "model" else "generating")
+                self.assertEqual(row["vector_index"]["status"], "failed" if stage == "model" else "indexing")
+                self.assertEqual("_operation" in row, stage == "qdrant")
                 self.assertEqual(self.docs.documents[ObjectId(later)], original_later)
                 self.assert_safe(body)
-                self.assertEqual((await self.bulk([broken]))[1]["succeeded"], 1)
+                retry = (await self.bulk([broken]))[1]
+                if stage == "model":
+                    self.assertEqual(retry["succeeded"], 1)
+                else:
+                    self.assertEqual(retry["results"][0]["code"], "busy")
 
     async def test_success_before_failure_not_rolled_back_count_verification_enforced(self):
         good, broken, later = [await self.prepared() for _ in range(3)]
@@ -215,7 +219,8 @@ class BulkReindexTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(status, 200)
         self.assertEqual((body["succeeded"], body["failed"], body["not_attempted"]), (1, 1, 1))
         self.assertEqual(self.docs.documents[ObjectId(good)]["vector_index"]["status"], "indexed")
-        self.assertEqual(self.docs.documents[ObjectId(broken)]["vector_index"]["status"], "failed")
+        self.assertEqual(self.docs.documents[ObjectId(broken)]["vector_index"]["status"], "indexing")
+        self.assertIn("_operation", self.docs.documents[ObjectId(broken)])
         self.assertNotIn("vector_index", self.docs.documents[ObjectId(later)])
 
     async def test_invalid_chunk_order_and_count_fail_safely(self):

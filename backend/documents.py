@@ -150,40 +150,62 @@ async def find_document(database, owner_id, document_id):
     )
 
 
+async def deletion_checkpoint():
+    await asyncio.sleep(0)
+    check_cancellation()
+
+
 async def delete_document(database, storage, owner_id, document_id, expected_knowledge_base_id=None):
     document, token = await claim_document(
         database, owner_id, document_id, expected_knowledge_base_id,
     )
     if document is None:
         return False
-    deleted = False
-    file_removed = False
+    # Once any mutation is dispatched, errors cannot justify unlocking. Even an
+    # acknowledged destructive step can leave an incomplete deletion lifecycle.
+    dispatched = False
+    cancelled = False
     try:
+        await deletion_checkpoint()
+        base_id = document["knowledge_base_id"]
+        claimed = {"_id": document_id, "owner_id": owner_id,
+                   "knowledge_base_id": base_id, "_operation": token}
+        # Pure path validation before destructive dispatch; delete revalidates it.
+        storage.reference(document)
         if document.get("vector_index", {}).get("collection_name"):
-            await database.get_collection("documents").update_one(
-                {"_id": document_id, "owner_id": owner_id, "_operation": token},
+            dispatched = True  # Invalidation may commit despite a lost response.
+            result = await database.get_collection("documents").update_one(
+                claimed,
                 {"$set": {"vector_index": {**document["vector_index"], "status": "stale"}}},
             )
+            if result.matched_count != 1:
+                raise PyMongoError("Document deletion requires service review.")
+            await deletion_checkpoint()
             await cleanup_document_vectors(document)
+            await deletion_checkpoint()
+        dispatched = True  # A cancelled await does not stop the filesystem worker.
         await run_in_threadpool(storage.delete, document)
-        file_removed = True
+        await deletion_checkpoint()
         await database.get_collection("document_chunks").delete_many(
-            {"document_id": document_id, "owner_id": owner_id}
+            {"document_id": document_id, "owner_id": owner_id, "knowledge_base_id": base_id}
         )
-        await release_reservation(database, owner_id, document["knowledge_base_id"], document_id)
-        result = await database.get_collection("documents").delete_one(
-            {"_id": document_id, "owner_id": owner_id, "_operation": token}
-        )
-        deleted = result.deleted_count == 1
-        return deleted
-    except BaseException:
-        if file_removed:
-            await database.get_collection("documents").update_one(
-                {"_id": document_id, "owner_id": owner_id, "_operation": token},
-                {"$set": {"status": "failed", "processing_error": "Document deletion is incomplete. Retry deletion.",
-                          "updated_at": datetime.now(timezone.utc)}},
-            )
+        await deletion_checkpoint()
+        await release_reservation(database, owner_id, base_id, document_id)
+        await deletion_checkpoint()
+        result = await database.get_collection("documents").delete_one(claimed)
+        if result.deleted_count != 1:
+            raise PyMongoError("Document deletion outcome could not be confirmed.")
+        await deletion_checkpoint()
+        return True
+    except asyncio.CancelledError:
+        cancelled = True
         raise
     finally:
-        if not deleted:
-            await release_document(database, owner_id, document_id, token)
+        # No compensation or failed-state publication after dispatch. The claim
+        # remains unless final metadata deletion itself committed. Never replay.
+        if not dispatched:
+            try:
+                await release_document(database, owner_id, document_id, token)
+            except Exception:
+                if not cancelled:
+                    raise

@@ -216,17 +216,20 @@ class BulkDeleteTests(unittest.IsolatedAsyncioTestCase):
                 self.assertNotIn(ObjectId(first), self.docs.documents)
                 self.assertEqual(self.docs.documents[ObjectId(last)], before_last)
                 row = self.docs.documents[broken_id]
-                self.assertNotIn("_operation", row)
+                self.assertEqual("_operation" in row, stage != "claim")
                 self.assertEqual(self.storage.reference(row).exists(), stage in ("qdrant", "filesystem", "claim"))
                 if stage in ("chunks", "reservation", "metadata"):
-                    self.assertEqual(row["status"], "failed")
+                    self.assertEqual(row["status"], "processed")
                 reservations = self.bases.documents[self.base_id]["_document_ids"]
                 self.assertIn(ObjectId(last), reservations)
                 self.assertNotIn(ObjectId(first), reservations)
                 self.assertEqual(broken_id in reservations, stage != "metadata")
                 self.assert_safe(body)
-                # Existing retry semantics tolerate already-removed PDF/chunks.
-                self.assertEqual((await self.bulk([broken, last]))[1]["succeeded"], 2)
+                # Only a proven pre-dispatch failure permits a subsequent operation.
+                retry = (await self.bulk([broken, last]))[1]
+                self.assertEqual(retry["succeeded"], 2 if stage == "claim" else 1)
+                if stage != "claim":
+                    self.assertEqual(retry["results"][0]["code"], "busy")
 
     async def test_cancellation_does_not_report_completion_or_start_next_item(self):
         first, second = str(ObjectId()), str(ObjectId())

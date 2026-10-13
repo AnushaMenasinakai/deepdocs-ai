@@ -138,7 +138,7 @@ class VectorLifecycleTests(unittest.IsolatedAsyncioTestCase):
         del app.dependency_overrides[get_current_user]
         self.assertEqual((await self.status(body))[0], 401)
 
-    async def test_partial_failure_state_and_retry_cleanup(self):
+    async def test_partial_write_uncertainty_retains_claim_and_blocks_retry(self):
         body = await self.prepare()
         self.qdrant.fail_upsert = True
         with patch("embeddings.load_model", return_value=embedding_helpers.FakeModel()):
@@ -146,11 +146,12 @@ class VectorLifecycleTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(status, 503)
             self.assertNotIn("private", str(value))
             state = self.docs.documents[ObjectId(body["id"])]["vector_index"]
-            self.assertEqual(state["status"], "failed")
-            self.assertFalse((await self.status(body))[1]["synchronized"])
+            self.assertEqual(state["status"], "indexing")
+            self.assertIn("_operation", self.docs.documents[ObjectId(body["id"])])
+            self.assertEqual((await self.status(body))[0], 409)
             self.qdrant.fail_upsert = False
-            self.assertEqual((await self.embed(body))[0], 200)
-        self.assertEqual(len(self.qdrant.points[self.vector_store.collection]), 3)
+            self.assertEqual((await self.embed(body))[0], 409)
+        self.assertEqual(len(self.qdrant.points[self.vector_store.collection]), 1)
 
     async def test_mongo_failure_after_vectors_preserves_cleanup_location(self):
         body = await self.prepare()
@@ -164,12 +165,13 @@ class VectorLifecycleTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((await self.embed(body))[0], 503)
         self.assertEqual(len(self.qdrant.points[self.vector_store.collection]), 3)
         state = self.docs.documents[ObjectId(body["id"])]["vector_index"]
-        self.assertEqual(state["status"], "failed")
+        self.assertEqual(state["status"], "indexing")
         self.assertEqual(state["collection_name"], self.vector_store.collection)
-        self.assertFalse((await self.status(body))[1]["synchronized"])
+        self.assertIn("_operation", self.docs.documents[ObjectId(body["id"])])
+        self.assertEqual((await self.status(body))[0], 409)
         self.docs.update_one = original
-        self.assertEqual((await request("DELETE", "/api/documents/" + body["id"]))[0], 204)
-        self.assertFalse(self.qdrant.points[self.vector_store.collection])
+        self.assertEqual((await request("DELETE", "/api/documents/" + body["id"]))[0], 409)
+        self.assertEqual(len(self.qdrant.points[self.vector_store.collection]), 3)
 
     async def test_reprocess_fewer_chunks_removes_old_vectors(self):
         body = await self.index()
@@ -189,31 +191,31 @@ class VectorLifecycleTests(unittest.IsolatedAsyncioTestCase):
         old_chunks = copy.deepcopy(self.chunks.documents)
         self.qdrant.fail_delete = True
         self.assertEqual((await self.process(body))[0], 503)
-        self.assertEqual(self.chunks.documents, old_chunks)
+        self.assertTrue(all(self.chunks.documents[key] == value for key, value in old_chunks.items()))
+        self.assertGreater(len(self.chunks.documents), len(old_chunks))
         record = self.docs.documents[ObjectId(body["id"])]
         self.assertEqual(record["vector_index"]["status"], "stale")
-        self.assertEqual(record["status"], "failed")
-        self.assertFalse((await self.status(body))[1]["synchronized"])
+        self.assertEqual(record["status"], "processing")
+        self.assertIn("_operation", record)
+        self.assertEqual((await self.status(body))[0], 409)
         self.qdrant.fail_delete = False
-        self.assertEqual((await self.process(body))[0], 200)
-        self.assertFalse(self.qdrant.points[self.vector_store.collection])
+        self.assertEqual((await self.process(body))[0], 409)
 
-    async def test_delete_failure_preserves_file_metadata_then_retry_cleans_only_owned(self):
+    async def test_delete_failure_preserves_file_metadata_and_blocks_retry(self):
         body = await self.index()
         chunk = copy.deepcopy(next(iter(self.chunks.documents.values())))
         chunk["owner_id"] = self.other
         await self.vector_store.upsert([chunk], [[1., 0., 0.]], 3)
-        foreign = point_id(chunk)
+        points = copy.deepcopy(self.qdrant.points[self.vector_store.collection])
         self.qdrant.fail_delete = True
         self.assertEqual((await request("DELETE", "/api/documents/" + body["id"]))[0], 503)
         self.assertTrue((self.root / (body["id"] + ".pdf")).exists())
-        self.assertIn(ObjectId(body["id"]), self.docs.documents)
-        self.assertFalse((await self.status(body))[1]["synchronized"])
+        self.assertIn("_operation", self.docs.documents[ObjectId(body["id"])])
+        self.assertEqual((await self.status(body))[0], 409)
         self.qdrant.fail_delete = False
-        self.assertEqual((await request("DELETE", "/api/documents/" + body["id"]))[0], 204)
-        self.assertEqual(set(self.qdrant.points[self.vector_store.collection]), {foreign})
-        self.assertFalse(self.chunks.documents)
-        self.assertFalse((self.root / (body["id"] + ".pdf")).exists())
+        self.assertEqual((await request("DELETE", "/api/documents/" + body["id"]))[0], 409)
+        self.assertEqual(self.qdrant.points[self.vector_store.collection], points)
+        self.assertTrue(self.chunks.documents)
 
     async def test_unavailable_health_index_and_status_are_safe(self):
         body = await self.index()
@@ -243,8 +245,9 @@ class VectorLifecycleTests(unittest.IsolatedAsyncioTestCase):
         self.vector_store.target = "changed-endpoint"
         self.assertEqual((await self.embed(body))[0], 503)
         self.assertEqual(self.docs.documents[ObjectId(body["id"])]["vector_index"]["target"], old)
-        self.assertEqual((await self.process(body))[0], 503)
-        self.assertEqual((await request("DELETE", "/api/documents/" + body["id"]))[0], 503)
+        self.assertEqual((await self.process(body))[0], 409)
+        self.assertIn("_operation", self.docs.documents[ObjectId(body["id"])])
+        self.assertEqual((await request("DELETE", "/api/documents/" + body["id"]))[0], 409)
         self.assertEqual(len(self.qdrant.points[self.vector_store.collection]), 3)
 
 
@@ -258,7 +261,8 @@ class VectorLifecycleTests(unittest.IsolatedAsyncioTestCase):
         self.vector_store.count = wrong_count
         with patch("embeddings.load_model", return_value=embedding_helpers.FakeModel()):
             self.assertEqual((await self.embed(body))[0], 503)
-        self.assertEqual(self.docs.documents[ObjectId(body["id"])]["vector_index"]["status"], "failed")
+        self.assertEqual(self.docs.documents[ObjectId(body["id"])]["vector_index"]["status"], "indexing")
+        self.assertIn("_operation", self.docs.documents[ObjectId(body["id"])])
 
     async def test_different_document_and_base_points_survive_cleanup(self):
         body = await self.index()
