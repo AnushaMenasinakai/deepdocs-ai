@@ -711,9 +711,9 @@ The release helper removes claim and diagnostics in one exact-token update.
 
 Legacy claims remain protected, including missing/malformed metadata. New claims
 replace stale diagnostics atomically. No lifecycle checkpoint calls or public
-response changes are included yet. Existing inline indexing completion writes
-still remove only the claim; any remaining diagnostics are stale, not an active
-operation or completion log. Phase 18B inspection remains unchanged. No migration,
+response changes were included in Part 1. Part 2B below extends atomic diagnostic
+cleanup to inline indexing completion writes. Any legacy remaining diagnostics
+are stale, not an active operation or completion log. Phase 18B inspection remains unchanged. No migration,
 history collection, indexes, heartbeat, automatic recovery, or expiry is added.
 Timestamps and recorded stages never prove worker liveness or authorize recovery.
 These diagnostics do not improve the deployment's crash/failover guarantees.
@@ -737,3 +737,28 @@ separate diagnostic completion write. Other lifecycle integrations remain deferr
 Required checkpoint writes add failure boundaries and may retain a claim even
 before chunk insertion. This is deliberate under uncertain acknowledgement, not
 proof of abandonment. Metadata is not a heartbeat, lease, or recovery authorization.
+
+## Phase 18C-C, Part 2B - indexing diagnostic checkpoints
+
+Embedding generation explicitly acquires an `indexing` claim. After validation and
+the initial generating-state publication, seven coarse intent checkpoints are
+recorded: `encoding`, `collection_setup`, `vector_cleanup`, `indexing_metadata`,
+`vector_replacement`, `count_verification`, and `final_publication`. The first
+encoding acknowledgement means the first batch completed; later synchronous
+encoding interleaves with upserts under the single vector-replacement checkpoint.
+There are no per-batch diagnostic writes. Count verification starts only after all
+batches finish, and final publication starts only after both count checks pass.
+
+Each checkpoint uses the existing exact-token, owner, KB, schema and sequence
+guards. Local sequence advances only after acknowledgement. Intent does not prove
+dispatch or completion; the last acknowledged stage records only completed work.
+Uncertain diagnostic writes stop subsequent work and retain the claim without
+failed-state publication, replay, or unlock. Cancellation propagates. Existing
+Qdrant uncertainty and bulk stop/not-attempted behavior remain in effect.
+
+Successful Indexed publication and justified local-failure publication remove
+both claim and diagnostics in the same guarded MongoDB update. There is no separate
+cleanup write after publication uncertainty. Legacy retained claims stay protected.
+These required diagnostic writes add availability boundaries; retained claims may
+need service review. Synchronous encoding remains non-interruptible until it returns.
+No heartbeat, lease, automatic recovery, expiration, or crash/failover guarantee is added.

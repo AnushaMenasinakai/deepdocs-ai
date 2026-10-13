@@ -2,7 +2,7 @@
 import asyncio
 from datetime import datetime, timezone
 from bson import ObjectId
-from document_operations import claim_document, release_document, DocumentBusy
+from document_operations import claim_document, release_document, record_operation_stage, DocumentBusy
 from document_processing import inspect_chunks
 from embeddings import EmbeddingFailure, embed_batches
 from vector_store import get_vector_store, cleanup_document_vectors, VectorFailure
@@ -41,7 +41,8 @@ async def generate_embeddings(database, owner_id, document_id, settings, expecte
         if "_operation" in snapshot:
             raise DocumentBusy()
         require_processed_generation(snapshot)
-    document, token = await claim_document(database, owner_id, document_id, expected_knowledge_base_id)
+    document, token = await claim_document(database, owner_id, document_id, expected_knowledge_base_id,
+                                         operation_type="indexing")
     if document is None:
         return None
     claimed = {"_id": document_id, "owner_id": owner_id, "_operation": token,
@@ -53,6 +54,22 @@ async def generate_embeddings(database, owner_id, document_id, settings, expecte
     phase = "validation"
     vector_state = document.get("vector_index", {})
     store = None
+    sequence = 0
+
+    async def record(stage, acknowledged):
+        nonlocal sequence, uncertain, phase
+        # Set before dispatch: an uncertain diagnostic must never authorize
+        # failed-state publication or unlock, even before vector work starts.
+        phase = "diagnostic"
+        uncertain = True
+        sequence = await record_operation_stage(
+            database, owner_id, document_id, token, sequence, stage,
+            expected_knowledge_base_id=document["knowledge_base_id"],
+            last_acknowledged_stage=acknowledged,
+        )
+        await indexing_checkpoint()
+        uncertain = False
+
     try:
         await indexing_checkpoint()
         require_processed_generation(document)
@@ -77,6 +94,7 @@ async def generate_embeddings(database, owner_id, document_id, settings, expecte
         if result.matched_count != 1:
             raise EmbeddingFailure()
         uncertain = False
+        await record("encoding", "validation")
         phase = "encoding"
         await indexing_checkpoint()
         count, dimension = 0, None
@@ -85,10 +103,12 @@ async def generate_embeddings(database, owner_id, document_id, settings, expecte
             if dimension is not None and dimension != batch_dimension:
                 raise EmbeddingFailure("Embedding vector validation failed.")
             if dimension is None:
+                await record("collection_setup", "encoding")
                 phase = "collection_setup"
                 await store.ensure_collection(batch_dimension)
                 await indexing_checkpoint()
                 # Validate the destination before removing any previous vectors.
+                await record("vector_cleanup", "collection_setup")
                 phase = "previous_vector_cleanup"
                 uncertain = True
                 await cleanup_document_vectors(document)
@@ -97,6 +117,7 @@ async def generate_embeddings(database, owner_id, document_id, settings, expecte
                 vector_state = {"status": "indexing", "collection_name": store.collection,
                                 "target": store.target, "chunk_generation": generation,
                                 "embedding_model": settings.model_name, "indexed_at": None}
+                await record("indexing_metadata", "vector_cleanup")
                 phase = "indexing_metadata"
                 uncertain = True
                 result = await docs.update_one(claimed, {"$set": {"vector_index": vector_state}})
@@ -104,6 +125,7 @@ async def generate_embeddings(database, owner_id, document_id, settings, expecte
                     raise EmbeddingFailure()
                 uncertain = False
                 await indexing_checkpoint()
+                await record("vector_replacement", "indexing_metadata")
                 phase = "document_vector_delete"
                 uncertain = True
                 await store.delete_document(document)
@@ -120,6 +142,7 @@ async def generate_embeddings(database, owner_id, document_id, settings, expecte
             phase = "encoding"
         if count != len(chunks) or dimension is None:
             raise EmbeddingFailure("Embedding vector validation failed.")
+        await record("count_verification", "vector_replacement")
         phase = "count_verification"
         await indexing_checkpoint()
         if await store.count(document, generation) != count or await store.count(document) != count:
@@ -130,10 +153,12 @@ async def generate_embeddings(database, owner_id, document_id, settings, expecte
         metadata = {**metadata, "status": "generated", "dimension": dimension,
                     "chunk_count": count, "embedded_at": datetime.now(timezone.utc)}
         # Metadata and unlock are atomic on one document, guarded by generation.
+        await record("final_publication", "count_verification")
         phase = "final_publication"
         uncertain = True
         result = await docs.update_one({**claimed, "chunk_generation": generation}, {
-            "$set": {"embedding": metadata, "vector_index": vector_state}, "$unset": {"_operation": ""},
+            "$set": {"embedding": metadata, "vector_index": vector_state},
+            "$unset": {"_operation": "", "_operation_meta": ""},
         })
         if result.matched_count != 1:
             raise EmbeddingFailure()
@@ -161,7 +186,7 @@ async def generate_embeddings(database, owner_id, document_id, settings, expecte
                 await docs.update_one(claimed, {
                     "$set": {"embedding": {"status": "failed", "error": "Embedding generation failed. Please retry."},
                              "vector_index": {**vector_state, "status": "failed"}},
-                    "$unset": {"_operation": ""},
+                    "$unset": {"_operation": "", "_operation_meta": ""},
                 })
             except Exception:
                 # Leave the generating state/lock for reconciliation; never fake success.
@@ -170,7 +195,7 @@ async def generate_embeddings(database, owner_id, document_id, settings, expecte
             raise
         raise EmbeddingFailure() from None
     finally:
-        if not started and not completed:
+        if not started and not completed and not uncertain:
             try:
                 await release_document(database, owner_id, document_id, token)
             except Exception:

@@ -119,8 +119,8 @@ class IndexingCancellationTests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(set(query), {"_id", "owner_id", "knowledge_base_id", "_operation", "chunk_generation"})
                     self.assertEqual(query["owner_id"], self.owner)
                     self.assertEqual(query["knowledge_base_id"], self.base_id)
-                    self.assertEqual(value["$unset"], {"_operation": ""})
-                    self.assertEqual(writes.await_count, 3)  # initial, target, final; no compensation
+                    self.assertEqual(value["$unset"], {"_operation": "", "_operation_meta": ""})
+                    self.assertEqual(writes.await_count, 10)  # three business writes + seven diagnostics; no compensation
                     row = self.docs.documents[ObjectId(identifier)]
                     self.assertEqual(row["vector_index"]["status"], "indexed" if commit else "indexing")
                     self.assertEqual("_operation" in row, not commit)
