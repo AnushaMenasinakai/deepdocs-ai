@@ -174,6 +174,27 @@ export function uploadDocument(knowledgeBaseId, file, signal) {
 export const deleteDocument = (documentId, signal) =>
   documentRequest('delete', '/api/documents/' + encodeURIComponent(documentId), undefined, signal)
 
+export async function processDocument(documentId, signal) {
+  try {
+    const response = await api.post('/api/documents/' + encodeURIComponent(documentId) + '/process', undefined, {
+      signal, timeout: 300000, headers: { Authorization: 'Bearer ' + getAccessToken() },
+    })
+    if (response.status !== 200 || response.data?.id !== documentId || response.data?.status !== 'processed') throw new Error('Unconfirmed response')
+    return response.data
+  } catch (error) {
+    if (axios.isCancel(error)) throw error
+    const status = error.response?.status
+    const safe = new Error(status === 401 ? 'Your session has expired. Please sign in again.'
+      : status === 403 ? 'You do not have access to process this document.'
+      : status === 404 ? 'This document is no longer available. Refresh the document list.'
+      : status === 409 ? 'This document has an operation in progress. Refresh or inspect its status.'
+      : status === 422 ? 'This processing request is invalid. Refresh the document list.'
+      : 'The processing outcome could not be confirmed. Processing may still be running. Refresh or inspect document status before taking further action.')
+    safe.status = status
+    throw safe
+  }
+}
+
 export async function inspectDocumentOperation(documentId, signal) {
   if (typeof documentId !== 'string' || !/^[a-f0-9]{24}$/i.test(documentId)) {
     throw new Error('This inspection request is invalid. Refresh the document list.')

@@ -91,37 +91,62 @@ class IndexingMetadataTests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual((await self.bulk([identifier]))[1]['results'][0]['code'], 'busy')
 
     async def test_repeated_cancellation_and_delayed_update_cannot_change_new_claim(self):
-        identifier, later = await self.prepared(), await self.prepared()
-        row = self.docs.documents[ObjectId(identifier)]
-        original = self.docs.update_one
-        arrived, cancelled = asyncio.Event(), asyncio.Event()
-        pending = []
-        async def delayed(query, value):
-            if value.get('$set', {}).get('_operation_meta.stage') == 'encoding':
-                pending.append(copy.deepcopy((query, value)))
-                arrived.set()
-                try:
-                    await asyncio.Event().wait()
-                except asyncio.CancelledError:
-                    cancelled.set()
-                    await asyncio.Event().wait()  # controlled adapter still awaiting on second cancellation
-            return await original(query, value)
-        with patch.object(self.docs, 'update_one', side_effect=delayed):
-            task = asyncio.create_task(self.bulk([identifier, later]))
-            await asyncio.wait_for(arrived.wait(), 3)
-            task.cancel()
-            await asyncio.wait_for(cancelled.wait(), 3)
-            task.cancel()
-            with self.assertRaises(asyncio.CancelledError): await task
-        self.assertIn('_operation', row)
-        self.assertEqual(self.model.batches, [])
-        self.assertNotIn('_operation', self.docs.documents[ObjectId(later)])
-        # Artificial claim replacement tests CAS only; never a recovery path.
-        await release_document(self.database, self.owner, row['_id'], row['_operation'])
-        await claim_document(self.database, self.owner, row['_id'])
-        before = copy.deepcopy(row)
-        await original(*pending[0])
-        self.assertEqual(row, before)
+        for stage in ('encoding', 'count_verification'):
+            with self.subTest(stage=stage):
+                identifier, later = await self.prepared(), await self.prepared()
+                row = self.docs.documents[ObjectId(identifier)]
+                later_before = copy.deepcopy(self.docs.documents[ObjectId(later)])
+                original = self.docs.update_one
+                arrived, cancelled = asyncio.Event(), asyncio.Event()
+                pending = []
+                batches_before = len(self.model.batches)
+                async def delayed(query, value):
+                    if value.get('$set', {}).get('_operation_meta.stage') == stage:
+                        pending.append(copy.deepcopy((query, value)))
+                        arrived.set()
+                        try:
+                            await asyncio.Event().wait()
+                        except asyncio.CancelledError:
+                            cancelled.set()
+                            await asyncio.Event().wait()  # adapter pending until second cancellation
+                    return await original(query, value)
+                with patch.object(self.docs, 'update_one', side_effect=delayed) as writes, \
+                        patch('document_embeddings.release_document', wraps=release_document) as release, \
+                        patch.object(self.vector_store, 'delete_document', wraps=self.vector_store.delete_document) as delete, \
+                        patch.object(self.vector_store, 'upsert', wraps=self.vector_store.upsert) as upsert, \
+                        patch('document_bulk.document_embeddings.generate_embeddings', wraps=document_embeddings.generate_embeddings) as generate:
+                    task = asyncio.create_task(self.bulk([identifier, later]))
+                    await asyncio.wait_for(arrived.wait(), 3)
+                    boundary = copy.deepcopy(row)
+                    points = copy.deepcopy(self.qdrant.points)
+                    calls = (writes.await_count, delete.await_count, upsert.await_count)
+                    if stage == 'count_verification':
+                        self.assertEqual((delete.await_count, upsert.await_count), (1, 2))
+                        self.assertEqual(sum(p.payload['document_id'] == identifier for p in
+                                             self.qdrant.points[self.vector_store.collection].values()), 3)
+                    task.cancel()
+                    await asyncio.wait_for(cancelled.wait(), 3)
+                    task.cancel()
+                    with self.assertRaises(asyncio.CancelledError): await task
+                    self.assertEqual((writes.await_count, delete.await_count, upsert.await_count), calls)
+                    release.assert_not_awaited()
+                    self.assertEqual(generate.await_count, 1)
+                self.assertEqual(len(pending), 1)
+                self.assertEqual(row, boundary)  # no success/failure publication or unlock
+                self.assertEqual(row['_operation_meta']['token'], row['_operation'])
+                self.assertEqual(row['_operation_meta']['type'], 'indexing')
+                self.assertEqual(row['_operation_meta']['stage_sequence'], STAGES.index(stage))
+                self.assertEqual(row['embedding']['status'], 'generating')
+                self.assertEqual(row['vector_index']['status'], 'indexing')
+                self.assertEqual(self.qdrant.points, points)
+                self.assertEqual(len(self.model.batches)-batches_before, 0 if stage == 'encoding' else 2)
+                self.assertEqual(self.docs.documents[ObjectId(later)], later_before)
+                # Artificial claim replacement tests CAS only; never a recovery path.
+                await release_document(self.database, self.owner, row['_id'], row['_operation'])
+                await claim_document(self.database, self.owner, row['_id'])
+                before = copy.deepcopy(row)
+                await original(*pending[0])
+                self.assertEqual(row, before)
 
     async def test_local_failure_cleans_both_and_legacy_claim_protected(self):
         identifier = await self.prepared()

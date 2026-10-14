@@ -7,6 +7,7 @@ from bson import ObjectId
 from pymongo.errors import ConnectionFailure
 import test_document_bulk as fixtures
 from test_documents import request
+from document_operations import release_document
 
 
 class VectorInspectionMetadataTests(unittest.IsolatedAsyncioTestCase):
@@ -119,3 +120,56 @@ class VectorInspectionMetadataTests(unittest.IsolatedAsyncioTestCase):
         before = copy.deepcopy(row)
         self.assertEqual((await self.inspect(legacy))[0], 409)
         self.assertEqual(row, before)
+
+    async def test_second_count_interruption_preserves_claim_and_business_state(self):
+        for mode in ('cancel', 'timeout'):
+            with self.subTest(mode=mode):
+                identifier = await self.indexed()
+                row = self.docs.documents[ObjectId(identifier)]
+                before, points = copy.deepcopy(row), copy.deepcopy(self.qdrant.points)
+                original = self.vector_store.count
+                arrived, finish = asyncio.Event(), asyncio.Event()
+                completed = []
+                calls = []
+                async def count(*args, **kwargs):
+                    calls.append((args, kwargs))
+                    if len(calls) == 1:
+                        result = await original(*args, **kwargs)
+                        completed.append(result)
+                        return result
+                    self.assertEqual(len(calls), 2)
+                    self.assertEqual(completed, [1])
+                    arrived.set()
+                    await finish.wait()
+                    raise TimeoutError('PRIVATE remote details')
+                with patch.object(self.vector_store, 'count', side_effect=count), \
+                        patch('document_routes.release_document', wraps=release_document) as release, \
+                        patch.object(self.docs, 'update_one', wraps=self.docs.update_one) as writes, \
+                        patch.object(self.vector_store, 'upsert', wraps=self.vector_store.upsert) as upsert, \
+                        patch.object(self.vector_store, 'delete_document', wraps=self.vector_store.delete_document) as delete:
+                    task = asyncio.create_task(self.inspect(identifier))
+                    await asyncio.wait_for(arrived.wait(), 3)
+                    token = row['_operation']
+                    diagnostics = copy.deepcopy(row['_operation_meta'])
+                    if mode == 'cancel':
+                        task.cancel()
+                        with self.assertRaises(asyncio.CancelledError): await task
+                    else:
+                        finish.set()
+                        status, body, _ = await task
+                        self.assertEqual(status, 503)
+                        self.assertEqual(body, {'detail': 'Document service is temporarily unavailable.'})
+                    release.assert_not_awaited()
+                    upsert.assert_not_awaited()
+                    delete.assert_not_awaited()
+                    self.assertEqual(writes.await_count, 1)  # diagnostic only, no repair/publication
+                self.assertEqual(len(calls), 2)
+                self.assertEqual(calls[0][1], {'collection': self.vector_store.collection})
+                self.assertEqual(calls[1][0][1:], (row['chunk_generation'], self.vector_store.collection))
+                self.assertEqual(row['_operation'], token)
+                self.assertEqual(row['_operation_meta'], diagnostics)
+                self.assertEqual(diagnostics['token'], token)
+                self.assertEqual(diagnostics['type'], 'vector_inspection')
+                self.assertEqual(diagnostics['stage_sequence'], 1)
+                self.assertEqual({k: v for k, v in row.items() if k not in ('_operation', '_operation_meta')}, before)
+                self.assertEqual(self.qdrant.points, points)

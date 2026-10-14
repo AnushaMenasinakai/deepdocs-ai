@@ -6,7 +6,7 @@ import DocumentUpload, { fileSize } from '../components/DocumentUpload.jsx'
 import DocumentBulk from '../components/DocumentBulk.jsx'
 import DocumentInspection from '../components/DocumentInspection.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { listKnowledgeBases, browseDocuments, uploadDocument, deleteDocument, bulkDeleteDocuments, bulkReindexDocuments } from '../services/api.js'
+import { listKnowledgeBases, browseDocuments, uploadDocument, deleteDocument, processDocument, bulkDeleteDocuments, bulkReindexDocuments } from '../services/api.js'
 
 import { ManagementControls, ManagementPagination, useManagementQuery } from '../components/ManagementControls.jsx'
 const SORTS = ['created_at', 'updated_at', 'filename']
@@ -34,6 +34,9 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
   const [notice, setNotice] = useState('')
   const [deleting, setDeleting] = useState(null)
   const [busy, setBusy] = useState('')
+  const [processingId, setProcessingId] = useState(null)
+  const [processError, setProcessError] = useState('')
+  const [uncertainIds, setUncertainIds] = useState([])
   const listRequest = useRef(null)
   const mutation = useRef(null)
   const pending = useRef(false)
@@ -151,6 +154,40 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
   const selectedIds = currentPage && selection.key === selectionKey ? selection.ids.filter(id => items.some(item => item.id === id)) : []
   const visibleConfirmation = confirmation?.key === selectionKey && currentPage ? confirmation : null
   const locked = Boolean(busy || deleting || visibleConfirmation)
+  const noteInspection = useCallback(data => {
+    // A newer non-Uploaded snapshot can only suppress eligibility, never restore it.
+    if (data.operation_state === 'claimed_unknown' || data.document_state !== 'uploaded' || data.attention === 'outcome_uncertain' || data.attention === 'requires_review') {
+      setUncertainIds(current => current.includes(data.document_id) ? current : [...current, data.document_id])
+    }
+  }, [])
+
+  async function processPdf(item) {
+    if (pending.current || locked || !currentPage || item.status !== 'uploaded' || item.indexed || item.failed || uncertainIds.includes(item.id)) return
+    pending.current = true
+    setBusy('process'); setProcessingId(item.id); onBusy(true)
+    setInspection(null); setProcessError(''); setNotice(''); setBulkResult(null)
+    const controller = new AbortController()
+    mutation.current = controller
+    try {
+      await processDocument(item.id, controller.signal)
+      if (controller.signal.aborted || !active.current) return
+      setNotice('PDF processed. It has not been automatically indexed.')
+      await load()
+    } catch (error) {
+      if (!active.current) return
+      if (error.status === 401) logout()
+      else {
+        setProcessError(controller.signal.aborted || error.code === 'ERR_CANCELED'
+          ? 'The processing outcome could not be confirmed. Processing may still be running. Refresh or inspect document status before taking further action.' : error.message)
+        // Do not offer a replay of an uncertain mutation from this mounted view.
+        setUncertainIds(current => [...current, item.id])
+        setSelection({ key: '', ids: [] })
+      }
+    } finally {
+      pending.current = false
+      if (active.current) { setBusy(''); setProcessingId(null); onBusy(false) }
+    }
+  }
 
   function openBulk(operation, event) {
     if (!currentPage || locked || pending.current || selectedIds.length === 0 || (operation === 'reindex' && selectedIds.length > 5)) return
@@ -195,6 +232,7 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
   }
   return <>
     <div role="status" aria-live="polite">{notice && <p className="auth-success">{notice}</p>}</div>
+    {processError && <p className="auth-error" role="alert">{processError}</p>}
     <DocumentUpload busy={locked || !currentPage} uploading={busy === 'upload'} error={uploadError} onUpload={mutate} onChange={() => setUploadError('')} />
     <div className="kb-toolbar document-list-heading">
       <div><h2 ref={heading} tabIndex={-1}>Documents in {base.name}</h2><p className="kb-muted">Original files · Indexed reflects last-confirmed vector synchronization</p></div>
@@ -208,7 +246,7 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
       confirmation={visibleConfirmation} onCancel={closeBulk} onConfirm={submitBulk}
       busy={busy === 'bulk'} result={bulkResult} error={bulkError} />
     {inspection?.key === selectionKey && currentPage && !busy && <DocumentInspection
-      key={inspection.item.id} document={inspection.item} onClose={() => {
+      key={inspection.item.id} document={inspection.item} onSnapshot={noteInspection} onClose={() => {
         setInspection(null)
         requestAnimationFrame(() => {
           const origin = inspectionOrigin.current
@@ -245,6 +283,9 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
           <p>{fileSize(item.file_size)} <span aria-hidden="true">·</span> Added <time dateTime={item.created_at}>{new Date(item.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</time></p>
           <span className="document-status">{item.failed ? 'Failed' : item.indexed ? 'Indexed' : ({ uploaded: 'Uploaded', processing: 'Processing', processed: 'Processed', failed: 'Failed' })[item.status] || 'Status unavailable'}</span>
         </div>
+        {item.status === 'uploaded' && !item.indexed && !item.failed && !uncertainIds.includes(item.id) && <button
+          className="session-button" disabled={locked || !currentPage} aria-label={'Process PDF ' + item.filename}
+          onClick={() => processPdf(item)}>{processingId === item.id ? 'Processing…' : 'Process PDF'}</button>}
         <button className="session-button" disabled={locked || !currentPage} aria-label={'Inspect status for ' + item.filename} onClick={event => {
           inspectionOrigin.current = event.currentTarget
           setInspection({ key: selectionKey, item })

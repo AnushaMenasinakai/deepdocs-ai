@@ -19,7 +19,7 @@ const actions = {
   refresh: 'Inspect again to check for an updated state.', contact_support: 'Contact support for review.',
 }
 
-export default function DocumentInspection({ document, onClose }) {
+export default function DocumentInspection({ document, onClose, onSnapshot }) {
   const { logout } = useAuth()
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
@@ -33,7 +33,10 @@ export default function DocumentInspection({ document, onClose }) {
     setLoading(true); setResult(null); setError('')
     try {
       const data = await inspectDocumentOperation(document.id, controller.signal)
-      if (!controller.signal.aborted) setResult({ data, receivedAt: new Date() })
+      if (!controller.signal.aborted) {
+        setResult({ data, receivedAt: new Date() })
+        onSnapshot?.(data)
+      }
     } catch (failure) {
       if (controller.signal.aborted) return
       if (failure.status === 401) logout()
@@ -41,7 +44,7 @@ export default function DocumentInspection({ document, onClose }) {
     } finally {
       if (!controller.signal.aborted) setLoading(false)
     }
-  }, [document.id, logout])
+  }, [document.id, logout, onSnapshot])
   useEffect(() => {
     let mounted = true
     title.current?.focus()
