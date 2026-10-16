@@ -1,4 +1,6 @@
 const paths = {
+  menu: 'M4 6h16 M4 12h16 M4 18h16',
+  close: 'M6 6l12 12 M18 6L6 18',
   dashboard: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
   library: 'M3 7h7l2 2h9v11H3z M3 7V4h7l2 3h8v2',
   document: 'M6 3h8l4 4v14H6z M14 3v5h4 M9 12h6 M9 16h6',

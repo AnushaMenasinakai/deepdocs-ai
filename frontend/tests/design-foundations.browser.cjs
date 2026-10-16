@@ -187,7 +187,12 @@ async function noOverflow(page) {
           await page.locator(ready).first().waitFor();
           await noOverflow(page); await readable(page.locator('h1'), 'page heading');
           if (authenticated) {
-            await readable(page.locator('.nav-link.active'), 'active navigation');
+            if (width <= 600) await page.getByRole('button', { name: 'Open navigation menu' }).click();
+            await readable(page.locator('.nav-link.active:visible'), 'active navigation');
+            if (width <= 600) {
+              await page.getByRole('button', { name: 'Close navigation menu' }).click();
+              await page.getByRole('dialog', { name: 'Mobile navigation' }).waitFor({ state: 'hidden' });
+            }
             await readable(page.locator('.panel').first(), 'page card');
             const name = await page.locator('.session-name').evaluate(e => ({ client: e.clientWidth, scroll: e.scrollWidth, overflow: getComputedStyle(e).textOverflow }));
             if (name.scroll > name.client) assert.equal(name.overflow, 'ellipsis');

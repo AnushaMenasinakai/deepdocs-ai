@@ -109,18 +109,21 @@ async function geometry(page) {
       await page.getByRole('button', { name: 'Collapse sidebar' }).click(); await settled(page);
       await page.setViewportSize({ width: 390, height: 1000 });
       assert.ok(!(await page.locator('.sidebar-toggle').isVisible()));
-      assert.equal(await page.locator('.sidebar').evaluate(e => getComputedStyle(e).position), 'static');
-      assert.equal((await page.locator('.sidebar').boundingBox()).width, 390);
-      for (const [name] of destinations) assert.ok(await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name, exact: true }).locator('.nav-text').isVisible());
+      assert.ok(!(await page.locator('.sidebar').isVisible()));
+      await page.getByRole('button', { name: 'Open navigation menu' }).click();
+      for (const [name] of destinations) assert.ok(await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name, exact: true }).isVisible());
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await page.setViewportSize({ width: 1024, height: 1000 }); assert.equal(await geometry(page), 80);
     });
-    await scenario('mobile default preserves two-column navigation and all routes', async ({ page }) => {
+    await scenario('mobile default uses closed drawer and preserves all routes', async ({ page }) => {
       assert.ok(!(await page.locator('.sidebar-toggle').isVisible()));
-      const nav = page.getByRole('navigation', { name: 'Main navigation' });
-      assert.equal(await nav.evaluate(e => getComputedStyle(e).gridTemplateColumns.split(' ').length), 2);
+      assert.equal(await page.getByRole('navigation', { name: 'Main navigation' }).count(), 0);
       for (const [name] of destinations) {
+        await page.getByRole('button', { name: 'Open navigation menu' }).click();
+        const nav = page.getByRole('navigation', { name: 'Main navigation' });
+        assert.equal(await nav.evaluate(e => getComputedStyle(e).gridTemplateColumns.split(' ').length), 1);
         await nav.getByRole('link', { name, exact: true }).click(); await page.getByRole('heading', { name, exact: true, level: 1 }).waitFor();
+        await page.getByRole('dialog', { name: 'Mobile navigation' }).waitFor({ state: 'hidden' });
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       }
     }, 390);

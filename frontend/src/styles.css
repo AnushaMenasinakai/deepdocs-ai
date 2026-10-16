@@ -47,6 +47,8 @@
   --focus-offset: 3px;
   --focus-offset-wide: 4px;
   --transition: 200ms ease;
+  --drawer-duration: 240ms;
+  --backdrop: #00000099;
   --shadow-color: #00000033;
   --shadow-card: 0 4px 16px var(--shadow-color);
   --radius-control: 8px;
@@ -84,6 +86,22 @@ svg { flex-shrink: 0; }
 .brand-ai { color: var(--accent-text); }
 .brand-copy { display: contents; }
 .sidebar-toggle { display: none; }
+.mobile-nav-bar { display: none; }
+.mobile-drawer { position: fixed; inset: 0 auto 0 0; margin: 0; width: min(290px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; padding: var(--space-5); border: 0; border-right: 1px solid var(--border); background: var(--surface); color: var(--text-primary); overflow-y: auto; overscroll-behavior: contain; }
+.mobile-drawer[open] { display: flex; flex-direction: column; gap: var(--space-6); animation: drawer-enter var(--drawer-duration) ease both; }
+.mobile-drawer::backdrop { background: var(--backdrop); animation: drawer-backdrop-enter var(--drawer-duration) ease both; }
+.mobile-drawer.drawer-closing { animation-name: drawer-exit; }
+.mobile-drawer.drawer-closing::backdrop { animation-name: drawer-backdrop-exit; }
+.mobile-drawer-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.mobile-drawer-heading .brand { font-size: 18px; }
+.mobile-menu-button { display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; padding: 0; border: 1px solid var(--border-control); border-radius: var(--radius-control); color: var(--accent-text); background: var(--surface-subtle); cursor: pointer; }
+.mobile-menu-button:hover { background: var(--accent-surface); }
+.mobile-drawer nav { grid-template-columns: 1fr; gap: var(--space-2); }
+.mobile-drawer .nav-link { min-height: 48px; font-size: 14px; }
+@keyframes drawer-enter { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes drawer-exit { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+@keyframes drawer-backdrop-enter { from { opacity: 0; } to { opacity: 1; } }
+@keyframes drawer-backdrop-exit { from { opacity: 1; } to { opacity: 0; } }
 @media (min-width: 601px) {
   .sidebar { transition: width var(--transition), padding var(--transition); z-index: 2; }
   .sidebar-toggle { display: flex; align-items: center; justify-content: center; align-self: flex-end; width: 40px; height: 40px; flex-shrink: 0; margin-top: var(--space-2); border: 1px solid var(--border-control); border-radius: var(--radius-control); background: var(--surface-subtle); color: var(--accent-text); cursor: pointer; }
@@ -222,7 +240,9 @@ h1 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; font-weight: 650;
 }
 @media (max-width: 600px) {
   .app-layout { display: block; }
-  .sidebar { width: 100%; height: auto; position: static; padding: 19px 18px var(--space-3); border-right: 0; border-bottom: 1px solid var(--border); }
+  .sidebar { display: none; }
+  .mobile-nav-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-5); background: var(--surface); border-bottom: 1px solid var(--border); }
+  .mobile-nav-bar .brand, .mobile-drawer .brand { margin-bottom: 0; }
   .brand { font-size: 21px; margin-bottom: 18px; }
   .brand-mark { width: 32px; height: 36px; }
   .nav-label, .sidebar-note, .sidebar-footer { display: none; }
@@ -338,7 +358,7 @@ h1 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; font-weight: 650;
   .session-name { max-width: 115px; }
 }
 @media (max-width: 600px) {
-  .authenticated-topbar { height: auto; min-height: 100px; padding: 14px var(--space-5); flex-wrap: wrap; gap: var(--space-2); }
+  .authenticated-topbar { height: auto; min-height: 0; padding: var(--space-3) var(--space-5); flex-wrap: wrap; gap: var(--space-2); }
   .session-controls { width: 100%; justify-content: space-between; }
   .session-name { max-width: 210px; }
   .auth-status-card { padding: 26px; }
@@ -572,4 +592,5 @@ input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="
 button:disabled { background: var(--surface-raised); color: var(--text-disabled); }
 @media (prefers-reduced-motion: reduce) {
   :root { --transition: 0s; }
+  .mobile-drawer[open], .mobile-drawer::backdrop { animation: none; }
 }
