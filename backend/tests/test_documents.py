@@ -486,10 +486,13 @@ class DocumentIndexTests(unittest.IsolatedAsyncioTestCase):
         collection = SimpleNamespace(create_index=AsyncMock())
         database = SimpleNamespace(get_collection=MagicMock(return_value=collection))
         await ensure_document_indexes(database)
-        collection.create_index.assert_awaited_once_with(
-            [("owner_id", 1), ("knowledge_base_id", 1), ("created_at", -1), ("_id", -1)],
-            name="documents_owner_base_created",
-        )
+        self.assertEqual(collection.create_index.await_count, 2)
+        self.assertEqual(collection.create_index.await_args_list[0].args[0],
+                         [("owner_id", 1), ("knowledge_base_id", 1), ("created_at", -1), ("_id", -1)])
+        self.assertEqual(collection.create_index.await_args_list[0].kwargs,
+                         {"name": "documents_owner_base_created"})
+        collection.create_index.assert_awaited_with(
+            [("owner_id", 1), ("created_at", -1), ("_id", -1)], name="documents_owner_created")
         collection.create_index.side_effect = ConnectionFailure("private-detail")
         other = SimpleNamespace(create_index=AsyncMock())
         database.get_collection.side_effect = lambda name: collection if name == "documents" else other

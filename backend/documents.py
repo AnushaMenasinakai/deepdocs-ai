@@ -22,6 +22,10 @@ async def ensure_document_indexes(database):
         [("owner_id", 1), ("knowledge_base_id", 1), *ORDER],
         name="documents_owner_base_created",
     )
+    await database.get_collection("documents").create_index(
+        [("owner_id", 1), *ORDER],
+        name="documents_owner_created",
+    )
 
 
 def public_document(document):
