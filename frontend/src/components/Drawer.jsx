@@ -45,7 +45,7 @@ export default function Drawer({ open, onClose, title, description, children, di
   function trapFocus(event) {
     if (event.key !== 'Tab') return
     const controls = [...dialog.current.querySelectorAll('a[href], button, input, select, textarea, [tabindex]')]
-      .filter(element => !element.disabled && element.tabIndex >= 0 && element.getClientRects().length && !element.closest('[inert]'))
+      .filter(element => !element.matches(':disabled') && element.tabIndex >= 0 && element.getClientRects().length && getComputedStyle(element).visibility === 'visible' && !element.closest('[inert]'))
     const first = controls[0], last = controls.at(-1)
     if (!first) { event.preventDefault(); dialog.current.querySelector('.side-drawer-title').focus(); return }
     if (event.shiftKey && (document.activeElement === first || !controls.includes(document.activeElement))) { event.preventDefault(); last.focus() }
