@@ -158,15 +158,14 @@ async function noOverflow(page) {
       await page.getByRole('button', { name: 'Sign in', exact: true }).click();
       await page.locator('.auth-error').waitFor(); await readable(page.locator('.auth-error'), 'service error');
     }, { authenticated: false });
-    await scenario('warning, uncertainty and loading remain readable; reduced motion', async ({ page, state, go }) => {
+    await scenario('uncertainty and loading remain readable; reduced motion', async ({ page, state, go }) => {
       await page.emulateMedia({ reducedMotion: 'reduce' });
       state.summaryGate = deferred(); await go('/');
       await page.locator('.dashboard-skeleton').first().waitFor();
       assert.equal(await page.locator('.dashboard-skeleton span').first().evaluate(e => getComputedStyle(e).animationName), 'none');
       state.summaryGate.resolve(); await page.locator('.dashboard-stat dd').first().waitFor();
-      await page.locator('.connection-status.unavailable').waitFor();
-      await readable(page.locator('.connection-status.unavailable'), 'warning status');
-      await readable(page.locator('.connection-status.connected').first(), 'success status');
+      assert.equal(await page.locator('.dashboard-health').count(), 0);
+      assert.ok(!state.calls.some(path => path.startsWith('/api/health')));
       await go('/documents?kb=' + base.id); await page.locator('.document-card').waitFor();
       await page.getByRole('button', { name: 'Inspect status for ' + doc.filename, exact: true }).click();
       const uncertain = page.getByText('Do not retry or delete this document until its state has been verified.', { exact: true });

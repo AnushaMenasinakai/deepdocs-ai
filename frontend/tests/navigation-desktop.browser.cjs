@@ -54,7 +54,7 @@ async function geometry(page) {
         for (const [name, path] of destinations) {
           const link = nav.getByRole('link', { name, exact: true });
           assert.ok(await link.locator('svg').isVisible()); await link.click();
-          await page.getByRole('heading', { name, exact: true, level: 1 }).waitFor();
+          await page.getByRole('heading', { name: name === 'Dashboard' ? 'Welcome back' : name, exact: true, level: 1 }).waitFor();
           assert.equal(new URL(page.url()).pathname, path);
           assert.equal(await link.getAttribute('aria-current'), 'page');
           assert.ok((await link.getAttribute('class')).includes('active'));
@@ -122,7 +122,7 @@ async function geometry(page) {
         await page.getByRole('button', { name: 'Open navigation menu' }).click();
         const nav = page.getByRole('navigation', { name: 'Main navigation' });
         assert.equal(await nav.evaluate(e => getComputedStyle(e).gridTemplateColumns.split(' ').length), 1);
-        await nav.getByRole('link', { name, exact: true }).click(); await page.getByRole('heading', { name, exact: true, level: 1 }).waitFor();
+        await nav.getByRole('link', { name, exact: true }).click(); await page.getByRole('heading', { name: name === 'Dashboard' ? 'Welcome back' : name, exact: true, level: 1 }).waitFor();
         await page.getByRole('dialog', { name: 'Mobile navigation' }).waitFor({ state: 'hidden' });
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       }

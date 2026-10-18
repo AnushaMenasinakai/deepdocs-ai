@@ -44,7 +44,7 @@ const USER={id:'507f1f77bcf86cd799439011',name:'Example User',email:'user@exampl
     page.on('pageerror',e=>errors.push(e.message));
     page.on('console',m=>logs.push(m.text()));
     const go=path=>page.goto(BASE+path);
-    const heading=text=>page.getByRole('heading',{name:text,exact:true,level:1}).waitFor();
+    const heading=(text,authenticated=false)=>page.locator(authenticated?'#main-content':'body').getByRole('heading',{name:text,exact:true,level:1}).waitFor();
     const login=async()=>{
       await page.getByLabel('Email',{exact:true}).fill('USER@Example.com');
       await page.getByLabel('Password',{exact:true}).fill('offline-password');
@@ -72,15 +72,15 @@ const USER={id:'507f1f77bcf86cd799439011',name:'Example User',email:'user@exampl
     });
     console.log('PASS no-token protection/public auth pages; no unnecessary /me requests');
 
-    for(const [path,title] of [['/','Dashboard'],['/documents','Documents'],['/knowledge-bases','Knowledge Bases'],['/ask','Ask DeepDocs']]) await scenario({token:TOKEN,delay:200},async({page,go,heading})=>{
+    for(const [path,title] of [['/','Welcome back'],['/documents','Documents'],['/knowledge-bases','Knowledge Bases'],['/ask','Ask DeepDocs']]) await scenario({token:TOKEN,delay:200},async({page,go,heading})=>{
       await go(path); await heading('Checking your account');
       assert.equal(await page.locator('.sidebar').count(),0);
       assert.equal(await page.locator('form').count(),0);
-      await heading(title);
+      await heading(title,true);
       assert.equal(await page.locator('.session-name').innerText(),USER.name);
     });
     for(const path of ['/login','/register']) await scenario({token:TOKEN},async({page,go,heading})=>{
-      await go(path); await heading('Dashboard');
+      await go(path); await heading('Welcome back',true);
       assert.equal(new URL(page.url()).pathname,'/');
       assert.equal(await page.locator('form').count(),0);
     });
@@ -110,7 +110,7 @@ const USER={id:'507f1f77bcf86cd799439011',name:'Example User',email:'user@exampl
 
     for(const destination of ['/documents','/']) await scenario({},async({page,go,heading,login,requests})=>{
       await go(destination); await heading('Welcome back'); await login();
-      await heading(destination==='/documents'?'Documents':'Dashboard');
+      await heading(destination==='/documents'?'Documents':'Welcome back',true);
       assert.equal(new URL(page.url()).pathname,destination);
       assert.deepEqual(await page.evaluate(()=>Object.entries(localStorage)),[['deepdocs_access_token',TOKEN]]);
       assert(requests.some(r=>r.path==='/api/auth/login'));
@@ -158,13 +158,13 @@ const USER={id:'507f1f77bcf86cd799439011',name:'Example User',email:'user@exampl
     await scenario({},async({page,go,heading,login})=>{
       await go('/login'); await heading('Welcome back');
       await page.evaluate(()=>history.replaceState({...history.state,usr:{from:'https://example.invalid/'}},''));
-      await page.reload(); await heading('Welcome back'); await login(); await heading('Dashboard');
+      await page.reload(); await heading('Welcome back'); await login(); await heading('Welcome back',true);
       assert.equal(new URL(page.url()).origin,BASE);
     });
     console.log('PASS intended destination through registration; external redirect rejected');
 
     for(const width of [1440,768,390]) await scenario({token:TOKEN,width},async({page,go,heading})=>{
-      await go('/'); await heading('Dashboard');
+      await go('/'); await heading('Welcome back',true);
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
       assert(await page.getByRole('button',{name:'Log out',exact:true}).isVisible());
       await page.screenshot({path:'E:/deepdocs-ai/.verification/authenticated-'+width+'.png',fullPage:true});

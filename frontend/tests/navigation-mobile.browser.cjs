@@ -59,7 +59,7 @@ async function overflow(page) { assert.ok(await page.evaluate(() => document.doc
       await scenario('all routes, active state and destination functionality at ' + width, async ({ page, drawer, open, closed }) => {
         for (const [name, path] of destinations) {
           await open(); await drawer.getByRole('link', { name, exact: true }).click(); await closed();
-          await page.getByRole('heading', { name, exact: true, level: 1 }).waitFor(); assert.equal(new URL(page.url()).pathname, path);
+          await page.getByRole('heading', { name: name === 'Dashboard' ? 'Welcome back' : name, exact: true, level: 1 }).waitFor(); assert.equal(new URL(page.url()).pathname, path);
           await open(); const active = drawer.getByRole('link', { name, exact: true });
           assert.equal(await active.getAttribute('aria-current'), 'page');
           assert.equal(await drawer.locator('.nav-link.active').count(), 1);
