@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import Icon from './Icon.jsx'
+import { showExclusiveDialog } from './overlay.js'
 const navigation = [['/', 'Dashboard', 'dashboard'], ['/knowledge-bases', 'Knowledge Bases', 'library'], ['/documents', 'Documents', 'document'], ['/ask', 'Ask DeepDocs', 'ask']]
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
@@ -31,7 +32,7 @@ export default function Sidebar() {
   useEffect(() => {
     if (!drawerOpen) return
     const element = drawer.current
-    element.showModal()
+    if (!showExclusiveDialog(element)) { setDrawerOpen(false); return }
     closeButton.current?.focus()
     const overflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'

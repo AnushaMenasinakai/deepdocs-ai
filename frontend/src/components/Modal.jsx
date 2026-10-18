@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Icon from './Icon.jsx'
+import { showExclusiveDialog } from './overlay.js'
 
 // One overlay at a time. Callers own open state; dismissal never cancels work.
 export default function Modal({ open, onClose, title, description, children, dismissible = true, initialFocusRef }) {
@@ -18,7 +19,7 @@ export default function Modal({ open, onClose, title, description, children, dis
       // Avoid transforming an application shell containing another top-layer dialog.
       const decorate = !document.querySelector('dialog[open]')
       element.classList.remove('modal-closing')
-      element.showModal()
+      if (!showExclusiveDialog(element)) return
       document.body.style.overflow = 'hidden'
       if (decorate) root?.classList.add('modal-background')
       const target = initialFocusRef?.current
