@@ -571,10 +571,17 @@ h1 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; font-weight: 650;
 .dashboard-recent-empty { padding: var(--space-4) 0; }
 .dashboard-bottom { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; margin-top: var(--space-6); }
 .dashboard-health li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: 14px 0; border-top: 1px solid var(--border); font-size: 13px; }
-.dashboard-actions nav { margin-top: 17px; }
-.dashboard-actions nav a { display: flex; align-items: center; gap: var(--space-3); padding: 13px var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-control); color: var(--accent-text); font-size: 13px; }
-.dashboard-actions nav a svg:last-child { margin-left: auto; }
-.dashboard-actions nav a:hover { background: var(--accent-surface); }
+.dashboard-actions nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); margin-top: var(--space-4); }
+.dashboard-actions nav a { display: flex; align-items: center; gap: var(--space-3); min-width: 0; min-height: 100px; padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface-subtle); color: var(--accent-text); font-size: 13px; }
+.dashboard-actions nav a > svg { flex-shrink: 0; }
+.dashboard-actions nav a > svg:last-child { margin-left: auto; }
+.dashboard-action-copy { min-width: 0; overflow-wrap: anywhere; }
+.dashboard-action-title, .dashboard-action-description { display: block; }
+.dashboard-action-title { color: var(--text-primary); font-weight: 600; }
+.dashboard-action-description { margin-top: var(--space-1); color: var(--text-muted); font-size: 12px; }
+.dashboard-actions nav a:hover, .dashboard-actions nav a:focus-visible { background: var(--accent-surface); border-color: var(--accent-border); }
+@media (max-width: 1100px) { .dashboard-actions nav { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .dashboard-actions nav { grid-template-columns: minmax(0, 1fr); } .dashboard-actions nav a { min-height: 88px; } }
 .dashboard-onboarding { display: flex; gap: var(--space-5); padding: 26px; background: var(--accent-surface); margin-top: var(--space-6); }
 .dashboard-onboarding p { color: var(--text-muted); font-size: 13px; margin-top: 9px; }
 .dashboard-onboarding .feature-icon { flex-shrink: 0; margin: 0; }
