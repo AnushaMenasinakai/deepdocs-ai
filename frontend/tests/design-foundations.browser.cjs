@@ -62,6 +62,7 @@ async function noOverflow(page) {
       if (path === '/api/auth/register') return reply({}, 201);
       if (path === '/api/auth/login') return reply({ detail: 'Synthetic unavailable service' }, 503);
       if (path.startsWith('/api/health')) return reply({ status: 'ok' }, path.endsWith('/qdrant') ? 503 : 200);
+      if (path === '/api/dashboard/recent-documents') return reply({ documents: [] });
       if (path === '/api/dashboard/summary') {
         if (state.summaryGate) await state.summaryGate.promise;
         return reply({ knowledge_base_count: 1, document_count: 1, indexed_document_count: 0, processing_document_count: 0, failed_document_count: 0, ask_history_count: 0, recent_knowledge_bases: [{ ...base, document_count: 1 }] });

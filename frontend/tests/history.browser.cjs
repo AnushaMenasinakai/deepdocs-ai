@@ -18,6 +18,7 @@ const answer = {status:'answered',answer:'Grounded answer.\n\nAnother paragraph.
       const headers={'access-control-allow-origin':'*'};
       if(req.method()==='OPTIONS') return route.fulfill({status:204,headers:{...headers,'access-control-allow-headers':'*','access-control-allow-methods':'GET, POST, DELETE, OPTIONS'}});
       if(path==='/api/auth/me') return route.fulfill({status:state.auth,json:state.auth===200?{id:'user',name:'Example User',email:'user@example.com',created_at:'2026-01-01'}:{detail:'PRIVATE'},headers});
+      if (path === '/api/dashboard/recent-documents') return route.fulfill({json:{documents:[]},headers});
       if(path==='/api/dashboard/summary') return route.fulfill({json:{knowledge_base_count:0,document_count:0,indexed_document_count:0,processing_document_count:0,failed_document_count:0,ask_history_count:0,recent_knowledge_bases:[]},headers});
       if(path.startsWith('/api/health')) return route.fulfill({json:{status:'ok'},headers});
       assert.equal(req.headers().authorization,'Bearer fake.test.token');

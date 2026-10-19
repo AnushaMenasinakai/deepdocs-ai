@@ -413,6 +413,32 @@ export async function getDashboardSummary(signal) {
   return { ...Object.fromEntries(counts.map(key => [key, data[key]])), recent_knowledge_bases: data.recent_knowledge_bases.map(({id, name, document_count, updated_at}) => ({id, name, document_count, updated_at})) }
 }
 
+export async function getRecentDocuments(signal) {
+  let response
+  try {
+    response = await api.get('/api/dashboard/recent-documents', { signal, headers: { Authorization: 'Bearer ' + getAccessToken() } })
+  } catch (error) {
+    if (axios.isCancel(error)) throw error
+    const safe = new Error('Recent documents are temporarily unavailable. Use Refresh overview to try again.')
+    safe.status = error.response?.status
+    throw safe
+  }
+  const documents = response.data?.documents
+  const validId = value => typeof value === 'string' && /^[a-f0-9]{24}$/i.test(value)
+  if (response.status !== 200 || !Array.isArray(documents) || documents.length > 3 ||
+      documents.some(item => !item || !validId(item.id) || !validId(item.knowledge_base_id) ||
+        typeof item.filename !== 'string' || !item.filename.trim() ||
+        !(item.knowledge_base_name === null || (typeof item.knowledge_base_name === 'string' && item.knowledge_base_name.trim() && item.knowledge_base_name.length <= 100)) ||
+        typeof item.created_at !== 'string' || !Number.isFinite(Date.parse(item.created_at)) ||
+        !['uploaded', 'processing', 'processed', 'failed'].includes(item.status) ||
+        typeof item.indexed !== 'boolean' || typeof item.failed !== 'boolean') ||
+      new Set(documents.map(item => item.id)).size !== documents.length) {
+    throw new Error('We could not read recent documents. Use Refresh overview to try again.')
+  }
+  return documents.map(({ id, knowledge_base_id, knowledge_base_name, filename, created_at, status, indexed, failed }) =>
+    ({ id, knowledge_base_id, knowledge_base_name, filename, created_at, status, indexed, failed }))
+}
+
 export async function getServiceHealth(service, signal) {
   const paths = { api: '/api/health', database: '/api/health/database', vector: '/api/health/qdrant' }
   if (!paths[service]) return 'unavailable'

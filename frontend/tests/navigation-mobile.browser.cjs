@@ -20,6 +20,7 @@ async function overflow(page) { assert.ok(await page.evaluate(() => document.doc
       const reply = json => route.fulfill({ json, headers });
       if (path === '/api/auth/me') return reply({ id: 'user', name: 'Example User', email: 'test@example.com', created_at: '2026-01-01' });
       if (path.startsWith('/api/health')) return reply({ status: 'ok' });
+      if (path === '/api/dashboard/recent-documents') return reply({ documents: [] });
       if (path === '/api/dashboard/summary') return reply({ knowledge_base_count: 1, document_count: 0, indexed_document_count: 0, processing_document_count: 0, failed_document_count: 0, ask_history_count: 0, recent_knowledge_bases: [{ ...base, document_count: 0 }] });
       if (path === '/api/knowledge-bases') return reply([base]);
       if (path.endsWith('/browse')) {

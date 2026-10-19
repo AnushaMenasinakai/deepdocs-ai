@@ -24,6 +24,7 @@ const USER={id:'507f1f77bcf86cd799439011',name:'Example User',email:'user@exampl
       const headers={'access-control-allow-origin':'*'};
       if(path==='/api/knowledge-bases/browse')return route.fulfill({json:{items:[],page:1,limit:20,total:0,total_pages:0},headers});
       if(path==='/api/knowledge-bases') return route.fulfill({json:[],headers});
+      if (path === '/api/dashboard/recent-documents') return route.fulfill({json:{documents:[]},headers});
       if(path==='/api/dashboard/summary') return route.fulfill({json:{knowledge_base_count:0,document_count:0,indexed_document_count:0,processing_document_count:0,failed_document_count:0,ask_history_count:0,recent_knowledge_bases:[]},headers});
       if(path.startsWith('/api/health')) return route.fulfill({json:{status:'ok'},headers});
       if(path==='/api/auth/me') {

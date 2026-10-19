@@ -16,6 +16,7 @@ const fixture = () => ({knowledge_base_count:7,document_count:12,indexed_documen
    if(path==='/api/auth/me')return route.fulfill({json:{id:'user',name:'Example User',email:'example@example.com',created_at:'2026-01-01'},headers});
    if(path.startsWith('/api/health'))throw Error('Dashboard must not request service health');
    assert.equal(req.headers().authorization,'Bearer offline.test.token');
+   if (path === '/api/dashboard/recent-documents') return route.fulfill({json:{documents:[]},headers});
    if(path==='/api/dashboard/summary'){
     const data=structuredClone(state.data),status=state.status;
     if(state.delay)await new Promise(r=>setTimeout(r,state.delay));

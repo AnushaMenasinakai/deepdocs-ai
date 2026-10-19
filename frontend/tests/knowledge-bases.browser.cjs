@@ -16,6 +16,7 @@ const sample = {id:'507f1f77bcf86cd799439012',name:'Research papers',description
    const headers={'access-control-allow-origin':'*'};
    if(method==='OPTIONS') return route.fulfill({status:204,headers:{...headers,'access-control-allow-headers':'*','access-control-allow-methods':'GET, POST, PATCH, DELETE, OPTIONS'}});
    if(path==='/api/auth/me') return route.fulfill({json:user,headers});
+   if (path === '/api/dashboard/recent-documents') return route.fulfill({json:{documents:[]},headers});
    if(path==='/api/dashboard/summary') return route.fulfill({json:{knowledge_base_count:0,document_count:0,indexed_document_count:0,processing_document_count:0,failed_document_count:0,ask_history_count:0,recent_knowledge_bases:[]},headers});
       if(path.startsWith('/api/health')) return route.fulfill({json:{status:'ok'},headers});
    if(path.startsWith('/api/knowledge-bases')) {
