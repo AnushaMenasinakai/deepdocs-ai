@@ -547,7 +547,7 @@ h1 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; font-weight: 650;
 .dashboard-stat dd { margin: var(--space-3) 0 0; font-size: 30px; line-height: 1.2; font-variant-numeric: tabular-nums; font-weight: 650; color: var(--text-primary); overflow-wrap: anywhere; }
 .dashboard-count-note { font-size: 12px; color: var(--text-muted); line-height: 1.8; margin: 14px 0 26px; }
 .dashboard-recent, .dashboard-health, .dashboard-actions { padding: 26px; min-width: 0; }
-.dashboard-recent { margin-top: var(--space-6); }
+.dashboard-recent { margin-top: var(--space-6); padding: var(--space-5); }
 .dashboard-documents { margin-top: var(--space-6); padding: var(--space-5); min-width: 0; }
 .dashboard-documents h2 { font-size: 18px; }
 .dashboard-documents > p { margin-top: var(--space-3); margin-bottom: 0; }
@@ -563,11 +563,11 @@ h1 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; font-weight: 650;
 @media (max-width: 600px) { .dashboard-documents li { flex-wrap: wrap; gap: var(--space-2); } .dashboard-document-info { flex-basis: 100%; } .dashboard-documents .session-button { margin-left: auto; } }
 .dashboard-text-link { color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; font-size: 12px; }
 .dashboard-recent ul, .dashboard-health ul { list-style: none; padding: 0; margin: var(--space-4) 0 0; }
-.dashboard-recent li { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 0; border-top: 1px solid var(--border); }
+.dashboard-recent li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) 0; border-top: 1px solid var(--border); }
 .dashboard-recent li > div { min-width: 0; overflow-wrap: anywhere; }
-.dashboard-recent h3 { font-size: 15px; }
-.dashboard-recent li p, .dashboard-recent-empty { font-size: 12px; color: var(--text-muted); margin-top: 7px; }
-.dashboard-recent .session-button { display: inline-flex; align-items: center; gap: var(--space-2); flex-shrink: 0; }
+.dashboard-recent h3 { font-size: 14px; }
+.dashboard-recent li p, .dashboard-recent-empty { font-size: 12px; color: var(--text-muted); margin-top: var(--space-1); }
+.dashboard-recent .session-button { min-height: 44px; display: inline-flex; align-items: center; gap: var(--space-2); flex-shrink: 0; }
 .dashboard-recent-empty { padding: var(--space-4) 0; }
 .dashboard-bottom { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; margin-top: var(--space-6); }
 .dashboard-health li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: 14px 0; border-top: 1px solid var(--border); font-size: 13px; }
@@ -583,7 +583,7 @@ h1 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; font-weight: 650;
 @keyframes dashboard-pulse { 50% { opacity: .45; } }
 @media (prefers-reduced-motion: reduce) { .dashboard-skeleton span { animation: none; } }
 @media (max-width: 1100px) { .dashboard-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 600px) { .dashboard-stat { padding: var(--space-4); } .dashboard-stat dt { flex-wrap: wrap; } .dashboard-stat dd { font-size: 27px; } .dashboard-section-heading { flex-wrap: wrap; } .dashboard-recent, .dashboard-health, .dashboard-actions, .dashboard-onboarding { padding: var(--space-5); } .dashboard-recent li { flex-wrap: wrap; } }
+@media (max-width: 600px) { .dashboard-stat { padding: var(--space-4); } .dashboard-stat dt { flex-wrap: wrap; } .dashboard-stat dd { font-size: 27px; } .dashboard-section-heading { flex-wrap: wrap; } .dashboard-recent, .dashboard-health, .dashboard-actions, .dashboard-onboarding { padding: var(--space-5); } .dashboard-recent li { flex-wrap: wrap; gap: var(--space-2); } .dashboard-recent li > div { flex-basis: 100%; } .dashboard-recent .session-button { margin-left: auto; } }
 
 /* Citation controls stay within the answer; they never open a PDF or external URL. */
 .citation-marker {
