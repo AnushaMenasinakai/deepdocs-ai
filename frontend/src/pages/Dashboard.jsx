@@ -51,7 +51,17 @@ export default function Dashboard() {
       : data && <>
         <dl className="dashboard-stats">{stats.map(([key, label, icon]) => <div className="panel dashboard-stat" key={key}><dt><Icon name={icon} size={20} />{label}</dt><dd>{data[key].toLocaleString()}</dd></div>)}</dl>
         <p className="dashboard-count-note">{data.processing_document_count} processing · {data.failed_document_count} failed. Indexed counts reflect the current generation’s last confirmed synchronization, not a live vector audit. Saved questions include insufficient-context results.</p>
-        {data.knowledge_base_count === 0 && data.document_count === 0 && data.ask_history_count === 0 && <section className="panel dashboard-onboarding"><span className="feature-icon library"><Icon name="library" /></span><div><h2>Create your first Knowledge Base</h2><p>Start organizing your PDFs, then process and index them to ask grounded questions.</p><Link className="primary-link" to="/knowledge-bases">Open Knowledge Bases <Icon name="arrow" size={17} /></Link></div></section>}
+        {data.knowledge_base_count === 0 && <section className="panel dashboard-onboarding" aria-labelledby="onboarding-title">
+          <svg className="dashboard-onboarding-art" viewBox="0 0 180 140" aria-hidden="true" focusable="false" fill="none">
+            <rect x="38" y="12" width="78" height="100" rx="8" fill="var(--surface-subtle)" stroke="var(--border)" />
+            <rect x="52" y="22" width="78" height="100" rx="8" fill="var(--surface)" stroke="var(--accent-border)" />
+            <path d="M66 42h42M66 54h28M66 66h36" stroke="var(--text-muted)" strokeWidth="3" strokeLinecap="round" />
+            <path d="M22 76h42l10 10h72v39a7 7 0 0 1-7 7H29a7 7 0 0 1-7-7Z" fill="var(--accent-surface)" stroke="var(--accent-border)" strokeWidth="2" />
+            <circle cx="132" cy="60" r="21" fill="var(--surface-subtle)" stroke="var(--accent-text)" strokeWidth="3" />
+            <path d="m148 76 15 15M123 60h18M132 51v18" stroke="var(--accent-text)" strokeWidth="3" strokeLinecap="round" />
+          </svg>
+          <div><h2 id="onboarding-title">Your knowledge workspace starts here</h2><p>Create your first Knowledge Base to organize documents and start asking grounded questions.</p><Link className="primary-link" to="/knowledge-bases">Create Knowledge Base <Icon name="arrow" size={17} /></Link></div>
+        </section>}
       </>}
     <RecentDocuments documents={documents} loading={documentsLoading} error={documentsError} />
     {!loading && !error && data && <section className="panel dashboard-recent" aria-labelledby="recent-kb-title"><div className="dashboard-section-heading"><h2 id="recent-kb-title">Recent Knowledge Bases</h2><Link className="dashboard-text-link" to="/knowledge-bases">Manage Knowledge Bases</Link></div><p className="kb-muted">Latest Knowledge Base edits. Document activity does not change this date.</p>

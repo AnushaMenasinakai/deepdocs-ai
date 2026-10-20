@@ -582,7 +582,11 @@ h1 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; font-weight: 650;
 .dashboard-actions nav a:hover, .dashboard-actions nav a:focus-visible { background: var(--accent-surface); border-color: var(--accent-border); }
 @media (max-width: 1100px) { .dashboard-actions nav { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .dashboard-actions nav { grid-template-columns: minmax(0, 1fr); } .dashboard-actions nav a { min-height: 88px; } }
-.dashboard-onboarding { display: flex; gap: var(--space-5); padding: 26px; background: var(--accent-surface); margin-top: var(--space-6); }
+.dashboard-onboarding { display: flex; align-items: center; gap: var(--space-6); padding: var(--space-6); margin-top: var(--space-6); }
+.dashboard-onboarding > div { min-width: 0; max-width: 560px; overflow-wrap: anywhere; }
+.dashboard-onboarding-art { width: 180px; height: 140px; flex-shrink: 0; }
+.dashboard-onboarding .primary-link { min-height: 44px; margin-top: var(--space-4); }
+@media (max-width: 600px) { .dashboard-onboarding { flex-direction: column; align-items: flex-start; gap: var(--space-4); } .dashboard-onboarding-art { width: 144px; height: 112px; } }
 .dashboard-onboarding p { color: var(--text-muted); font-size: 13px; margin-top: 9px; }
 .dashboard-onboarding .feature-icon { flex-shrink: 0; margin: 0; }
 .dashboard-skeleton span { display: block; background: var(--surface-raised); height: 12px; border-radius: 5px; width: 80%; animation: dashboard-pulse 1.8s ease-in-out infinite; }
