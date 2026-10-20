@@ -8,7 +8,7 @@ const fixture = () => ({knowledge_base_count:7,document_count:12,indexed_documen
  const browser=await chromium.launch({channel:'msedge',headless:true}); let passed=0;
  async function scenario(name,run,width=1440){
   const context=await browser.newContext({viewport:{width,height:1000}});
-  const state={data:fixture(),status:200,delay:0,network:false,calls:[],gate:null,started:deferred()};
+  const state={data:fixture(),status:200,delay:0,network:false,calls:[],gate:null,started:deferred(),recentGate:null,recentStatus:200,recentStarted:deferred()};
   await context.addInitScript(()=>localStorage.setItem('deepdocs_access_token','offline.test.token'));
   await context.route('**/api/**',async route=>{
    const req=route.request(),path=new URL(req.url()).pathname,headers={'access-control-allow-origin':'*'};
@@ -17,7 +17,7 @@ const fixture = () => ({knowledge_base_count:7,document_count:12,indexed_documen
    if(path==='/api/auth/me')return route.fulfill({json:{id:'user',name:'Example User',email:'example@example.com',created_at:'2026-01-01'},headers});
    if(path.startsWith('/api/health'))throw Error('Dashboard must not request service health');
    assert.equal(req.headers().authorization,'Bearer offline.test.token');
-   if (path === '/api/dashboard/recent-documents') return route.fulfill({json:{documents:[]},headers});
+   if (path === '/api/dashboard/recent-documents') { const gate=state.recentGate,status=state.recentStatus;state.recentStarted.resolve();if(gate)await gate.promise;return route.fulfill({status,json:status===200?{documents:[]}:{detail:'PRIVATE'},headers}); }
    if(path==='/api/dashboard/summary'){
     const data=structuredClone(state.data),status=state.status,gate=state.gate;state.started.resolve();if(gate)await gate.promise;
     if(state.delay)await new Promise(r=>setTimeout(r,state.delay));
@@ -33,7 +33,7 @@ const fixture = () => ({knowledge_base_count:7,document_count:12,indexed_documen
   page.on('console',m=>{if(m.type()==='error'&&!m.text().startsWith('Failed to load resource:'))errors.push(m.text());if(/PRIVATE|offline\.test\.token/.test(m.text()))errors.push('Sensitive output')});
   const go=()=>page.goto(baseURL+'/');
   const ready=async()=>{await go();await page.locator('.dashboard-stat dd').first().waitFor()};
-  try{await run({page,state,context,go,ready});assert.deepEqual(errors,[]);assert.ok(!state.calls.some(p=>/ask$|embeddings|search/.test(p)));passed++;console.log('PASS '+name)}finally{state.gate?.resolve();await context.close()}
+  try{await run({page,state,context,go,ready});assert.deepEqual(errors,[]);assert.ok(!state.calls.some(p=>/ask$|embeddings|search/.test(p)));passed++;console.log('PASS '+name)}finally{state.gate?.resolve();state.recentGate?.resolve();await context.close()}
  }
  try{
   await scenario('loading skeletons do not show fake counts',async({page,state,go})=>{state.delay=700;await go();await page.getByRole('status',{name:'Loading workspace overview'}).waitFor();assert.equal(await page.locator('.dashboard-stat dd').count(),0);assert.equal(await page.locator('.dashboard-skeleton').count(),4);await page.locator('.dashboard-stat dd').first().waitFor()});
@@ -87,6 +87,29 @@ const fixture = () => ({knowledge_base_count:7,document_count:12,indexed_documen
   for(const initial of [0,1])await scenario('onboarding follows acknowledged refresh from '+initial,async({page,state,ready})=>{state.data.knowledge_base_count=initial;await ready();assert.equal(await page.locator('.dashboard-onboarding').count(),initial===0?1:0);state.data.knowledge_base_count=1-initial;state.gate=deferred();state.started=deferred();await page.getByRole('button',{name:'Refresh overview'}).click();await state.started.promise;assert.equal(await page.locator('.dashboard-onboarding').count(),0);state.gate.resolve();await page.locator('.dashboard-stat dd').first().waitFor();assert.equal(await page.locator('.dashboard-onboarding').count(),initial===0?0:1);});
   await scenario('late empty summary cannot overwrite a remounted populated Dashboard',async({page,state,go})=>{state.data.knowledge_base_count=0;const gate=deferred();state.gate=gate;await go();await state.started.promise;await page.getByRole('navigation',{name:'Quick actions'}).getByRole('link',{name:'View Documents',exact:true}).click();await page.getByRole('heading',{name:'Documents',exact:true,level:1}).waitFor();state.gate=null;state.data.knowledge_base_count=7;await page.getByRole('link',{name:'Dashboard',exact:true}).click();await page.locator('.dashboard-stat dd').first().waitFor();gate.resolve();assert.equal(await page.locator('.dashboard-onboarding').count(),0);assert.equal(await page.locator('.dashboard-stat dd').first().textContent(),'7');});
   for(const width of [1440,1024,768,600,390])await scenario('onboarding responsive and reduced motion '+width,async({page,state,ready})=>{state.data.knowledge_base_count=0;await page.emulateMedia({reducedMotion:'reduce'});await ready();const card=page.locator('.dashboard-onboarding'),art=card.locator('.dashboard-onboarding-art'),link=card.getByRole('link');assert.equal(await card.evaluate(e=>getComputedStyle(e).flexDirection),width<=600?'column':'row');assert.ok((await link.boundingBox()).height>=44);assert.equal(await art.evaluate(e=>getComputedStyle(e).animationName),'none');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));const ratios=await card.evaluate(e=>{const lum=c=>{const v=c.match(/[\d.]+/g).slice(0,3).map(Number).map(x=>{x/=255;return x<=.04045?x/12.92:((x+.055)/1.055)**2.4});return .2126*v[0]+.7152*v[1]+.0722*v[2]};return [...e.querySelectorAll('h2,p,a')].map(n=>{let b=n;while(getComputedStyle(b).backgroundColor==='rgba(0, 0, 0, 0)')b=b.parentElement;const bg=lum(getComputedStyle(b).backgroundColor),fg=lum(getComputedStyle(n).color);return (Math.max(bg,fg)+.05)/(Math.min(bg,fg)+.05)})});assert.ok(ratios.every(r=>r>=4.5));await card.locator('h2').evaluate(e=>e.textContent='LongWorkspaceTitle'.repeat(20));assert.ok(await card.locator('h2').evaluate(e=>e.scrollWidth<=e.clientWidth));assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));},width);
+
+  const neutral='No recent documents to display.',firstBase='Create a Knowledge Base first, then add your documents.',upload='No documents yet. Upload a PDF from the Documents page to get started.';
+  const recent=page=>page.getByRole('region',{name:'Recent Documents',exact:true});
+  for(const count of [0,1])for(const order of ['documents first','summary first'])await scenario('empty guidance '+count+' KBs '+order,async({page,state,go})=>{
+   state.data.knowledge_base_count=count;state.data.recent_knowledge_bases=count?fixture().recent_knowledge_bases:[];
+   const gate=deferred();if(order==='documents first')state.gate=gate;else state.recentGate=gate;
+   await go();if(order==='documents first'){await recent(page).getByText(neutral,{exact:true}).waitFor();assert.equal(await page.locator('.dashboard-onboarding').count(),0);assert.equal(await recent(page).getByText(upload,{exact:true}).count(),0)}else{await page.locator('.dashboard-stat dd').first().waitFor();await recent(page).getByRole('status').waitFor();assert.equal(await recent(page).getByText(firstBase,{exact:true}).count(),0)}
+   gate.resolve();await recent(page).getByText(count?upload:firstBase,{exact:true}).waitFor();assert.equal(await page.getByRole('link',{name:'Create Knowledge Base',exact:true}).count(),count?0:1);assert.equal(await recent(page).getByRole('link').count(),0);
+  });
+  for(const failure of ['http','network','malformed'])await scenario('summary '+failure+' uses neutral document guidance',async({page,state,go})=>{
+   state.data.knowledge_base_count=0;if(failure==='http')state.status=503;else if(failure==='network')state.network=true;else delete state.data.knowledge_base_count;
+   await go();await page.getByRole('button',{name:'Retry overview'}).waitFor();await recent(page).getByText(neutral,{exact:true}).waitFor();assert.equal(await page.locator('.dashboard-onboarding').count(),0);assert.equal(await recent(page).getByRole('alert').count(),0);
+  });
+  await scenario('document error stays local with confirmed zero KB summary',async({page,state,ready})=>{state.data.knowledge_base_count=0;state.recentStatus=503;await ready();await recent(page).getByRole('alert').waitFor();assert.ok(!(await recent(page).textContent()).includes('PRIVATE'));assert.equal(await recent(page).getByText(firstBase,{exact:true}).count(),0);await page.locator('.dashboard-onboarding').waitFor();assert.deepEqual(await page.locator('.dashboard-stat dd').allTextContents(),['0','12','9','23']);});
+  for(const initial of [0,1])await scenario('guidance refresh clears old summary '+initial,async({page,state,ready})=>{
+   state.data.knowledge_base_count=initial;await ready();await recent(page).getByText(initial?upload:firstBase,{exact:true}).waitFor();state.data.knowledge_base_count=1-initial;state.gate=deferred();state.started=deferred();await page.getByRole('button',{name:'Refresh overview'}).click();await state.started.promise;await recent(page).getByText(neutral,{exact:true}).waitFor();assert.equal(await page.locator('.dashboard-onboarding').count(),0);state.gate.resolve();await recent(page).getByText(initial?firstBase:upload,{exact:true}).waitFor();
+  });
+  await scenario('failed refresh does not reuse confirmed empty guidance',async({page,state,ready})=>{state.data.knowledge_base_count=0;await ready();await recent(page).getByText(firstBase,{exact:true}).waitFor();state.status=503;await page.getByRole('button',{name:'Refresh overview'}).click();await page.getByRole('button',{name:'Retry overview'}).waitFor();await recent(page).getByText(neutral,{exact:true}).waitFor();assert.equal(await page.locator('.dashboard-onboarding').count(),0);state.status=200;state.data.knowledge_base_count=1;await page.getByRole('button',{name:'Retry overview'}).click();await recent(page).getByText(upload,{exact:true}).waitFor();});
+  await scenario('late cancelled summary cannot restore obsolete empty guidance',async({page,state,go})=>{
+   state.data.knowledge_base_count=0;const gate=deferred();state.gate=gate;await go();await state.started.promise;await recent(page).getByText(neutral,{exact:true}).waitFor();
+   const cancelled=page.waitForEvent('requestfailed',{predicate:r=>new URL(r.url()).pathname==='/api/dashboard/summary'});
+   await page.getByRole('navigation',{name:'Quick actions'}).getByRole('link',{name:'View Documents',exact:true}).click();await cancelled;await page.getByRole('heading',{name:'Documents',exact:true,level:1}).waitFor();state.gate=null;state.data.knowledge_base_count=1;await page.getByRole('link',{name:'Dashboard',exact:true}).click();await recent(page).getByText(upload,{exact:true}).waitFor();gate.resolve();assert.equal(await recent(page).getByText(firstBase,{exact:true}).count(),0);assert.equal(await page.locator('.dashboard-onboarding').count(),0);
+  });
   console.log('Dashboard: '+passed+' scenarios passed; no unexpected console/runtime errors.');
  }finally{await browser.close()}
 })().catch(error=>{console.error(error);process.exitCode=1});

@@ -2,12 +2,12 @@ import { Link } from 'react-router-dom'
 
 const labels = { uploaded: 'Uploaded', processing: 'Processing', processed: 'Processed', failed: 'Failed' }
 
-export default function RecentDocuments({ documents, loading, error }) {
+export default function RecentDocuments({ documents, loading, error, emptyMessage = 'No recent documents to display.' }) {
   return <section className="panel dashboard-documents" aria-labelledby="recent-documents-title">
     <h2 id="recent-documents-title">Recent Documents</h2>
     {loading ? <p className="kb-muted" role="status">Loading recent documents…</p>
       : error ? <p className="auth-error" role="alert">{error}</p>
-      : documents.length === 0 ? <p className="kb-muted">No documents yet. Upload a PDF from the Documents page to get started.</p>
+      : documents.length === 0 ? <p className="kb-muted">{emptyMessage}</p>
       : <ul>{documents.map(item => {
         // Match the Documents page: failure takes precedence over indexed metadata.
         const status = item.failed ? 'Failed' : item.indexed ? 'Indexed' : labels[item.status]

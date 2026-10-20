@@ -43,6 +43,11 @@ export default function Dashboard() {
     })()])
   }, [logout])
   useEffect(() => { load(); return () => request.current?.abort() }, [load])
+  const recentDocumentsEmptyMessage = !loading && !error && data
+    ? data.knowledge_base_count === 0
+      ? 'Create a Knowledge Base first, then add your documents.'
+      : 'No documents yet. Upload a PDF from the Documents page to get started.'
+    : 'No recent documents to display.'
   return <div className="dashboard-page">
     <Header eyebrow="YOUR KNOWLEDGE WORKSPACE" title="Welcome back" description="Keep track of your knowledge, documents and saved questions." />
     <div className="dashboard-section-heading"><h2>Workspace overview</h2><button className="session-button" onClick={load} disabled={loading}>Refresh overview</button></div>
@@ -63,7 +68,7 @@ export default function Dashboard() {
           <div><h2 id="onboarding-title">Your knowledge workspace starts here</h2><p>Create your first Knowledge Base to organize documents and start asking grounded questions.</p><Link className="primary-link" to="/knowledge-bases">Create Knowledge Base <Icon name="arrow" size={17} /></Link></div>
         </section>}
       </>}
-    <RecentDocuments documents={documents} loading={documentsLoading} error={documentsError} />
+    <RecentDocuments documents={documents} loading={documentsLoading} error={documentsError} emptyMessage={recentDocumentsEmptyMessage} />
     {!loading && !error && data && <section className="panel dashboard-recent" aria-labelledby="recent-kb-title"><div className="dashboard-section-heading"><h2 id="recent-kb-title">Recent Knowledge Bases</h2><Link className="dashboard-text-link" to="/knowledge-bases">Manage Knowledge Bases</Link></div><p className="kb-muted">Latest Knowledge Base edits. Document activity does not change this date.</p>
           {!data.recent_knowledge_bases.length ? <p className="dashboard-recent-empty">No Knowledge Bases yet. Create one to give related documents a home.</p> : <ul>{data.recent_knowledge_bases.slice(0, 3).map(base => <li key={base.id}><div><h3>{base.name}</h3><p>{base.document_count} {base.document_count === 1 ? 'document' : 'documents'} · Edited <time dateTime={base.updated_at}>{new Date(base.updated_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</time></p></div><Link className="session-button" to="/knowledge-bases" aria-label={'Manage Knowledge Bases for ' + base.name}>Manage <Icon name="arrow" size={15} /></Link></li>)}</ul>}
         </section>}
