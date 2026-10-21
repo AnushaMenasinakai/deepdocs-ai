@@ -187,7 +187,7 @@ const fixture={name:'notes.pdf',mimeType:'application/pdf',buffer:Buffer.from('%
    assert.equal(await page.evaluate(()=>localStorage.getItem('deepdocs_access_token')),null);
   });
   await scenario('Knowledge Base 409 actionable message',async({page,state,button})=>{
-   state.kbDeleteStatus=409;await page.goto(BASE+'/knowledge-bases',{waitUntil:'domcontentloaded'});await button('Delete Research').click();
+   state.kbDeleteStatus=409;await page.goto(BASE+'/knowledge-bases',{waitUntil:'domcontentloaded'});await page.locator('.kb-card').filter({has:page.getByRole('heading',{name:'Research',exact:true})}).getByRole('button',{name:'Actions for Research',exact:true}).click();await page.getByRole('menuitem',{name:'Delete',exact:true}).click();
    await button('Confirm deletion').click();await page.getByRole('alert').filter({hasText:'Delete its documents before deleting the Knowledge Base'}).waitFor();
   });
   for(const width of [1440,768,390])await scenario('Responsive '+width,async({page,state,ready,pick,button})=>{

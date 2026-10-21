@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import Modal from '../components/Modal.jsx'
+import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import DropdownMenu from '../components/DropdownMenu.jsx'
 import Header from '../components/Header.jsx'
 import Icon from '../components/Icon.jsx'
 import KnowledgeBaseForm from '../components/KnowledgeBaseForm.jsx'
@@ -26,6 +30,10 @@ export default function KnowledgeBases() {
   const pending = useRef(false)
   const createButton = useRef(null)
   const returnFocus = useRef(null)
+  const nameInput = useRef(null)
+  const restoreFocus = useRef(false)
+  const session = useRef(0)
+  const [retryVersion, setRetryVersion] = useState(0)
 
   const load = useCallback(async () => {
     request.current?.abort()
@@ -54,21 +62,36 @@ export default function KnowledgeBases() {
     return () => request.current?.abort()
   }, [load])
 
-  useEffect(() => () => mutation.current?.abort(), [])
+  useEffect(() => () => { session.current++; mutation.current?.abort() }, [])
+
+  // Shared dialogs restore their trigger. After deletion that trigger may no
+  // longer exist, so wait for both dialog closure and list refresh before
+  // focusing the enabled fallback. Never steal focus from another overlay.
+  useEffect(() => {
+    function restore() {
+      if (!restoreFocus.current || (editor || deleting) || busy || loading || document.querySelector('dialog:modal')) return
+      const target = returnFocus.current?.isConnected && !returnFocus.current.disabled ? returnFocus.current : createButton.current
+      if (target && !target.disabled) { target.focus(); restoreFocus.current = false }
+    }
+    document.addEventListener('close', restore, true)
+    restore()
+    return () => document.removeEventListener('close', restore, true)
+  }, [editor, deleting, busy, loading])
 
   function close() {
+    session.current++
     setEditor(null)
     setDeleting(null)
     setActionError('')
-    // Return keyboard focus to the originating action, or New after deletion.
-    requestAnimationFrame(() => {
-      const target = returnFocus.current?.isConnected ? returnFocus.current : createButton.current
-      target?.focus()
-    })
+    restoreFocus.current = true
   }
 
   function open(kind, item, event) {
-    returnFocus.current = event.currentTarget
+    if (pending.current) return
+    session.current++
+    restoreFocus.current = false
+    setRetryVersion(0)
+    returnFocus.current = event?.currentTarget || document.activeElement
     setActionError('')
     setNotice('')
     setEditor(kind === 'edit' ? { item } : null)
@@ -82,32 +105,41 @@ export default function KnowledgeBases() {
     setActionError('')
     const controller = new AbortController()
     mutation.current = controller
+    const attemptSession = session.current
+    const current = () => !controller.signal.aborted && session.current === attemptSession
+    let retryAllowed = false
     try {
       if (deleting) {
         await deleteKnowledgeBase(deleting.id, controller.signal)
-        if (controller.signal.aborted) return
+        if (!current()) return
         setNotice('Knowledge Base deleted.')
       } else {
         await (editor.item
           ? updateKnowledgeBase(editor.item.id, data, controller.signal)
           : createKnowledgeBase(data, controller.signal))
-        if (controller.signal.aborted) return
+        if (!current()) return
         setNotice(editor.item ? 'Knowledge Base updated.' : 'Knowledge Base created.')
       }
       close()
       await load()
     } catch (error) {
-      if (controller.signal.aborted) return
+      if (!current()) return
       if (error.status === 401) logout()
       else if (error.status === 404) {
         close()
         setNotice('This Knowledge Base is no longer available. Updating your list.')
         setBusy(false)
         await load()
-      } else setActionError(error.message)
+      } else {
+        setActionError(error.message)
+        retryAllowed = Boolean(deleting)
+      }
     } finally {
-      pending.current = false
-      if (!controller.signal.aborted) setBusy(false)
+      if (mutation.current === controller) {
+        pending.current = false
+        if (!controller.signal.aborted) setBusy(false)
+        if (retryAllowed && current()) setRetryVersion(version => version + 1)
+      }
     }
   }
 
@@ -116,19 +148,13 @@ export default function KnowledgeBases() {
     <Header eyebrow="ORGANIZE YOUR KNOWLEDGE" title="Knowledge Bases" description="Keep related documents together, with room for every topic and project." />
     <div className="kb-toolbar">
       <div><h2>Your collections</h2><p className="kb-muted">A focused space for each topic or project.</p></div>
-      <button ref={createButton} className="kb-primary" disabled={editing || loading || Boolean(loadError)} onClick={event => open('edit', null, event)}>New Knowledge Base</button>
+      <button ref={createButton} className="kb-primary" disabled={editing || busy || loading || Boolean(loadError)} onClick={event => open('edit', null, event)}>New Knowledge Base</button>
     </div>
     <div role="status" aria-live="polite">{notice && <p className="auth-success">{notice}</p>}</div>
-    {editor && <KnowledgeBaseForm key={editor.item?.id || 'new'} item={editor.item} busy={busy} error={actionError} onSave={mutate} onCancel={close} />}
-    {deleting && <section className="panel kb-editor kb-delete" aria-labelledby="kb-delete-title">
-      <h2 id="kb-delete-title">Delete Knowledge Base?</h2>
-      <p>Delete <strong>{deleting.name}</strong>? This cannot be undone.</p>
-      {actionError && <p role="alert" className="auth-error">{actionError}</p>}
-      <div className="kb-actions">
-        <button autoFocus className="session-button" disabled={busy} onClick={close}>Cancel</button>
-        <button className="kb-danger" disabled={busy} onClick={() => mutate()}>{busy ? 'Deleting…' : 'Confirm deletion'}</button>
-      </div>
-    </section>}
+    <Modal open={Boolean(editor)} onClose={() => { if (!pending.current) close() }} title={editor?.item ? 'Edit Knowledge Base' : 'Create Knowledge Base'} dismissible={!busy} initialFocusRef={nameInput}>
+      {editor && <KnowledgeBaseForm key={editor.item?.id || 'new'} item={editor.item} inputRef={nameInput} busy={busy} error={actionError} onSave={mutate} onCancel={() => { if (!pending.current) close() }} />}
+    </Modal>
+    <ConfirmDialog open={Boolean(deleting)} title="Delete Knowledge Base?" description={<><span>Delete <strong>{deleting?.name}</strong>? This cannot be undone.</span>{actionError && <span role="alert" className="auth-error kb-delete-error">{actionError}</span>}</>} confirmLabel="Confirm deletion" destructive pending={busy} retryVersion={retryVersion} onConfirm={() => mutate()} onCancel={() => { if (!pending.current) close() }} />
     <ManagementControls state={view} disabled={editing || busy} />
     <ManagementPagination meta={meta} loading={loading || waiting} change={change} disabled={editing || busy || Boolean(loadError)} />
     {loading && items.length === 0 ? <section className="panel kb-state" role="status">Loading your Knowledge Bases…</section>
@@ -140,13 +166,13 @@ export default function KnowledgeBases() {
       </section>
       : <div className="kb-grid" aria-busy={loading || waiting}>{items.map(item => <article className="panel kb-card" key={item.id}>
         <span className="feature-icon"><Icon name="library" size={22} /></span>
-        <h2>{item.name}</h2>
+        <h2><Link className="kb-card-link" to={'/documents?kb=' + encodeURIComponent(item.id)} aria-disabled={editing || busy || loading || waiting} tabIndex={editing || busy || loading || waiting ? -1 : undefined} onClick={event => { if (editing || pending.current || loading || waiting) event.preventDefault() }}>{item.name}</Link></h2>
         <p className="kb-description">{item.description || 'No description added.'}</p>
-        <p className="kb-updated">Updated <time dateTime={item.updated_at}>{new Date(item.updated_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</time></p>
-        <div className="kb-actions">
-          <button className="session-button" aria-label={'Edit ' + item.name} disabled={editing || busy || loading || waiting} onClick={event => open('edit', item, event)}>Edit</button>
-          <button className="session-button kb-delete-link" aria-label={'Delete ' + item.name} disabled={editing || busy || loading || waiting} onClick={event => open('delete', item, event)}>Delete</button>
-        </div>
+        <p className="kb-updated">Last edited <time dateTime={Number.isNaN(Date.parse(item.updated_at)) ? undefined : item.updated_at}>{Number.isNaN(Date.parse(item.updated_at)) ? 'Date unavailable' : new Date(item.updated_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</time><span aria-hidden="true"> &rarr;</span></p>
+        <div className="kb-card-menu"><DropdownMenu triggerLabel={'Actions for ' + item.name} disabled={editing || busy || loading || waiting} items={[
+          { id: 'edit', label: 'Edit', onSelect: () => open('edit', item) },
+          { id: 'delete', label: 'Delete', destructive: true, onSelect: () => open('delete', item) },
+        ]} /></div>
       </article>)}</div>}
   </>
 }

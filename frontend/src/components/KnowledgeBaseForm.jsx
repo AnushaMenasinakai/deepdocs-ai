@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function KnowledgeBaseForm({ item, busy, error, onSave, onCancel }) {
+export default function KnowledgeBaseForm({ item, inputRef, busy, error, onSave, onCancel }) {
   const [name, setName] = useState(item?.name || '')
   const [description, setDescription] = useState(item?.description || '')
   const [validation, setValidation] = useState('')
@@ -18,14 +18,13 @@ export default function KnowledgeBaseForm({ item, busy, error, onSave, onCancel 
     onSave({ name: trimmedName, description: trimmedDescription || null })
   }
 
-  return <section className="panel kb-editor" aria-labelledby="kb-form-title">
-    <h2 id="kb-form-title">{item ? 'Edit Knowledge Base' : 'Create Knowledge Base'}</h2>
+  return <section className="kb-editor kb-modal-editor">
     <p className="kb-muted">Give your collection a clear name and a little context.</p>
     <form onSubmit={submit}>
       <fieldset className="auth-fields" disabled={busy}>
         <div className="auth-field">
           <label htmlFor="kb-name">Name</label>
-          <input id="kb-name" autoFocus required maxLength={100} value={name} onChange={event => setName(event.target.value)} placeholder="e.g. Machine Learning Notes" />
+          <input ref={inputRef} id="kb-name" required maxLength={100} value={name} onChange={event => setName(event.target.value)} placeholder="e.g. Machine Learning Notes" />
         </div>
         <div className="auth-field">
           <label htmlFor="kb-description">Description <span className="kb-muted">(optional)</span></label>

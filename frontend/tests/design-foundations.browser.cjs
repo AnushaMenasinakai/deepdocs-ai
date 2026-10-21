@@ -105,22 +105,64 @@ async function noOverflow(page) {
     });
     await scenario('four button hierarchies, hover, disabled and keyboard focus', async ({ page, go }) => {
       await go('/knowledge-bases'); await page.locator('.kb-card').waitFor();
+      const originalUrl = page.url();
       const primary = page.getByRole('button', { name: 'New Knowledge Base', exact: true });
-      const secondary = page.getByRole('button', { name: 'Edit ' + base.name, exact: true });
       const neutral = page.locator('.session-controls .session-button');
-      const colors = [];
-      for (const [label, item] of [['primary', primary], ['secondary', secondary], ['neutral', neutral]]) colors.push((await readable(item, label)).background);
-      assert.equal(colors[0], rgb('14B8A6')); assert.equal(new Set(colors).size, 3);
+      const primaryColor = (await readable(primary, 'primary')).background;
+      const neutralColor = (await readable(neutral, 'neutral')).background;
+      assert.equal(primaryColor, rgb('14B8A6'));
       await primary.hover();
       await page.waitForFunction(() => getComputedStyle(document.querySelector('.kb-toolbar .kb-primary')).backgroundColor === 'rgb(45, 212, 191)');
       await readable(primary, 'primary hover');
-      await secondary.focus(); await page.keyboard.press('Tab');
-      const focused = page.locator(':focus');
-      assert.equal(await focused.getAttribute('aria-label'), 'Delete ' + base.name);
-      const focus = await styles(focused); assert.equal(focus.outline, 'solid'); assert.ok(parseFloat(focus.outlineWidth) >= 2);
-      await focused.press('Enter');
+
+      const trigger = page.getByRole('button', { name: 'Actions for ' + base.name, exact: true });
+      await trigger.focus(); await page.keyboard.press('Enter');
+      await page.getByRole('menu').waitFor(); assert.equal(await trigger.getAttribute('aria-expanded'), 'true');
+      const edit = page.getByRole('menuitem', { name: 'Edit', exact: true });
+      const remove = page.getByRole('menuitem', { name: 'Delete', exact: true });
+      assert.ok(await edit.isVisible()); assert.ok(await remove.isVisible());
+      assert.ok(await edit.evaluate(e => e === document.activeElement));
+      await readable(edit, 'focused Edit menu action');
+      assert.equal(page.url(), originalUrl, 'Opening menu does not navigate the card');
+      await page.keyboard.press('Enter');
+      await page.getByRole('dialog', { name: 'Edit Knowledge Base', exact: true }).waitFor();
+      assert.equal(await page.getByLabel('Name', { exact: true }).inputValue(), base.name);
+      assert.equal(page.url(), originalUrl, 'Edit does not navigate the card');
+      // Cancel retains the secondary hierarchy formerly sampled on inline Edit.
+      const secondary = page.getByRole('button', { name: 'Cancel', exact: true });
+      const secondaryColor = (await readable(secondary, 'secondary')).background;
+      assert.equal(new Set([primaryColor, secondaryColor, neutralColor]).size, 3);
+      await secondary.click(); await page.getByRole('dialog').waitFor({ state: 'hidden' });
+
+      await trigger.focus(); await page.keyboard.press('Enter');
+      await edit.waitFor(); await page.keyboard.press('ArrowDown');
+      assert.ok(await remove.evaluate(e => e === document.activeElement));
+      const focus = await styles(remove); assert.equal(focus.outline, 'solid'); assert.ok(parseFloat(focus.outlineWidth) >= 2);
+      await readable(remove, 'focused destructive menu action');
+      await page.keyboard.press('Enter');
+      await page.getByRole('dialog', { name: 'Delete Knowledge Base?', exact: true }).waitFor();
+      assert.equal(page.url(), originalUrl, 'Delete does not navigate the card');
       const danger = page.getByRole('button', { name: 'Confirm deletion', exact: true });
       assert.equal((await readable(danger, 'destructive')).background, rgb('B91C1C'));
+
+      const gate = deferred(), entered = deferred(); let deletions = 0;
+      await page.route('**/api/knowledge-bases/' + base.id, async route => {
+        if (route.request().method() !== 'DELETE') return route.fallback();
+        deletions++; entered.resolve(); await gate.promise;
+        return route.fulfill({ status: 409, json: { detail: 'Synthetic conflict' }, headers: { 'access-control-allow-origin': '*' } });
+      });
+      try {
+        await danger.click(); await entered.promise;
+        const working = page.getByRole('button', { name: /^Working/ });
+        for (const control of await page.getByRole('dialog').getByRole('button').all()) assert.ok(await control.isDisabled());
+        assert.ok(await trigger.isDisabled());
+        assert.equal((await readable(working, 'pending confirmation')).background, rgb('25364D'));
+        await working.evaluate(e => e.click()); assert.equal(deletions, 1);
+      } finally { gate.resolve(); }
+      await page.getByRole('alert').filter({ hasText: 'Delete its documents before deleting the Knowledge Base' }).waitFor();
+      await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await page.getByRole('dialog').waitFor({ state: 'hidden' });
+
       await go('/ask'); await page.locator('#ask-question').waitFor();
       const submit = page.getByRole('button', { name: 'Ask DeepDocs', exact: true });
       assert.ok(await submit.isDisabled());

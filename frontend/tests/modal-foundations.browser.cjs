@@ -22,7 +22,10 @@ const {default: ConfirmDialog} = await import('/src/components/ConfirmDialog.jsx
 const h = React.createElement;
 window.confirmations = 0; window.cancellations = 0; window.backgroundClicks = 0;
 function Harness() {
- const [mode,setMode] = React.useState(''), [pending,setPending] = React.useState(false), [mounted,setMounted] = React.useState(true);
+ const [mode,setMode] = React.useState(''), [pending,setPending] = React.useState(false), [mounted,setMounted] = React.useState(true), [retryVersion,setRetryVersion] = React.useState(0);
+ window.finishConfirmation = failed => {setPending(false);if(failed)setRetryVersion(v=>v+1)};
+ window.bumpRetry = () => setRetryVersion(v=>v+1);
+ window.openConfirmation = () => {setPending(false);setMode('confirm')};
  window.closeModal = () => setMode(''); window.unmountModal = () => setMounted(false);
  window.reopen = () => setMode('modal');
  return h('div', {style:{minHeight:'1800px',padding:'20px'}},
@@ -32,19 +35,19 @@ function Harness() {
  mounted && h(Modal,{open:mode==='modal',onClose:()=>setMode(''),title:'Example form',description:'Form description'},
  h('label',null,'Name',h('input',{name:'name'})), h('textarea',{'aria-label':'Notes'}),h('button',null,'Last control'),
  h('div',{style:{height:'1000px'}},'Long content')),
- mounted && h(ConfirmDialog,{open:mode==='confirm',title:'Delete example?',description:'This cannot be undone.',destructive:true,pending,onCancel:()=>{window.cancellations++;setMode('')},onConfirm:()=>{window.confirmations++;setPending(true)}}));
+ mounted && h(ConfirmDialog,{open:mode==='confirm',title:'Delete example?',description:'This cannot be undone.',destructive:true,pending,...(location.search.includes('retry')?{retryVersion}:{}),onCancel:()=>{window.cancellations++;setMode('')},onConfirm:()=>{window.confirmations++;setPending(true)}}));
 }
 createRoot(document.getElementById('root')).render(h(React.StrictMode,null,h(Harness)));
 </script></body></html>`;
 (async () => {
  const browser = await chromium.launch({channel:'msedge',headless:true}); let passed=0;
- async function test(name, run, width=1440, reducedMotion='no-preference') {
+ async function test(name, run, width=1440, reducedMotion='no-preference', retry=false) {
   const context=await browser.newContext({viewport:{width,height:800},reducedMotion});
   const page=await context.newPage(), errors=[];
   page.on('pageerror',e=>{errors.push(e.message);console.error(e.message)});
-  await page.route('**/__modal-test',r=>r.fulfill({contentType:'text/html',body:html}));
+  await page.route('**/__modal-test*',r=>r.fulfill({contentType:'text/html',body:html}));
   await page.route('**/api/**',r=>{errors.push('Unexpected API');return r.abort()});
-  try {await page.goto(ROOT+'/__modal-test');await page.getByText('Open modal',{exact:true}).waitFor();await run(page);assert.deepEqual(errors,[]);passed++;console.log('PASS '+name)} finally {await context.close()}
+  try {await page.goto(ROOT+'/__modal-test'+(retry?'?retry':''));await page.getByText('Open modal',{exact:true}).waitFor();await run(page);assert.deepEqual(errors,[]);passed++;console.log('PASS '+name)} finally {await context.close()}
  }
  const modal=p=>p.getByRole('dialog',{name:'Example form'});
  async function open(p){await p.getByText('Open modal',{exact:true}).click();await modal(p).waitFor();await modal(p).evaluate(async e=>Promise.allSettled(e.getAnimations().map(a=>a.finished)))}
@@ -56,6 +59,21 @@ createRoot(document.getElementById('root')).render(h(React.StrictMode,null,h(Har
   await test('backdrop blocks pointers and keyboard, locks scroll',async p=>{await open(p);await p.mouse.click(10,10);assert.equal(await p.evaluate(()=>window.backgroundClicks),0);await p.getByText('Background action').evaluate(e=>e.focus());assert.ok(await modal(p).evaluate(e=>e.contains(document.activeElement)));assert.equal(await p.evaluate(()=>document.body.style.overflow),'hidden');await p.keyboard.press('Escape');await closed(p)});
   await test('cancel never confirms and destructive dialog starts on Cancel',async p=>{await p.getByText('Open confirmation').click();assert.ok(await p.getByRole('button',{name:'Cancel',exact:true}).evaluate(e=>e===document.activeElement));await p.getByRole('button',{name:'Cancel',exact:true}).click();await p.getByRole('dialog').waitFor({state:'hidden'});assert.equal(await p.evaluate(()=>window.confirmations),0);assert.equal(await p.evaluate(()=>window.cancellations),1)});
   await test('explicit confirmation only, pending locks close/cancel/duplicate confirm',async p=>{await p.getByText('Open confirmation').click();assert.ok(await contrast(p.getByRole('button',{name:'Confirm',exact:true}))>=4.5);await p.getByRole('button',{name:'Confirm',exact:true}).dblclick();assert.equal(await p.evaluate(()=>window.confirmations),1);for(const b of await p.getByRole('dialog').getByRole('button').all())assert.ok(await b.isDisabled());await p.keyboard.press('Escape');assert.ok(await p.getByRole('dialog').isVisible());assert.equal(await p.evaluate(()=>window.cancellations),0);assert.ok(await p.getByRole('status').isVisible());assert.ok(await contrast(p.getByRole('button',{name:'Working…'}))>=4.5);await p.keyboard.press('Tab');assert.ok(await p.getByRole('dialog').evaluate(e=>e.contains(document.activeElement)))});
+  await test('explicit retry after failure, never automatic; success stays locked',async p=>{
+   await p.getByText('Open confirmation').click();await p.getByRole('button',{name:'Confirm',exact:true}).click();
+   await p.evaluate(()=>window.finishConfirmation(true));await p.getByRole('button',{name:'Confirm',exact:true}).waitFor();assert.equal(await p.evaluate(()=>window.confirmations),1);
+   await p.getByRole('button',{name:'Confirm',exact:true}).focus();await p.keyboard.press('Enter');assert.equal(await p.evaluate(()=>window.confirmations),2);
+   await p.evaluate(()=>window.finishConfirmation(false));await p.getByRole('button',{name:'Confirm',exact:true}).click();assert.equal(await p.evaluate(()=>window.confirmations),2);
+  },1440,'reduce',true);
+  await test('retry version during pending cannot unlock this or a later successful attempt',async p=>{
+   await p.getByText('Open confirmation').click();await p.getByRole('button',{name:'Confirm',exact:true}).click();await p.evaluate(()=>window.bumpRetry());assert.ok(await p.getByRole('button',{name:/^Working/}).isDisabled());
+   await p.evaluate(()=>window.finishConfirmation(false));await p.getByRole('button',{name:'Confirm',exact:true}).click();assert.equal(await p.evaluate(()=>window.confirmations),1);
+   await p.evaluate(()=>window.finishConfirmation(true));await p.getByRole('button',{name:'Confirm',exact:true}).click();assert.equal(await p.evaluate(()=>window.confirmations),2);
+  },1440,'reduce',true);
+  await test('legacy caller stays locked after pending ends; closing resets guard',async p=>{
+   await p.getByText('Open confirmation').click();await p.getByRole('button',{name:'Confirm',exact:true}).click();await p.evaluate(()=>window.finishConfirmation(true));await p.getByRole('button',{name:'Confirm',exact:true}).click();assert.equal(await p.evaluate(()=>window.confirmations),1);
+   await p.getByRole('button',{name:'Cancel',exact:true}).click();await p.getByRole('dialog').waitFor({state:'hidden'});await p.getByText('Open confirmation').click();await p.getByRole('button',{name:'Confirm',exact:true}).click();assert.equal(await p.evaluate(()=>window.confirmations),2);
+  });
   for(const width of [1440,768,390]) await test('responsive long content and no overflow '+width,async p=>{await open(p);const b=await modal(p).boundingBox();assert.ok(b.x>=0&&b.y>=0&&b.x+b.width<=width&&b.y+b.height<=800);assert.ok(await modal(p).evaluate(e=>e.scrollHeight>e.clientHeight));assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await modal(p).evaluate(e=>e.scrollTop=e.scrollHeight);assert.ok(await modal(p).evaluate(e=>e.scrollTop>0))},width);
   await test('animation, backdrop opacity and scoped background effects',async p=>{await open(p);assert.equal(await modal(p).evaluate(e=>getComputedStyle(e).animationDuration),'0.24s');assert.equal(await modal(p).evaluate(e=>getComputedStyle(e,'::backdrop').backgroundColor),'rgba(0, 0, 0, 0.45)');assert.equal(await p.locator('#root').evaluate(e=>getComputedStyle(e).filter),'blur(3px)');await p.evaluate(()=>window.closeModal());await closed(p)});
   await test('reduced motion removes modal and background animation',async p=>{await open(p);assert.equal(await modal(p).evaluate(e=>getComputedStyle(e).animationName),'none');assert.equal(await p.locator('#root').evaluate(e=>getComputedStyle(e).transform),'none');await p.keyboard.press('Escape');await closed(p)},390,'reduce');
