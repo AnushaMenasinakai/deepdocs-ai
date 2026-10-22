@@ -19,13 +19,12 @@ const actions = {
   refresh: 'Inspect again to check for an updated state.', contact_support: 'Contact support for review.',
 }
 
-export default function DocumentInspection({ document, onClose, onSnapshot }) {
+export default function DocumentInspection({ document, onSnapshot }) {
   const { logout } = useAuth()
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const request = useRef(null)
-  const title = useRef(null)
   const inspect = useCallback(async () => {
     request.current?.abort()
     const controller = new AbortController()
@@ -47,13 +46,11 @@ export default function DocumentInspection({ document, onClose, onSnapshot }) {
   }, [document.id, logout, onSnapshot])
   useEffect(() => {
     let mounted = true
-    title.current?.focus()
     // Avoid sending the discarded first request during StrictMode's setup probe.
     queueMicrotask(() => { if (mounted) inspect() })
     return () => { mounted = false; request.current?.abort() }
   }, [inspect])
-  return <section className="panel kb-editor document-inspection" aria-labelledby="inspection-title">
-    <h2 id="inspection-title" ref={title} tabIndex={-1}>Document status inspection</h2>
+  return <section className="document-inspection" aria-label="Inspection snapshot">
     <p><strong>{document.filename}</strong></p>
     <p className="kb-muted">Read-only, point-in-time metadata snapshot. This does not verify live vectors, PDF availability, worker activity, or recovery eligibility.</p>
     {loading && <p role="status">Inspecting document status…</p>}
@@ -70,7 +67,6 @@ export default function DocumentInspection({ document, onClose, onSnapshot }) {
     </>}
     <div className="kb-actions">
       <button className="session-button" disabled={loading} onClick={inspect}>Inspect again</button>
-      <button className="session-button" onClick={onClose}>Close inspection</button>
     </div>
   </section>
 }

@@ -451,12 +451,14 @@ h1 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; font-weight: 650;
 .kb-delete-error { display: block; }
 
 /* Document library and PDF upload */
-.document-selector { max-width: 550px; margin-bottom: var(--space-6); }
+.documents-page > .page-heading { margin-bottom: var(--space-5); }
+.documents-page > .page-heading h1 { font-size: clamp(26px, 3vw, 32px); }
+.document-selector { max-width: 550px; margin-bottom: var(--space-5); }
 .document-selector label, .document-upload label { display: block; color: var(--text-primary); font-size: 13px; font-weight: 600; margin-bottom: var(--space-2); }
 .document-selector select { width: 100%; min-width: 0; min-height: 46px; border: 1px solid var(--border-control); border-radius: var(--radius-control); padding: 10px var(--space-3); background: var(--surface); color: var(--text-primary); font: inherit; text-overflow: ellipsis; }
 .document-selector select:focus-visible { outline: 3px solid var(--focus); outline-offset: var(--focus-offset-wide); }
-.document-upload { padding: 26px; border-color: var(--border); }
-.document-upload h2 { font-size: 18px; }
+.document-upload { min-width: 0; }
+.document-heading-actions { flex-wrap: wrap; flex-shrink: 0; }
 .document-upload form { margin-top: var(--space-5); }
 .document-upload input { display: block; width: 100%; max-width: 100%; min-width: 0; padding: var(--space-3); border: 1px dashed var(--border-control); border-radius: var(--radius-control); background: var(--surface-subtle); color: var(--text-muted); font-size: 13px; }
 .document-upload input::file-selector-button { border: 1px solid var(--border-control); background: var(--surface); padding: 9px var(--space-3); margin-right: var(--space-3); color: var(--accent-text); border-radius: 5px; cursor: pointer; }
@@ -466,13 +468,18 @@ h1 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; font-weight: 650;
 .document-upload .auth-error { margin-top: var(--space-4); }
 .document-list-heading { margin-top: 30px; }
 .document-list-heading h2 { overflow-wrap: anywhere; }
-.document-list { display: grid; gap: 14px; }
-.document-card { display: flex; align-items: center; gap: 18px; padding: 22px; min-width: 0; }
-.document-card .feature-icon { margin: 0; flex-shrink: 0; }
+.document-list { display: grid; gap: var(--space-2); }
+.document-card { display: grid; grid-template-columns: 18px 36px minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding: var(--space-4); min-width: 0; box-shadow: none; }
+.document-card .feature-icon { margin: 0; width: 36px; height: 36px; }
+.document-row-actions { display: flex; align-items: center; gap: var(--space-2); }
+.document-row-actions .dropdown-trigger { min-width: 44px; min-height: 44px; }
 .document-info { min-width: 0; flex: 1; }
 .document-info h3 { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
-.document-info p { font-size: 12px; color: var(--text-muted); margin: 6px 0 9px; }
-.document-status { display: inline-block; border: 1px solid var(--border); border-radius: 5px; background: var(--success-surface); color: var(--success-text); padding: 3px var(--space-2); font-size: 11px; }
+.document-info p { font-size: 12px; color: var(--text-muted); margin: var(--space-1) 0 var(--space-2); }
+.document-status { display: inline-block; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-subtle); color: var(--text-muted); padding: 3px var(--space-2); font-size: 12px; }
+.document-status.indexed { background: var(--success-surface); color: var(--success-text); border-color: var(--success-border); }
+.document-status.failed { background: var(--error-surface); color: var(--error-text); border-color: var(--error-border); }
+.document-status.processing { background: var(--warning-surface); color: var(--warning-text); }
 .document-card button:disabled { opacity: 1; color: var(--text-disabled); cursor: not-allowed; }
 .document-inspection dl { display: grid; gap: var(--space-4); margin: var(--space-5) 0; }
 .document-inspection dt { font-weight: 600; margin-bottom: 5px; }
@@ -481,11 +488,11 @@ h1 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; font-weight: 650;
 .document-inspection h2:focus-visible { outline: 3px solid var(--focus); outline-offset: var(--focus-offset-wide); }
 .document-inspection .kb-actions { flex-wrap: wrap; }
 @media (max-width: 600px) {
-  .document-upload { padding: var(--space-5); }
   .document-selector select { font-size: 16px; }
-  .document-card { flex-wrap: wrap; padding: var(--space-5); align-items: flex-start; gap: var(--space-3); }
-  .document-card .document-info { flex-basis: calc(100% - 56px); }
-  .document-card > button { margin-left: 52px; }
+  .document-card { grid-template-columns: 18px minmax(0, 1fr) auto; padding: var(--space-3); align-items: start; }
+  .document-card .feature-icon { display: none; }
+  .document-row-check { margin-top: var(--space-3); }
+  .document-row-actions { flex-direction: column; align-items: flex-end; }
   .document-upload input { font-size: 12px; padding: 9px; }
 }
 
@@ -640,9 +647,11 @@ h1 { font-size: 30px; line-height: 1.25; letter-spacing: -1px; font-weight: 650;
 .document-check { display: inline-flex; align-items: center; gap: 9px; font-size: 14px; }
 .document-check input, .document-row-check { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--accent); }
 .document-check input:focus-visible, .document-row-check:focus-visible { outline: 2px solid var(--focus); outline-offset: var(--focus-offset); }
-.document-bulk-bar { width: 100%; min-width: 0; padding: 18px; }
-.document-bulk-bar p, .document-bulk-result p { margin: 0 0 var(--space-3); }
-.document-bulk-bar .kb-actions { flex-wrap: wrap; margin-bottom: var(--space-3); }
+.document-bulk-bar { width: 100%; min-width: 0; padding: var(--space-3) var(--space-4); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); box-shadow: none; }
+.document-bulk-bar p { margin: 0; }
+.document-bulk-bar #reindex-limit { flex-basis: 100%; font-size: 12px; }
+.document-bulk-result p { margin: 0 0 var(--space-3); }
+.document-bulk-bar .kb-actions { flex-wrap: wrap; margin-left: auto; }
 .document-bulk-result { padding: 18px; margin-bottom: 18px; overflow-wrap: anywhere; }
 .document-bulk-result li { margin: 10px 0; }
 @media (max-width: 600px) { .document-bulk-bar .kb-actions > button { flex: 1 1 140px; } }

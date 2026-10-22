@@ -5,6 +5,10 @@ import Icon from '../components/Icon.jsx'
 import DocumentUpload, { fileSize } from '../components/DocumentUpload.jsx'
 import DocumentBulk from '../components/DocumentBulk.jsx'
 import DocumentInspection from '../components/DocumentInspection.jsx'
+import DropdownMenu from '../components/DropdownMenu.jsx'
+import Modal from '../components/Modal.jsx'
+import Drawer from '../components/Drawer.jsx'
+import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { listKnowledgeBases, browseDocuments, uploadDocument, deleteDocument, processDocument, bulkDeleteDocuments, bulkReindexDocuments } from '../services/api.js'
 
@@ -24,7 +28,6 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
   const [bulkResult, setBulkResult] = useState(null)
   const [bulkError, setBulkError] = useState('')
   const [inspection, setInspection] = useState(null)
-  const inspectionOrigin = useRef(null)
   const [meta, setMeta] = useState({ page: 1, total: 0, total_pages: 0 })
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -33,6 +36,10 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
   const [deleteError, setDeleteError] = useState('')
   const [notice, setNotice] = useState('')
   const [deleting, setDeleting] = useState(null)
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [retryVersion, setRetryVersion] = useState(0)
+  const dialogSession = useRef(0)
+  const restoreDialogFocus = useRef(false)
   const [busy, setBusy] = useState('')
   const [processingId, setProcessingId] = useState(null)
   const [processError, setProcessError] = useState('')
@@ -75,6 +82,7 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
     load()
     return () => {
       active.current = false
+      dialogSession.current++
       listRequest.current?.abort()
       mutation.current?.abort()
     }
@@ -83,6 +91,9 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
   useEffect(() => {
     setSelection({ key: '', ids: [] })
     setConfirmation(null)
+    setUploadOpen(false)
+    setDeleting(null)
+    dialogSession.current++
   }, [selectionKey])
   useEffect(() => () => onBusy(false), [onBusy])
   useEffect(() => {
@@ -93,12 +104,40 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
     }
   }, [confirmation])
 
-  function closeDelete() {
+  // Restore only after both the native closing animation and list refresh finish.
+  useEffect(() => {
+    function restore() {
+      if (!restoreDialogFocus.current || uploadOpen || deleting || busy || loading || document.querySelector('dialog:modal')) return
+      const origin = returnFocus.current
+      const target = origin?.isConnected && !origin.disabled ? origin : heading.current
+      target?.focus()
+      restoreDialogFocus.current = false
+    }
+    document.addEventListener('close', restore, true)
+    restore()
+    return () => document.removeEventListener('close', restore, true)
+  }, [uploadOpen, deleting, busy, loading])
+
+  function closeDialog() {
+    dialogSession.current++
+    setUploadOpen(false)
     setDeleting(null)
     setDeleteError('')
-    requestAnimationFrame(() => {
-      if (active.current) (returnFocus.current?.isConnected ? returnFocus.current : heading.current)?.focus()
-    })
+    restoreDialogFocus.current = true
+  }
+
+  function openDialog(kind, item) {
+    // A closing native dialog still owns the top layer. Never queue a rejected open.
+    if (pending.current || locked || !currentPage || document.querySelector('dialog:modal')) return
+    dialogSession.current++
+    restoreDialogFocus.current = false
+    returnFocus.current = document.activeElement
+    setRetryVersion(0)
+    setNotice('')
+    setDeleteError('')
+    setUploadError('')
+    if (kind === 'upload') setUploadOpen(true)
+    else setDeleting(item)
   }
 
   async function mutate(file) {
@@ -113,39 +152,44 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
     setNotice('')
     const controller = new AbortController()
     mutation.current = controller
+    const attemptSession = dialogSession.current
+    const current = () => active.current && !controller.signal.aborted && dialogSession.current === attemptSession
+    let retryAllowed = false
     try {
       if (file) {
         await uploadDocument(base.id, file, controller.signal)
-        if (controller.signal.aborted || !active.current) return false
+        if (!current()) return false
         setNotice('PDF uploaded.')
+        closeDialog()
       } else {
         await deleteDocument(deleting.id, controller.signal)
-        if (controller.signal.aborted || !active.current) return false
+        if (!current()) return false
         setItems(current => current.filter(item => item.id !== deleting.id))
-        closeDelete()
+        closeDialog()
         setNotice('Document deleted.')
       }
       await load()
       return true
     } catch (error) {
-      if (controller.signal.aborted || !active.current) return false
+      if (!current()) return false
       if (error.status === 401) logout()
       else if (error.status === 404) {
         if (file) onRefreshBases()
         else {
           setItems(current => current.filter(item => item.id !== deleting.id))
-          closeDelete()
+          closeDialog()
           setNotice('This document is no longer available. Refreshing the list.')
           await load()
         }
       } else if (file) setUploadError(error.message)
-      else setDeleteError(error.message)
+      else { setDeleteError(error.message); retryAllowed = true }
       return false
     } finally {
-      pending.current = false
-      if (active.current) {
-        setBusy('')
-        onBusy(false)
+      if (mutation.current === controller) {
+        pending.current = false
+        if (active.current) { setBusy(''); onBusy(false) }
+        // Preserve the existing explicit failed-delete retry path, never success/cancellation.
+        if (retryAllowed && current()) setRetryVersion(version => version + 1)
       }
     }
   }
@@ -153,7 +197,7 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
   const currentPage = !loading && !waiting && !loadError && loadedKey === queryKey
   const selectedIds = currentPage && selection.key === selectionKey ? selection.ids.filter(id => items.some(item => item.id === id)) : []
   const visibleConfirmation = confirmation?.key === selectionKey && currentPage ? confirmation : null
-  const locked = Boolean(busy || deleting || visibleConfirmation)
+  const locked = Boolean(busy || uploadOpen || deleting || visibleConfirmation)
   const noteInspection = useCallback(data => {
     // A newer non-Uploaded snapshot can only suppress eligibility, never restore it.
     if (data.operation_state === 'claimed_unknown' || data.document_state !== 'uploaded' || data.attention === 'outcome_uncertain' || data.attention === 'requires_review') {
@@ -233,10 +277,17 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
   return <>
     <div role="status" aria-live="polite">{notice && <p className="auth-success">{notice}</p>}</div>
     {processError && <p className="auth-error" role="alert">{processError}</p>}
-    <DocumentUpload busy={locked || !currentPage} uploading={busy === 'upload'} error={uploadError} onUpload={mutate} onChange={() => setUploadError('')} />
+    <Modal open={uploadOpen} onClose={() => { if (!pending.current) closeDialog() }} title="Upload PDF" dismissible={!busy}>
+      {uploadOpen && <DocumentUpload busy={Boolean(busy) || !currentPage} uploading={busy === 'upload'} error={uploadError} onUpload={mutate} onChange={() => setUploadError('')} />}
+    </Modal>
+    <ConfirmDialog open={Boolean(deleting)} title="Delete document?" description={<><span>Delete <strong>{deleting?.filename}</strong>? The original PDF and its metadata will be removed. This cannot be undone.</span>{deleteError && <span role="alert" className="auth-error kb-delete-error">{deleteError}</span>}</>}
+      confirmLabel="Confirm deletion" destructive pending={Boolean(busy)} retryVersion={retryVersion} onConfirm={() => mutate()} onCancel={() => { if (!pending.current) closeDialog() }} />
     <div className="kb-toolbar document-list-heading">
       <div><h2 ref={heading} tabIndex={-1}>Documents in {base.name}</h2><p className="kb-muted">Original files · Indexed reflects last-confirmed vector synchronization</p></div>
-      <button className="session-button" disabled={locked || loading} onClick={load}>Refresh documents</button>
+      <div className="kb-actions document-heading-actions">
+        <button className="kb-primary" disabled={locked || !currentPage} onClick={() => openDialog('upload')}>Upload PDF</button>
+        <button className="session-button" disabled={locked || loading} onClick={load}>Refresh documents</button>
+      </div>
     </div>
     <ManagementControls state={view} documents disabled={locked} />
     <ManagementPagination meta={meta} loading={loading || waiting} change={change} disabled={locked || Boolean(loadError)} />
@@ -245,23 +296,10 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
       onClear={() => setSelection({ key: '', ids: [] })} onOpen={openBulk}
       confirmation={visibleConfirmation} onCancel={closeBulk} onConfirm={submitBulk}
       busy={busy === 'bulk'} result={bulkResult} error={bulkError} />
-    {inspection?.key === selectionKey && currentPage && !busy && <DocumentInspection
-      key={inspection.item.id} document={inspection.item} onSnapshot={noteInspection} onClose={() => {
-        setInspection(null)
-        requestAnimationFrame(() => {
-          const origin = inspectionOrigin.current
-          if (active.current) (origin?.isConnected && !origin.disabled ? origin : heading.current)?.focus()
-        })
-      }} />}
-    {deleting && <section className="panel kb-editor kb-delete" aria-labelledby="document-delete-title">
-      <h2 id="document-delete-title">Delete document?</h2>
-      <p>Delete <strong>{deleting.filename}</strong>? The original PDF and its metadata will be removed. This cannot be undone.</p>
-      {deleteError && <p role="alert" className="auth-error">{deleteError}</p>}
-      <div className="kb-actions">
-        <button autoFocus className="session-button" disabled={Boolean(busy)} onClick={closeDelete}>Cancel</button>
-        <button className="kb-danger" disabled={Boolean(busy)} onClick={() => mutate()}>{busy === 'delete' ? 'Deleting…' : 'Confirm deletion'}</button>
-      </div>
-    </section>}
+    <Drawer open={Boolean(inspection?.key === selectionKey && currentPage && !busy)} title="Document status inspection" onClose={() => setInspection(null)}>
+      {inspection?.key === selectionKey && currentPage && !busy && <DocumentInspection
+        key={inspection.item.id} document={inspection.item} onSnapshot={noteInspection} />}
+    </Drawer>
     {loading && items.length === 0 ? <section className="panel kb-state" role="status">Loading documents…</section>
       : loadError ? <section className="panel kb-state">
         <p role="alert">{loadError.message}</p>
@@ -269,7 +307,7 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
       </section>
       : items.length === 0 ? <section className="panel empty-state">
         <span className="empty-icon"><Icon name="document" size={32} /></span>
-        <h2>{query.search || query.status !== 'all' ? 'No matching documents' : 'No documents here yet'}</h2><p>{query.search || query.status !== 'all' ? 'Try another filename or clear your filters.' : 'Choose a PDF above to add your first document to this Knowledge Base.'}</p>
+        <h2>{query.search || query.status !== 'all' ? 'No matching documents' : 'No documents here yet'}</h2><p>{query.search || query.status !== 'all' ? 'Try another filename or clear your filters.' : 'Use Upload PDF to add your first document to this Knowledge Base.'}</p>
       </section>
       : <div className="document-list" aria-busy={loading || waiting}>{items.map(item => <article key={item.id} className="panel document-card">
         <input className="document-row-check" type="checkbox" aria-label={'Select ' + item.filename}
@@ -281,21 +319,21 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
         <div className="document-info">
           <h3>{item.filename}</h3>
           <p>{fileSize(item.file_size)} <span aria-hidden="true">·</span> Added <time dateTime={item.created_at}>{new Date(item.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</time></p>
-          <span className="document-status">{item.failed ? 'Failed' : item.indexed ? 'Indexed' : ({ uploaded: 'Uploaded', processing: 'Processing', processed: 'Processed', failed: 'Failed' })[item.status] || 'Status unavailable'}</span>
+          <span className={'document-status ' + (item.failed ? 'failed' : item.indexed ? 'indexed' : item.status)}>{item.failed ? 'Failed' : item.indexed ? 'Indexed' : ({ uploaded: 'Uploaded', processing: 'Processing', processed: 'Processed', failed: 'Failed' })[item.status] || 'Status unavailable'}</span>
         </div>
-        {item.status === 'uploaded' && !item.indexed && !item.failed && !uncertainIds.includes(item.id) && <button
-          className="session-button" disabled={locked || !currentPage} aria-label={'Process PDF ' + item.filename}
-          onClick={() => processPdf(item)}>{processingId === item.id ? 'Processing…' : 'Process PDF'}</button>}
-        <button className="session-button" disabled={locked || !currentPage} aria-label={'Inspect status for ' + item.filename} onClick={event => {
-          inspectionOrigin.current = event.currentTarget
-          setInspection({ key: selectionKey, item })
-        }}>Inspect status</button>
-        <button className="session-button kb-delete-link" disabled={locked || !currentPage} aria-label={'Delete ' + item.filename} onClick={event => {
-          returnFocus.current = event.currentTarget
-          setNotice('')
-          setDeleteError('')
-          setDeleting(item)
-        }}>Delete</button>
+        <div className="document-row-actions">
+          {processingId === item.id && <span className="kb-muted" role="status">Processing…</span>}
+          <DropdownMenu triggerLabel={'Actions for ' + item.filename} disabled={locked || !currentPage} items={[
+            ...(item.status === 'uploaded' && !item.indexed && !item.failed && !uncertainIds.includes(item.id) ? [{
+              id: 'process', label: 'Process PDF', disabled: locked || !currentPage, onSelect: () => processPdf(item),
+            }] : []),
+            { id: 'inspect', label: 'Inspect status', disabled: locked || !currentPage, onSelect: () => {
+              if (pending.current || locked || !currentPage || document.querySelector('dialog:modal')) return
+              setInspection({ key: selectionKey, item })
+            } },
+            { id: 'delete', label: 'Delete', destructive: true, disabled: locked || !currentPage, onSelect: () => openDialog('delete', item) },
+          ]} />
+        </div>
       </article>)}</div>}
   </>
 }
@@ -342,7 +380,7 @@ export default function Documents() {
   }
 
   const base = bases.find(item => item.id === selected)
-  return <>
+  return <div className="documents-page">
     <Header eyebrow="YOUR SOURCE OF KNOWLEDGE" title="Documents" description="Upload and organize original PDFs within your Knowledge Bases." />
     {notice && <p className="auth-success" role="status">{notice}</p>}
     {loading ? <section className="panel kb-state" role="status">Loading Knowledge Bases…</section>
@@ -364,5 +402,5 @@ export default function Documents() {
         </div>
         {base && <DocumentCollection key={base.id} base={base} onBusy={setBusy} onRefreshBases={reconcile} />}
       </>}
-  </>
+  </div>
 }

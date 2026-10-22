@@ -173,9 +173,13 @@ async function noOverflow(page) {
     });
     await scenario('dark management inputs, select, textarea, checkbox and file control', async ({ page, go }) => {
       await go('/documents?kb=' + base.id); await page.locator('.document-card').waitFor();
-      for (const selector of ['.management-search input', '.document-selector select', '.management-controls select', '.document-upload input', '.document-selector label']) {
+      for (const selector of ['.management-search input', '.document-selector select', '.management-controls select', '.document-selector label']) {
         const s = await readable(page.locator(selector).first(), selector); assert.ok(luminance(s.background) < .1);
       }
+      await page.getByRole('button', { name: 'Upload PDF', exact: true }).click();
+      const fileStyle = await readable(page.locator('.document-upload input'), 'PDF file input'); assert.ok(luminance(fileStyle.background) < .1);
+      await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
+      await page.waitForFunction(() => !document.querySelector('dialog:modal'));
       const checkbox = page.getByRole('checkbox', { name: 'Select current page', exact: true });
       await checkbox.check(); assert.ok(await checkbox.isChecked());
       assert.equal(await checkbox.evaluate(e => getComputedStyle(e).accentColor), rgb('14B8A6'));
@@ -210,7 +214,11 @@ async function noOverflow(page) {
       assert.equal(await page.locator('.dashboard-health').count(), 0);
       assert.ok(!state.calls.some(path => path.startsWith('/api/health')));
       await go('/documents?kb=' + base.id); await page.locator('.document-card').waitFor();
-      await page.getByRole('button', { name: 'Inspect status for ' + doc.filename, exact: true }).click();
+      const documentActions = page.getByRole('button', { name: 'Actions for ' + doc.filename, exact: true });
+      await documentActions.scrollIntoViewIfNeeded();
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      await documentActions.click();
+      await page.getByRole('menuitem', { name: 'Inspect status', exact: true }).click();
       const uncertain = page.getByText('Do not retry or delete this document until its state has been verified.', { exact: true });
       await uncertain.waitFor(); await readable(uncertain, 'uncertain operation notice');
       await go('/ask'); await page.locator('#ask-question').waitFor(); state.askGate = deferred();

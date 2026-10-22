@@ -37,7 +37,7 @@ function paginate(rows,p,docs){
   const page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error'&&!m.text().startsWith('Failed to load resource:'))errors.push(m.text())});
   const go=path=>page.goto(ROOT+path,{waitUntil:'domcontentloaded'}),ready=async()=>{await page.waitForTimeout(80);await page.waitForFunction(()=>document.querySelector('.management-pagination p')?.textContent.includes('results · Page '+(new URL(location.href).searchParams.get('page')||'1')+' of'))};
-  const button=name=>page.getByRole('button',{name,exact:true}),settle=async()=>{await page.waitForTimeout(350);await ready()};
+  const button=name=>name==='Upload PDF'?page.locator('.document-upload button[type=submit], .document-heading-actions > .kb-primary:not(:disabled)'):page.getByRole('button',{name,exact:true}),settle=async()=>{await page.waitForTimeout(350);await ready()};
   try{await run({page,state,go,ready,settle,button});assert.deepEqual(errors,[]);assert.ok(!(await page.locator('body').innerText()).includes('PRIVATE'));passed++;console.log('PASS '+name)}catch(e){console.log('FAIL '+name);throw e}finally{await context.close()}
  }
  try{
@@ -67,12 +67,12 @@ function paginate(rows,p,docs){
    state.delay=url=>url.pathname.includes('/kb-1/')?800:0;await go('/documents');await page.getByLabel('Knowledge Base',{exact:true}).selectOption('kb-2');await ready();await page.getByRole('heading',{name:'Other collection.pdf'}).waitFor();await page.waitForTimeout(900);assert.equal(await page.locator('.document-card').count(),1);assert.equal(new URL(page.url()).searchParams.get('kb'),'kb-2');
   });
   for(const path of ['/knowledge-bases','/documents'])await scenario('delete last item '+path,async({page,state,go,ready,button})=>{
-   state.bases=state.bases.slice(0,2);state.docs=state.docs.slice(0,2);await go(path+'?limit=1&page=2');await ready();if(path==='/documents') await page.locator('.document-card button').last().click();
+   state.bases=state.bases.slice(0,2);state.docs=state.docs.slice(0,2);await go(path+'?limit=1&page=2');await ready();if(path==='/documents') {await page.locator('.document-card').last().getByRole('button',{name:/^Actions for /}).click();await page.getByRole('menuitem',{name:'Delete',exact:true}).click();}
    else {const card=page.locator('.kb-card').last();await card.getByRole('button',{name:/^Actions for /}).click();await page.getByRole('menuitem',{name:'Delete',exact:true}).click();await page.getByRole('dialog',{name:'Delete Knowledge Base?'}).waitFor();}
    await button('Confirm deletion').click();await page.waitForFunction(()=>new URL(location.href).searchParams.get('page')==='1');await ready();assert.equal(await page.locator(path==='/documents'?'.document-card':'.kb-card').count(),1);
   });
   await scenario('upload refresh respects indexed filter',async({page,state,go,ready,button})=>{
-   await go('/documents?status=indexed');await ready();const before=state.calls.filter(c=>c.path.endsWith('/browse')).length;await page.getByLabel('PDF file',{exact:true}).setInputFiles({name:'uploaded.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-test')});await button('Upload PDF').click();await page.getByText('PDF uploaded.',{exact:true}).waitFor();await ready();assert.ok(state.calls.filter(c=>c.path.endsWith('/browse')).length>before);assert.equal(await page.getByRole('heading',{name:'uploaded.pdf',exact:true}).count(),0);
+   await go('/documents?status=indexed');await ready();const before=state.calls.filter(c=>c.path.endsWith('/browse')).length;await button('Upload PDF').click();await page.getByLabel('PDF file',{exact:true}).setInputFiles({name:'uploaded.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-test')});await button('Upload PDF').click();await page.getByText('PDF uploaded.',{exact:true}).waitFor();await ready();assert.ok(state.calls.filter(c=>c.path.endsWith('/browse')).length>before);assert.equal(await page.getByRole('heading',{name:'uploaded.pdf',exact:true}).count(),0);
   });
   await scenario('Ask selector retains all 25 KBs',async({page,go})=>{await go('/ask');const selector=page.getByLabel('Knowledge Base',{exact:true});await selector.waitFor();assert.equal(await selector.locator('option').count(),25);await selector.selectOption('kb-25')});
   await scenario('expired session',async({page,state,go})=>{state.status=401;await go('/knowledge-bases');await page.getByRole('heading',{name:'Welcome back',exact:true}).waitFor();assert.equal(await page.evaluate(()=>localStorage.getItem('deepdocs_access_token')),null)});

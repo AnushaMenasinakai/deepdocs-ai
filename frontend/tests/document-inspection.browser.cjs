@@ -20,7 +20,8 @@ const snapshot=(n,changes={})=>({document_id:id(n),operation_state:'idle',docume
    if(path.endsWith('/operation-status')){
     assert.equal(method,'GET');assert.match(req.headers().authorization,/Bearer /);
     const n=parseInt(path.split('/')[3],16),result=state.result(n),status=state.status,network=state.network;
-    await new Promise(r=>setTimeout(r,state.delay));
+    if(state.gate)await state.gate;
+    else await new Promise(r=>setTimeout(r,state.delay));
     if(network)return route.abort();
     return route.fulfill({status,json:status===200?result:{detail:'PRIVATE provider /path secret'},headers});
    }
@@ -35,8 +36,12 @@ const snapshot=(n,changes={})=>({document_id:id(n),operation_state:'idle',docume
   });
   const page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error'&&!/Failed to load resource|net::ERR_FAILED/.test(m.text()))errors.push(m.text())});
-  const panel=()=>page.getByRole('region',{name:'Document status inspection'}),button=name=>page.getByRole('button',{name,exact:true});
-  const inspect=n=>page.getByRole('button',{name:'Inspect status for '+state.docs.find(d=>d.id===id(n)).filename,exact:true}).click();
+  const panel=()=>page.getByRole('dialog',{name:'Document status inspection'}),button=name=>page.getByRole('button',{name,exact:true});
+  const inspect=async n=>{
+   const trigger=page.getByRole('button',{name:'Actions for '+state.docs.find(d=>d.id===id(n)).filename,exact:true});
+   await trigger.scrollIntoViewIfNeeded();await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+   await trigger.click();await page.getByRole('menuitem',{name:'Inspect status',exact:true}).click();
+  };
   const ready=()=>page.getByText(/Inspection received at/).waitFor();
   try{
    await page.goto(ROOT+'/documents?search=Reference&sort=filename&order=asc');await page.locator('.document-card').first().waitFor();
@@ -45,13 +50,13 @@ const snapshot=(n,changes={})=>({document_id:id(n),operation_state:'idle',docume
  }
  try{
   await scenario('action, safe uploaded snapshot, selection and URL unchanged, keyboard focus',async({page,state,panel,inspect,ready,button})=>{
-   assert.equal(await page.getByRole('button',{name:/Inspect status for/}).count(),2);
+   assert.equal(await page.getByRole('button',{name:/Actions for/}).count(),2);
    await page.getByRole('checkbox',{name:'Select Reference 101.pdf',exact:true}).check();const url=page.url();
    await inspect(101);await ready();assert.equal(page.url(),url);assert.equal(await page.getByRole('checkbox',{name:'Select Reference 101.pdf',exact:true}).isChecked(),true);
    await panel().getByText('This document has not completed processing.').waitFor();await panel().getByText('No operation claim was recorded at inspection time.').waitFor();
-   assert.equal(await page.locator('#inspection-title').evaluate(e=>e===document.activeElement),true);
-   assert.ok(state.calls.every(c=>c.method==='GET'));await button('Close inspection').click();
-   await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Inspect status for Reference 101.pdf');
+   assert.equal(await page.locator('.side-drawer-title').evaluate(e=>e===document.activeElement),true);
+   assert.ok(state.calls.every(c=>c.method==='GET'));await button('Close drawer').click();
+   await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Actions for Reference 101.pdf');
   });
   for(const [name,changes,text] of [
    ['indexed',{document_state:'indexed',attention:'none',recommended_action:'none'},'Indexed (last confirmed)'],
@@ -77,27 +82,22 @@ const snapshot=(n,changes={})=>({document_id:id(n),operation_state:'idle',docume
    state.result=n=>kind==='id'?snapshot(999):kind==='enum'?snapshot(n,{attention:'PRIVATE'}):snapshot(n,{operation_state:'claimed_unknown'});
    await inspect(101);await page.getByRole('alert').filter({hasText:/could not read/}).waitFor();
   });
-  await scenario('new document ignores old delayed response',async({state,inspect,ready,panel,page})=>{
-   state.delay=500;await inspect(101);state.delay=0;state.result=n=>snapshot(n,{document_state:'indexed',attention:'none',recommended_action:'none'});
+  await scenario('new document ignores old delayed response',async({state,inspect,ready,panel,page,button})=>{
+   state.delay=500;await inspect(101);await button('Close drawer').click();await page.waitForFunction(()=>!document.querySelector('dialog:modal'));state.delay=0;state.result=n=>snapshot(n,{document_state:'indexed',attention:'none',recommended_action:'none'});
    await inspect(102);await ready();await page.waitForTimeout(550);await panel().getByText('Reference 102.pdf',{exact:true}).waitFor();await panel().getByText('Indexed (last confirmed)').waitFor();
   });
   for(const change of ['kb','search','status','sort','order','page','refresh','unmount'])await scenario('inspection invalidated on '+change,async({state,inspect,page,panel,button})=>{
    state.delay=350;await inspect(101);
-   if(change==='kb')await page.getByLabel('Knowledge Base',{exact:true}).selectOption(id(2));
-   if(change==='search')await page.getByLabel('Search filenames').fill('Changed');
-   if(change==='status')await page.getByLabel('Status',{exact:true}).selectOption('failed');
-   if(change==='sort')await page.getByLabel('Sort by').selectOption('created_at');
-   if(change==='order')await page.getByLabel('Order',{exact:true}).selectOption('desc');
-   if(change==='page')await page.evaluate(()=>{const url=new URL(location.href);url.searchParams.set('page','2');history.pushState({},'',url);dispatchEvent(new PopStateEvent('popstate'))});
-   if(change==='refresh')await button('Refresh documents').click();
+   if(!['refresh','unmount'].includes(change))await page.evaluate(({change,value})=>{const url=new URL(location.href);url.searchParams.set(change,value);history.pushState({},'',url);dispatchEvent(new PopStateEvent('popstate'))},{change,value:({kb:id(2),search:'Changed',status:'failed',sort:'created_at',order:'desc',page:'2'})[change]});
+   if(change==='refresh'){await button('Close drawer').click();await page.waitForFunction(()=>!document.querySelector('dialog:modal'));await button('Refresh documents').click()}
    if(change==='unmount')await page.goto('about:blank');
    await page.waitForTimeout(450);assert.equal(await panel().count(),0);
   });
   await scenario('single deletion closes inspection',async({inspect,ready,button,page,panel})=>{
-   await inspect(101);await ready();await button('Delete Reference 101.pdf').click();await button('Confirm deletion').click();await page.getByText('Document deleted.',{exact:true}).waitFor();assert.equal(await panel().count(),0);
+   await inspect(101);await ready();await button('Close drawer').click();await page.waitForFunction(()=>!document.querySelector('dialog:modal'));await button('Actions for Reference 101.pdf').scrollIntoViewIfNeeded();await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await button('Actions for Reference 101.pdf').click();await page.getByRole('menuitem',{name:'Delete',exact:true}).click();await button('Confirm deletion').click();await page.getByText('Document deleted.',{exact:true}).waitFor();assert.equal(await panel().count(),0);
   });
   for(const action of ['delete','reindex'])await scenario('inspection preserves bulk '+action,async({inspect,ready,button,page,panel,state})=>{
-   await page.getByRole('checkbox',{name:'Select current page',exact:true}).check();await inspect(101);await ready();
+   await page.getByRole('checkbox',{name:'Select current page',exact:true}).check();await inspect(101);await ready();await button('Close drawer').click();await page.waitForFunction(()=>!document.querySelector('dialog:modal'));
    await button(action==='delete'?'Delete selected':'Re-index selected').click();await button('Cancel bulk action').click();
    assert.equal(await page.getByRole('checkbox',{name:'Select current page',exact:true}).isChecked(),true);
    await button(action==='delete'?'Delete selected':'Re-index selected').click();await button(action==='delete'?'Confirm bulk deletion':'Confirm bulk re-index').click();
@@ -105,10 +105,47 @@ const snapshot=(n,changes={})=>({document_id:id(n),operation_state:'idle',docume
    assert.equal(await panel().count(),0);assert.equal(state.calls.filter(c=>c.method==='POST').length,1);
   });
   await scenario('401 centralized sign out',async({state,inspect,page})=>{state.status=401;await inspect(101);await page.waitForURL('**/login');assert.equal(await page.evaluate(()=>localStorage.getItem('deepdocs_access_token')),null)});
-  for(const width of [1440,768,390])await scenario('responsive safe text '+width,async({state,inspect,ready,panel,page})=>{
-   state.docs[0].filename='<img src=x onerror=alert(1)>-'+('long-name-'.repeat(20))+'.pdf';await page.getByRole('button',{name:'Refresh documents',exact:true}).click();await page.getByRole('button',{name:'Inspect status for '+state.docs[0].filename,exact:true}).waitFor();
+  for(const width of [1440,1024,768,600,390])await scenario('responsive safe text '+width,async({state,inspect,ready,panel,page})=>{
+   state.docs[0].filename='<img src=x onerror=alert(1)>-'+('long-name-'.repeat(20))+'.pdf';await page.getByRole('button',{name:'Refresh documents',exact:true}).click();await page.getByRole('button',{name:'Actions for '+state.docs[0].filename,exact:true}).waitFor();
    await inspect(101);await ready();assert.equal(await panel().locator('img').count(),0);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+   await panel().evaluate(e=>Promise.allSettled(e.getAnimations().map(animation=>animation.finished)));
+   const box=await panel().boundingBox();assert.ok(box.x>=0&&box.x+box.width<=width+1);
+   await page.setViewportSize({width,height:400});
+   const scroll=panel().locator('.side-drawer-content');assert.equal(await scroll.evaluate(e=>e.scrollHeight>e.clientHeight),true);
+   await scroll.evaluate(e=>{e.scrollTop=e.scrollHeight});assert.ok(await scroll.evaluate(e=>e.scrollTop)>0);
+   await panel().getByRole('button',{name:'Close drawer'}).click();await page.waitForFunction(()=>!document.querySelector('dialog:modal'));
+   assert.equal(await page.evaluate(()=>document.body.style.overflow),'');
   },width);
+  for(const method of ['Escape','backdrop','close'])await scenario('drawer dismissal, focus containment and read-only '+method,async({page,state,inspect,ready,button,panel})=>{
+   await inspect(101);await ready();assert.equal(await panel().getByRole('button',{name:'Close drawer'}).count(),1);
+   await page.keyboard.press('Tab');assert.equal(await button('Close drawer').evaluate(e=>e===document.activeElement),true);
+   await page.keyboard.press('Shift+Tab');assert.equal(await button('Inspect again').evaluate(e=>e===document.activeElement),true);
+   await page.keyboard.press('Tab');assert.equal(await button('Close drawer').evaluate(e=>e===document.activeElement),true);
+   assert.equal(await page.evaluate(()=>document.body.style.overflow),'hidden');
+   // Native modal blocks the page, and the parent refuses a competing modal open.
+   await page.locator('.document-heading-actions > .kb-primary').evaluate(e=>e.click());
+   assert.equal(await page.locator('dialog:modal').count(),1);
+   if(method==='Escape')await page.keyboard.press('Escape');else if(method==='backdrop')await page.mouse.click(8,500);else await button('Close drawer').click();
+   await page.locator('.document-heading-actions > .kb-primary').evaluate(e=>e.click());
+   await page.waitForFunction(()=>!document.querySelector('dialog:modal'));
+   assert.equal(await page.evaluate(()=>document.body.style.overflow),'');
+   assert.equal(await button('Actions for Reference 101.pdf').evaluate(e=>e===document.activeElement),true);
+   assert.equal(state.calls.filter(c=>c.path.endsWith('/operation-status')).length,1);assert.ok(state.calls.every(c=>c.method==='GET'));
+  });
+  await scenario('close aborts pending inspection and delayed snapshot cannot suppress another session',async({page,state,inspect,ready,button,panel})=>{
+   let release;state.gate=new Promise(resolve=>{release=resolve});
+   state.result=n=>snapshot(n,{document_state:'processed',attention:'needs_reindex',recommended_action:'reindex'});
+   const requested=page.waitForRequest(r=>r.url().endsWith('/operation-status'));
+   await inspect(101);const request=await requested;
+   const aborted=page.waitForEvent('requestfailed',r=>r===request);
+   await button('Close drawer').click();await aborted;
+   await page.waitForFunction(()=>!document.querySelector('dialog:modal'));
+   state.gate=null;state.result=n=>snapshot(n);release();
+   await inspect(102);await ready();await panel().getByText('Reference 102.pdf',{exact:true}).waitFor();
+   await button('Close drawer').click();await page.waitForFunction(()=>!document.querySelector('dialog:modal'));
+   await button('Actions for Reference 101.pdf').click();assert.equal(await page.getByRole('menuitem',{name:'Process PDF',exact:true}).isEnabled(),true);
+   assert.equal(state.calls.filter(c=>c.path.endsWith('/operation-status')).length,2);assert.ok(state.calls.every(c=>c.method==='GET'));
+  });
   console.log(`Document inspection: ${passed} scenarios passed; no unexpected console/runtime errors.`);
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

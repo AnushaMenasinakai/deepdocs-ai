@@ -46,7 +46,7 @@ const doc=n=>({id:id(n+100),knowledge_base_id:id(1),filename:'Reference '+n+'.pd
   });
   const page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error'&&!m.text().startsWith('Failed to load resource:'))errors.push(m.text())});
-  const button=name=>page.getByRole('button',{name,exact:true});
+  const button=name=>name==='Upload PDF'?page.locator('.document-upload button[type=submit], .document-heading-actions > .kb-primary:not(:disabled)'):page.getByRole('button',{name,exact:true});
   const pageCheck=()=>page.getByRole('checkbox',{name:'Select current page',exact:true});
   const rows=()=>page.locator('.document-row-check');
   const ready=async()=>{await page.waitForTimeout(90);await page.waitForFunction(()=>document.querySelector('.management-pagination p')?.textContent.includes('results ·')&&!document.querySelector('.document-bulk-controls input')?.disabled)};
@@ -81,7 +81,7 @@ const doc=n=>({id:id(n+100),knowledge_base_id:id(1),filename:'Reference '+n+'.pd
    assert.ok(!new URL(page.url()).search.includes(id(107)));
   });
   await scenario('upload refresh clears selection',async({page,go,select,button,ready})=>{
-   await go();await select();await page.getByLabel('PDF file',{exact:true}).setInputFiles({name:'uploaded.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-test')});await button('Upload PDF').click();await page.getByText('PDF uploaded.',{exact:true}).waitFor();await ready();assert.equal(await button('Delete selected').count(),0);
+   await go();await select();await button('Upload PDF').click();await page.getByLabel('PDF file',{exact:true}).setInputFiles({name:'uploaded.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-test')});await button('Upload PDF').click();await page.getByText('PDF uploaded.',{exact:true}).waitFor();await ready();assert.equal(await button('Delete selected').count(),0);
   });
   for(const operation of ['delete','reindex'])await scenario(operation+' confirmation, cancellation, success and duplicate prevention',async({page,state,go,select,open,confirm,button,calls,rows,ready})=>{
    await go();await select(2);await open(operation);assert.equal(calls().length,0);await button('Cancel bulk action').click();assert.equal(calls().length,0);await open(operation);state.delay=500;

@@ -37,8 +37,8 @@ export default function DocumentUpload({ busy, uploading, error, onUpload, onCha
     if (await onUpload(file)) clear()
   }
 
-  return <section className="panel document-upload" aria-labelledby="upload-title">
-    <div><h2 id="upload-title">Add a PDF</h2><p className="kb-muted">Keep your original PDFs together. Uploading stores the file; processing is a separate step.</p></div>
+  return <section className="document-upload" aria-label="PDF upload form">
+    <div><p className="kb-muted">Keep your original PDFs together. Uploading stores the file; processing is a separate step.</p></div>
     <form onSubmit={submit} aria-busy={uploading}>
       <label htmlFor="pdf-file">PDF file</label>
       <input ref={input} id="pdf-file" type="file" accept=".pdf,application/pdf" disabled={busy} onChange={event => choose(event.target.files?.[0] || null)} aria-describedby="pdf-hint" />

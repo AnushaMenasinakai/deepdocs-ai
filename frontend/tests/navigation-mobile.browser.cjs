@@ -131,6 +131,8 @@ async function overflow(page) { assert.ok(await page.evaluate(() => document.doc
       await open(); state.expired = true;
       // A real client-side shell unmount, rather than a full browser reload.
       await drawer.getByRole('link', { name: 'Knowledge Bases', exact: true }).click();
+      // Dashboard has the same heading; wait for the actual authentication redirect.
+      await page.waitForURL('**/login**');
       await page.getByRole('heading', { name: 'Welcome back', exact: true }).waitFor();
       assert.equal(await page.locator('#mobile-navigation').count(), 0);
       assert.equal(await page.evaluate(() => document.body.style.overflow), '');
