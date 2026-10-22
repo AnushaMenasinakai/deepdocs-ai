@@ -1,9 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Drawer from './Drawer.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { listAskHistory, deleteAskHistory } from '../services/api.js'
-import AnswerContent from './AnswerContent.jsx'
 
-export default function AskHistory({ knowledgeBaseId, revision }) {
+export default function AskHistory({ knowledgeBaseId, revision, selectedId, selectionDisabled, onSelect, onDeleted }) {
+  const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 900px)').matches)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const historyButton = useRef(null)
+  const restoreDesktop = useRef(false)
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 900px)')
+    function resize() {
+      if (!media.matches) { restoreDesktop.current = Boolean(document.querySelector('.ask-history')?.closest('dialog:modal')); setDrawerOpen(false) }
+      setMobile(media.matches)
+    }
+    media.addEventListener('change', resize)
+    return () => media.removeEventListener('change', resize)
+  }, [])
   const { logout } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -15,6 +28,9 @@ export default function AskHistory({ knowledgeBaseId, revision }) {
   const read = useRef(null)
   const mutation = useRef(null)
   const title = useRef(null)
+  useEffect(() => {
+    if (!mobile && restoreDesktop.current) { restoreDesktop.current = false; title.current?.focus() }
+  }, [mobile])
   const confirmButton = useRef(null)
   useEffect(() => { if (confirming) confirmButton.current?.focus() }, [confirming])
   const returnFocus = useRef(null)
@@ -32,7 +48,12 @@ export default function AskHistory({ knowledgeBaseId, revision }) {
       else setLoadError(error.message)
     } finally { if (!controller.signal.aborted) setLoading(false) }
   }, [knowledgeBaseId, logout])
-  useEffect(() => { load(); return () => read.current?.abort() }, [load, revision])
+  useEffect(() => {
+    let mounted = true
+    // Do not dispatch the discarded StrictMode setup's initial history request.
+    queueMicrotask(() => { if (mounted) load() })
+    return () => { mounted = false; read.current?.abort() }
+  }, [load, revision])
   useEffect(() => () => mutation.current?.abort(), [])
   function cancel() {
     setConfirming(null); setActionError('')
@@ -50,19 +71,21 @@ export default function AskHistory({ knowledgeBaseId, revision }) {
       // A read started before deletion must not restore the deleted snapshot.
       read.current?.abort(); setLoading(false)
       setItems(current => current.filter(item => item.id !== id))
+      onDeleted(id)
       setConfirming(null); setNotice('Previous question deleted.')
       title.current?.focus()
     } catch (error) {
       if (controller.signal.aborted) return
       if (error.status === 401) logout()
       else if (error.status === 404) {
+        onDeleted(id)
         setConfirming(null); setNotice('This entry is no longer available. Refreshing history.'); load()
       } else setActionError(error.message)
     } finally {
       if (!controller.signal.aborted) { mutation.current = null; setBusy(false) }
     }
   }
-  return <section className="ask-history" aria-labelledby="history-title">
+  const content = <section className="panel ask-history" aria-labelledby="history-title">
     <h2 id="history-title" tabIndex={-1} ref={title}>Previous questions</h2>
     <p className="kb-muted">Your latest 20 saved questions for this Knowledge Base. Each new question starts fresh.</p>
     <p className="visually-hidden" role="status">{notice}</p>
@@ -76,17 +99,19 @@ export default function AskHistory({ knowledgeBaseId, revision }) {
       <div className="kb-actions"><button ref={confirmButton} className="kb-danger" disabled={busy} onClick={remove}>{busy ? 'Deleting…' : 'Confirm delete'}</button><button className="session-button" disabled={busy} onClick={cancel}>Cancel</button></div>
     </section>}
     {!loading && !loadError && <ul className="history-list">
-      {items.map(item => <li className="panel history-item" key={item.id}>
-        <details>
-          <summary><span className="history-question">{item.question}</span><span className="history-meta"><span>{item.status === 'answered' ? 'Answered' : 'Insufficient context'}</span><time dateTime={item.created_at}>{new Date(item.created_at).toLocaleString()}</time></span></summary>
-          <div className="history-answer"><p className="small-label">SAVED ANSWER</p>
-            {!!item.sources.length && <p className="kb-muted history-snapshot-note">Historical snapshot: these source documents may have changed or been deleted.</p>}
-            <AnswerContent result={item} />
-          </div>
-        </details>
+      {items.map(item => <li className={'history-item' + (selectedId === item.id ? ' history-item-selected' : '')} key={item.id}>
+        <button className="history-select" type="button" title={item.question} aria-pressed={selectedId === item.id} disabled={selectionDisabled || busy}
+          onClick={() => { if (!selectionDisabled && !mutation.current && onSelect(item)) setDrawerOpen(false) }}>
+          <span className="history-question">{item.question}</span><span className="history-meta"><span>{item.status === 'answered' ? 'Answered' : 'Insufficient context'}</span><time dateTime={item.created_at}>{new Date(item.created_at).toLocaleString()}</time></span>
+        </button>
         <button className="session-button kb-delete-link" disabled={busy} aria-label={'Delete previous question: ' + item.question}
           onClick={event => { returnFocus.current = event.currentTarget; setConfirming(item); setActionError('') }}>Delete</button>
       </li>)}
     </ul>}
   </section>
+  return mobile ? <>
+    <button ref={historyButton} className="session-button ask-history-trigger" type="button" aria-haspopup="dialog" aria-expanded={drawerOpen}
+      onClick={() => { if (!document.querySelector('dialog:modal')) setDrawerOpen(true) }}>History</button>
+    <Drawer open={drawerOpen} title="Question history" dismissible={!busy} onClose={() => { if (!mutation.current) setDrawerOpen(false) }}>{content}</Drawer>
+  </> : content
 }

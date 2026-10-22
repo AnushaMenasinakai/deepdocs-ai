@@ -94,7 +94,9 @@ async function overflow(page) { assert.ok(await page.evaluate(() => document.doc
       const url = page.url(), before = calls.length;
       await open(); await drawer.getByRole('button', { name: 'Close navigation menu' }).click(); await closed();
       assert.equal(page.url(), url); assert.equal(await page.getByLabel('Knowledge Base', { exact: true }).inputValue(), base.id); assert.equal(calls.length, before);
-      await page.goto(ROOT + '/ask'); await page.getByRole('heading', { name: 'No previous questions yet' }).waitFor();
+      await page.goto(ROOT + '/ask'); await page.getByRole('button', { name: 'History', exact: true }).click();
+      await page.getByRole('heading', { name: 'No previous questions yet' }).waitFor();
+      await page.getByRole('button', { name: 'Close drawer' }).click(); await page.waitForFunction(() => !document.querySelector('dialog:modal'));
       await page.getByLabel('Your question', { exact: true }).fill('Preserved draft'); const asks = calls.length;
       await open(); await page.keyboard.press('Escape'); await closed();
       assert.equal(await page.getByLabel('Your question', { exact: true }).inputValue(), 'Preserved draft'); assert.equal(calls.length, asks);

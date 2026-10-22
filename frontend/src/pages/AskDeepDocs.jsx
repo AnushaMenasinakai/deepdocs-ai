@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Header from '../components/Header.jsx'
 import Icon from '../components/Icon.jsx'
@@ -11,7 +11,9 @@ function QuestionForm({ base, refreshBases }) {
   const { logout } = useAuth()
   const [question, setQuestion] = useState('')
   const [historyRevision, setHistoryRevision] = useState(0)
-  const [result, setResult] = useState(null)
+  const [view, setView] = useState({ kind: 'new' })
+  const input = useRef(null)
+  const result = view.result
   const [error, setError] = useState('')
   const [missing, setMissing] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -21,16 +23,35 @@ function QuestionForm({ base, refreshBases }) {
     active.current = true
     return () => { active.current = false; pending.current?.abort() }
   }, [])
+  useLayoutEffect(() => {
+    const element = input.current
+    function resize() {
+      element.style.height = 'auto'
+      const maximum = Math.max(56, Math.min(180, (window.visualViewport?.height || window.innerHeight) * 0.25))
+      element.style.height = Math.min(element.scrollHeight + 2, maximum) + 'px'
+    }
+    resize()
+    // Width changes can rewrap the draft without a keystroke.
+    let width = element.clientWidth
+    const widthObserver = new ResizeObserver(() => {
+      if (element.clientWidth !== width) { width = element.clientWidth; resize() }
+    })
+    widthObserver.observe(element)
+    window.addEventListener('resize', resize)
+    window.visualViewport?.addEventListener('resize', resize)
+    return () => { widthObserver.disconnect(); window.removeEventListener('resize', resize); window.visualViewport?.removeEventListener('resize', resize) }
+  }, [question])
   const valid = question.trim().length > 0 && question.length <= 1000
   async function submit(event) {
     event.preventDefault()
     if (!valid || pending.current || missing) return
     const controller = new AbortController()
     pending.current = controller
-    setBusy(true); setError(''); setResult(null)
+    const submittedQuestion = question.trim()
+    setBusy(true); setError(''); setView({ kind: 'new' })
     try {
-      const answer = await askKnowledgeBase(base.id, question, controller.signal)
-      if (active.current && !controller.signal.aborted) { setResult(answer); setHistoryRevision(current => current + 1) }
+      const answer = await askKnowledgeBase(base.id, submittedQuestion, controller.signal)
+      if (active.current && !controller.signal.aborted) { setView({ kind: 'current', question: submittedQuestion, result: answer }); setHistoryRevision(current => current + 1) }
     } catch (failure) {
       if (!active.current || controller.signal.aborted) return
       if (failure.status === 401) logout()
@@ -39,21 +60,27 @@ function QuestionForm({ base, refreshBases }) {
       if (active.current && !controller.signal.aborted) { pending.current = null; setBusy(false) }
     }
   }
+  const forgetHistory = useCallback(id => {
+    setView(current => current.kind === 'historical' && current.id === id ? { kind: 'new' } : current)
+  }, [])
+  function newQuestion() {
+    if (pending.current) return
+    setView({ kind: 'new' }); setQuestion('')
+    if (!missing) setError('')
+    input.current?.focus()
+  }
+  function selectHistory(item) {
+    if (pending.current) return
+    setView({ kind: 'historical', id: item.id, question: item.question, result: item })
+    if (!missing) setError('')
+    return true
+  }
   return <div className="ask-workspace">
-    <section className="panel ask-composer">
-      <div className="ask-composer-heading"><span className="empty-icon"><Icon name="ask" /></span>
-        <div><h2>Explore your documents</h2><p className="kb-muted">Ask about indexed PDFs in {base.name}.</p></div>
-      </div>
-      <form onSubmit={submit}>
-        <label htmlFor="ask-question">Your question</label>
-        <textarea id="ask-question" value={question} maxLength={1000} required disabled={busy || missing}
-          placeholder="What would you like to understand?" aria-describedby="ask-hint ask-count"
-          onChange={event => { setQuestion(event.target.value); setResult(null); setError('') }} />
-        <div className="ask-input-footer"><p id="ask-hint">One question at a time. Answers use your retrieved document context.</p>
-          <span id="ask-count">{question.length}/1,000</span></div>
-        <button className="kb-primary" type="submit" disabled={!valid || busy || missing}>{busy ? 'Finding an answer…' : 'Ask DeepDocs'}</button>
-      </form>
-    </section>
+    <AskHistory knowledgeBaseId={base.id} revision={historyRevision} selectedId={view.kind === 'historical' ? view.id : null}
+      selectionDisabled={busy} onSelect={selectHistory} onDeleted={forgetHistory} />
+    <div className="ask-main">
+    <div className="ask-view-toolbar"><p className="kb-muted">{view.kind === 'historical' ? 'Saved question' : view.kind === 'current' ? 'Current result' : 'New question'}</p>
+      <button className="session-button" disabled={busy} onClick={newQuestion}>New Question</button></div>
     <div aria-live="polite" aria-atomic="true">
       {busy && <section className="panel ask-loading" role="status">
         <span className="ask-loading-icon" aria-hidden="true"><Icon name="spark" size={24} /></span>
@@ -62,13 +89,27 @@ function QuestionForm({ base, refreshBases }) {
         <span className="ask-loading-dots" aria-hidden="true"><span /><span /><span /></span>
       </section>}
       {error && <div className="panel kb-state" role="alert"><p>{error}</p>{missing && <button className="session-button" onClick={refreshBases}>Refresh Knowledge Bases</button>}</div>}
-      {result && <section className="panel ask-answer" aria-labelledby="answer-title">
+      {result && <section className={'panel ask-answer' + (view.kind === 'historical' ? ' history-answer' : '')} aria-labelledby="answer-title">
+        <p className="small-label">{view.kind === 'historical' ? 'SAVED QUESTION' : 'YOUR QUESTION'}</p>
+        <p className="ask-displayed-question">{view.question}</p>
+        {view.kind === 'historical' && !!result.sources.length && <p className="kb-muted history-snapshot-note">Historical snapshot: these source documents may have changed or been deleted.</p>}
         <p className="eyebrow">{result.status === 'answered' ? 'FROM YOUR DOCUMENTS' : 'MORE CONTEXT NEEDED'}</p>
         <h2 id="answer-title">{result.status === 'answered' ? 'Answer' : 'Not enough relevant information'}</h2>
-        <AnswerContent result={result} />
+        <AnswerContent key={view.kind + ':' + (view.id || historyRevision)} result={result} historical={view.kind === 'historical'} />
       </section>}
     </div>
-    <AskHistory knowledgeBaseId={base.id} revision={historyRevision} />
+    <section className="panel ask-composer">
+      <form onSubmit={submit}>
+        <label htmlFor="ask-question">Your question</label>
+        <textarea ref={input} id="ask-question" rows={1} value={question} maxLength={1000} required disabled={busy || missing}
+          placeholder="What would you like to understand?" aria-describedby="ask-hint ask-count"
+          onChange={event => { setQuestion(event.target.value); setError('') }} />
+        <div className="ask-input-footer"><p id="ask-hint">One question at a time. Answers use your retrieved document context.</p>
+          <span id="ask-count">{question.length}/1,000</span></div>
+        <button className="kb-primary" type="submit" disabled={!valid || busy || missing}>{busy ? 'Finding an answer…' : 'Ask DeepDocs'}</button>
+      </form>
+    </section>
+    </div>
   </div>
 }
 

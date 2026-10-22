@@ -249,6 +249,7 @@ async function noOverflow(page) {
           } else await readable(page.locator('.auth-field input').first(), 'auth input');
           if (path === '/ask') {
             await page.locator('#ask-question').fill('A question'); await page.getByRole('button', { name: 'Ask DeepDocs', exact: true }).click();
+            await page.getByRole('button', { name: 'Supporting sources', exact: true }).click();
             await page.locator('.source-card').waitFor(); await readable(page.locator('.answer-text'), 'answer'); await readable(page.locator('.source-filename'), 'source'); await noOverflow(page);
           }
           if (path.startsWith('/documents')) {
