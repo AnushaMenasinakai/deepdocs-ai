@@ -179,6 +179,23 @@ const USER={id:'507f1f77bcf86cd799439011',name:'Example User',email:'user@exampl
       assert.equal(await page.evaluate(()=>localStorage.length),0);
     });
     console.log('PASS responsive user/logout/retry controls at 1440, 768, 390; no overflow or credential logging');
+    await scenario({token:TOKEN},async({page,go,heading})=>{
+      for(const [path,title] of [['/','Dashboard'],['/knowledge-bases','Knowledge Bases'],['/documents','Documents'],['/ask','Ask DeepDocs'],['/unknown','Page Not Found']]){
+        await go(path);await page.waitForFunction(expected=>document.title===expected,title+' | DeepDocs AI');
+      }
+      await page.goBack();await page.waitForFunction(()=>document.title==='Ask DeepDocs | DeepDocs AI');await page.goForward();await page.waitForFunction(()=>document.title==='Page Not Found | DeepDocs AI');
+      await go('/login');await heading('Welcome back',true);assert.equal(await page.title(),'Dashboard | DeepDocs AI');
+      await page.getByRole('button',{name:'Log out',exact:true}).click();await heading('Welcome back');await page.waitForFunction(()=>document.title==='Login | DeepDocs AI');
+    });
+    await scenario({},async({page,go,heading,login})=>{
+      await go('/documents');await heading('Welcome back');assert.equal(await page.title(),'Login | DeepDocs AI');
+      await page.getByRole('link',{name:'Create an account'}).click();await page.waitForFunction(()=>document.title==='Register | DeepDocs AI');
+      await page.getByRole('link',{name:'Sign in',exact:true}).click();await page.waitForFunction(()=>document.title==='Login | DeepDocs AI');
+      await login();await heading('Documents',true);await page.waitForFunction(()=>document.title==='Documents | DeepDocs AI');
+      const select=page.getByRole('button',{name:'Log out',exact:true});await select.focus();
+      await page.evaluate(()=>{history.pushState({},'', '/documents?search=test');dispatchEvent(new PopStateEvent('popstate'))});
+      assert.equal(await page.title(),'Documents | DeepDocs AI');assert.ok(await select.evaluate(e=>e===document.activeElement));
+    });
     console.log('TOTAL:',passed,'browser scenarios passed');
   } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});

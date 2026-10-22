@@ -80,6 +80,9 @@ export default function AskHistory({ knowledgeBaseId, revision, selectedId, sele
       else if (error.status === 404) {
         onDeleted(id)
         setConfirming(null); setNotice('This entry is no longer available. Refreshing history.'); load()
+        const target = title.current
+        const modal = document.querySelector('dialog:modal')
+        if (target?.isConnected && target.getClientRects().length && (!modal || modal.contains(target))) target.focus()
       } else setActionError(error.message)
     } finally {
       if (!controller.signal.aborted) { mutation.current = null; setBusy(false) }

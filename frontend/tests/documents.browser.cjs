@@ -134,6 +134,8 @@ const fixture={name:'notes.pdf',mimeType:'application/pdf',buffer:Buffer.from('%
   ])await scenario('Client validation: '+name,async({page,state,ready,pick,button,openUpload})=>{
    await ready();await openUpload();if(file)await pick(file);await button('Upload PDF').click();
    await page.getByRole('alert').filter({hasText:message}).waitFor();assert.equal(state.calls.filter(c=>c.method==='POST').length,0);
+   const field=page.getByLabel('PDF file',{exact:true});assert.equal(await field.getAttribute('aria-invalid'),'true');assert.equal(await field.getAttribute('aria-describedby'),'pdf-hint pdf-validation-error');assert.equal(await page.locator('#pdf-validation-error').textContent(),message);
+   await pick();assert.equal(await field.getAttribute('aria-invalid'),'false');assert.equal(await field.getAttribute('aria-describedby'),'pdf-hint');assert.equal(await page.locator('#pdf-validation-error').count(),0);
   });
   await scenario('Clear/change file and missing MIME upload',async({page,ready,pick,button})=>{
    await ready();await pick();await button('Clear file').click();assert.equal(await page.getByLabel('PDF file',{exact:true}).inputValue(),'');
@@ -142,6 +144,7 @@ const fixture={name:'notes.pdf',mimeType:'application/pdf',buffer:Buffer.from('%
   for(const status of [413,415,422,503])await scenario('Upload error '+status+' safely retains file and retries',async({page,state,ready,pick,button})=>{
    await ready();await pick();state.uploadStatus=status;await button('Upload PDF').click();await page.getByRole('alert').waitFor();
    assert.notEqual(await page.getByLabel('PDF file',{exact:true}).inputValue(),'');
+   assert.equal(await page.getByLabel('PDF file',{exact:true}).getAttribute('aria-invalid'),'false');assert.equal(await page.getByLabel('PDF file',{exact:true}).getAttribute('aria-describedby'),'pdf-hint');
    state.uploadStatus=201;await button('Upload PDF').click();await page.getByText('PDF uploaded.',{exact:true}).waitFor();
   });
   await scenario('Upload network failure',async({page,state,ready,pick,button})=>{

@@ -1,4 +1,5 @@
-import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Link, Route, Routes, matchPath, useLocation } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { ProtectedRoute, PublicOnlyRoute } from './components/AuthRoutes.jsx'
 import AppLayout from './components/AppLayout.jsx'
@@ -9,9 +10,20 @@ import AskDeepDocs from './pages/AskDeepDocs.jsx'
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
 
+function RouteTitle() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    const routes = [['/', 'Dashboard'], ['/knowledge-bases', 'Knowledge Bases'], ['/documents', 'Documents'], ['/ask', 'Ask DeepDocs'], ['/login', 'Login'], ['/register', 'Register']]
+    const title = routes.find(([path]) => matchPath({ path, end: true }, pathname))?.[1] || 'Page Not Found'
+    document.title = title + ' | DeepDocs AI'
+  }, [pathname])
+  return null
+}
+
 export default function App() {
   return (
     <BrowserRouter>
+      <RouteTitle />
       <AuthProvider>
         <Routes>
           <Route element={<PublicOnlyRoute />}>

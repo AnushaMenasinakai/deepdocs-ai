@@ -190,6 +190,15 @@ const sample = {id:'507f1f77bcf86cd799439012',name:'Research papers',description
    assert.equal(await page.getByLabel('Search Knowledge Bases').inputValue(),'Research');assert.equal(await page.getByLabel('Sort by').inputValue(),'name');assert.equal(await page.getByLabel('Order',{exact:true}).inputValue(),'asc');
    assert.equal(state.requests.filter(r=>r.method==='PATCH').length,1);assert.match(await page.locator('.kb-updated').innerText(),/^Last edited/);assert.equal(await page.locator('.kb-updated time').getAttribute('datetime'),'2026-09-25T12:00:00Z');
   });
+  for(const value of ['', '   '])await scenario(async({page,state,go,button})=>{
+   await go();await button('New Knowledge Base').click();const name=page.getByLabel('Name',{exact:true});
+   await name.fill(value);await button('Create Knowledge Base').click();await page.locator('#kb-validation-error').waitFor();
+   assert.equal(await name.getAttribute('aria-invalid'),'true');assert.equal(await name.getAttribute('aria-describedby'),'kb-validation-error');
+   assert.equal(await page.locator('#kb-description').getAttribute('aria-invalid'),'false');assert.equal(await page.locator('#kb-description').getAttribute('aria-describedby'),'kb-description-hint');
+   assert.equal(state.requests.filter(r=>r.method==='POST').length,0);
+   await name.fill('Corrected name');assert.equal(await name.getAttribute('aria-invalid'),'false');assert.equal(await name.getAttribute('aria-describedby'),null);assert.equal(await page.locator('#kb-validation-error').count(),0);
+   state.status=503;await button('Create Knowledge Base').click();await page.getByRole('alert').waitFor();assert.equal(await name.getAttribute('aria-invalid'),'false');assert.equal(await name.getAttribute('aria-describedby'),null);
+  });
   console.log('PASS: '+passed+' mocked Knowledge Base browser scenarios; CRUD, validation, pending state, errors/retry, 401 logout, 404 reconciliation, responsive 1440/1024/768/600/390; no runtime errors or secret output.');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error.message);process.exitCode=1});

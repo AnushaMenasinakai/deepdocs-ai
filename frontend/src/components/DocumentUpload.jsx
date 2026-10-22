@@ -41,10 +41,10 @@ export default function DocumentUpload({ busy, uploading, error, onUpload, onCha
     <div><p className="kb-muted">Keep your original PDFs together. Uploading stores the file; processing is a separate step.</p></div>
     <form onSubmit={submit} aria-busy={uploading}>
       <label htmlFor="pdf-file">PDF file</label>
-      <input ref={input} id="pdf-file" type="file" accept=".pdf,application/pdf" disabled={busy} onChange={event => choose(event.target.files?.[0] || null)} aria-describedby="pdf-hint" />
+      <input ref={input} id="pdf-file" type="file" accept=".pdf,application/pdf" disabled={busy} onChange={event => choose(event.target.files?.[0] || null)} aria-invalid={Boolean(validation)} aria-describedby={validation ? 'pdf-hint pdf-validation-error' : 'pdf-hint'} />
       <p id="pdf-hint" className="auth-hint">One PDF at a time · Up to 10 MiB · Validated by the server</p>
       {file && <p className="document-selected"><strong>{file.name}</strong> <span>{fileSize(file.size)}</span></p>}
-      {(validation || error) && <p role="alert" className="auth-error">{validation || error}</p>}
+      {(validation || error) && <p id={validation ? 'pdf-validation-error' : undefined} role="alert" className="auth-error">{validation || error}</p>}
       <div className="kb-actions">
         <button className="kb-primary" disabled={busy} type="submit">{uploading ? 'Uploading PDF…' : 'Upload PDF'}</button>
         {file && <button className="session-button" type="button" disabled={busy} onClick={clear}>Clear file</button>}
