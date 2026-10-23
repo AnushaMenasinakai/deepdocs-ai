@@ -1,0 +1,10 @@
+# Allowlist: no environment files, uploaded PDFs, local model cache, virtualenv,
+# tests/reports, frontend assets, Git metadata or editor files enter the context.
+**
+!Dockerfile
+!.dockerignore
+!requirements.txt
+!*.py
+!docker/
+!docker/requirements-cpu.txt
+!docker/package_model.py

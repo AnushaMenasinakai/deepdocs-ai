@@ -1,0 +1,3 @@
+# Official CPU-only CPython 3.13 Linux amd64 wheel, pinned by content hash.
+# Resolve together with unchanged application requirements; never add a CUDA index.
+torch @ https://download.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp313-cp313-manylinux_2_28_x86_64.whl#sha256=8d316e5bf121f1eab1147e49ad0511a9d92e4c45cc357d1ab0bee440da71a095
