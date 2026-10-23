@@ -1,0 +1,28 @@
+name: deepdocs-ai
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: deepdocs-backend
+    ports:
+      - "127.0.0.1:8000:8000"
+    # Keep the image's non-root user and single-worker exec command.
+    # Allow in-flight work time to finish; interruption never authorizes recovery.
+    stop_grace_period: 5m
+    volumes:
+      # A fresh volume inherits the image directory's UID 10001 / mode 0750.
+      # Do not use `docker compose down --volumes` for storage you need to retain.
+      - pdf_storage:/app/backend/storage/documents
+      # Reuse config.py's dotenv parser without Compose interpolating secret values.
+      # Supply a separate local file with BACKEND_ENV_FILE when needed.
+      - type: bind
+        source: ${BACKEND_ENV_FILE:-./backend/.env}
+        target: /app/backend/.env
+        read_only: true
+        bind:
+          create_host_path: false
+
+volumes:
+  pdf_storage:
