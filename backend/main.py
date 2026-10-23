@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pymongo.asynchronous.database import AsyncDatabase
+from config import load_cors_origins
 
 from database import UNAVAILABLE_MESSAGE, database_lifespan, get_database, ping_database
 from auth_routes import router as auth_router
@@ -33,10 +34,10 @@ async def validation_error_handler(request, error):
     ]
     return JSONResponse(status_code=422, content={"detail": details})
 
-# Only the local Vite development frontend may make cross-origin requests.
+# Local Vite origins plus explicitly validated frontend origins.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"],
+    allow_origins=load_cors_origins(),
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["*"],
 )

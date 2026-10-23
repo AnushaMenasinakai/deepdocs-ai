@@ -13,6 +13,51 @@ class ConfigurationError(ValueError):
     """A safe, public configuration message that never includes input values."""
 
 
+def load_cors_origins() -> list[str]:
+    """Explicit browser origins only; process environment overrides dotenv."""
+    import ipaddress
+    import re
+    from urllib.parse import urlsplit
+
+    origins = ["http://127.0.0.1:5173", "http://localhost:5173"]
+    try:
+        values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+        raw = values.get("CORS_FRONTEND_ORIGINS") or ""
+        if not raw.strip():
+            return origins
+        for entry in raw.split(","):
+            origin = entry.strip()
+            # Reject credentials, paths (including /), empty query/fragment,
+            # whitespace and ambiguous URL syntax before urllib normalizes it.
+            match = re.fullmatch(r"(https?)://(\[[0-9A-Fa-f:]+\]|[A-Za-z0-9.-]+)(?::([0-9]+))?", origin)
+            if not match:
+                raise ValueError
+            parsed = urlsplit(origin)
+            host = parsed.hostname
+            if host is None:
+                raise ValueError
+            if ":" in host:
+                host = f"[{ipaddress.IPv6Address(host).compressed}]"
+            elif re.fullmatch(r"[0-9.]+", host):
+                host = str(ipaddress.IPv4Address(host))
+            elif len(host) > 253 or any(
+                not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label)
+                for label in host.split(".")
+            ):
+                raise ValueError
+            port = parsed.port
+            if port is not None and not 1 <= port <= 65535:
+                raise ValueError
+            # Match the browser's serialized origin, including default ports.
+            suffix = f":{port}" if port is not None and port != {"http": 80, "https": 443}[parsed.scheme] else ""
+            normalized = f"{parsed.scheme}://{host}{suffix}"
+            if normalized not in origins:
+                origins.append(normalized)
+        return origins
+    except (OSError, UnicodeError, ValueError, TypeError):
+        raise ConfigurationError("CORS_FRONTEND_ORIGINS must contain comma-separated explicit HTTP/HTTPS origins without paths, credentials, queries, fragments or wildcards.") from None
+
+
 @dataclass(frozen=True)
 class Settings:
     mongodb_uri: str = field(repr=False)
