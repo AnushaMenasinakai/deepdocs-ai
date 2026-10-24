@@ -70,6 +70,11 @@ def recorded_dataset_fingerprint(dataset='original', *, root=ROOT):
     if not isinstance(dataset, str) or dataset not in manifest['datasets']:
         raise HistoricalIntegrityError('Unknown historical dataset')
     entry = manifest['datasets'][dataset]
+    # This aggregate is defined over exactly these three ordered artifacts.
+    # Reject malformed membership before validating files or returning provenance.
+    expected = ['corpus.json', 'cases.json', 'fixture_rankings.json']
+    if dataset != 'original' or entry.get('members') != expected:
+        raise HistoricalIntegrityError('Invalid historical dataset membership or ordering')
     for artifact in entry['members']:
         _validated_entry(artifact, root, manifest)
     return entry['legacy_sha256']

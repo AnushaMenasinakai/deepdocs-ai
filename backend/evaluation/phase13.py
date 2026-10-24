@@ -11,6 +11,7 @@ from types import SimpleNamespace
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evaluation.dataset import load_dataset, public_chunk
+from evaluation.historical_integrity import recorded_dataset_fingerprint, validate_historical_content
 from evaluation.retrieval_metrics import covered, expected, retrieval_metrics
 from evaluation.rag_metrics import decision_metrics
 from rag_context import build_context
@@ -21,9 +22,15 @@ PRIMARY, BUDGET, TOP_K = 0.50, 12000, 5
 
 
 def measured_rankings(report_path=None):
+    if report_path is None:
+        digest = recorded_dataset_fingerprint('original', root=ROOT)
+        validate_historical_content('reports/local-model.json', root=ROOT)
+        report_path = ROOT/'reports/local-model.json'
+    else:
+        # Explicit fresh reports describe the current dataset bytes, not history.
+        digest = hashlib.sha256(b''.join((ROOT/name).read_bytes() for name in ('corpus.json','cases.json','fixture_rankings.json'))).hexdigest()
     version, chunks, cases, _ = load_dataset()
-    report = json.loads((report_path or ROOT/'reports/local-model.json').read_text(encoding='utf-8'))
-    digest = hashlib.sha256(b''.join((ROOT/name).read_bytes() for name in ('corpus.json','cases.json','fixture_rankings.json'))).hexdigest()
+    report = json.loads(report_path.read_text(encoding='utf-8'))
     if digest != report['dataset_sha256'] or version != report['dataset_version']:
         raise ValueError('Baseline dataset mismatch')
     by_page = {(c['document'],c['page']):c for c in chunks}
