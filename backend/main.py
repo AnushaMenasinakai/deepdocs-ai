@@ -1,4 +1,4 @@
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -53,3 +53,15 @@ async def database_health(database: AsyncDatabase = Depends(get_database)):
     if not await ping_database(database):
         raise HTTPException(status_code=503, detail=UNAVAILABLE_MESSAGE)
     return {"status": "ok", "message": "MongoDB is reachable"}
+
+
+@app.get("/api/ready")
+async def ready(request: Request):
+    readiness = getattr(request.app.state, "readiness", None)
+    database = getattr(request.app.state, "database", None)
+    available = readiness is not None and await readiness.check(database)
+    return JSONResponse(
+        {"status": "ready" if available else "not_ready"},
+        status_code=200 if available else 503,
+        headers={"Cache-Control": "no-store"},
+    )

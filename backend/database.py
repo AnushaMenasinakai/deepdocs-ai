@@ -17,6 +17,7 @@ from documents import ensure_document_indexes
 from document_processing import ensure_chunk_indexes
 from vector_store import close_vector_store
 from gemini_provider import close_gemini_provider
+from readiness import Readiness
 
 logger = logging.getLogger(__name__)
 UNAVAILABLE_MESSAGE = "MongoDB is unavailable. Check configuration and Atlas connectivity."
@@ -36,6 +37,8 @@ async def ping_database(database: AsyncDatabase) -> bool:
 @asynccontextmanager
 async def database_lifespan(app: FastAPI):
     client = None
+    readiness = Readiness()
+    app.state.readiness = readiness
     app.state.database = None
     app.state.database_configuration_error = None
     app.state.users_index_ready = False
@@ -68,6 +71,7 @@ async def database_lifespan(app: FastAPI):
                 async with asyncio.timeout(5):
                     await ensure_user_indexes(app.state.database)
                 app.state.users_index_ready = True
+                readiness.indexes["users"] = True
             except (PyMongoError, TimeoutError):
                 # Never permit inserts without confirmed uniqueness enforcement.
                 # No destructive repair of existing records or indexes is attempted.
@@ -76,27 +80,33 @@ async def database_lifespan(app: FastAPI):
             try:
                 async with asyncio.timeout(5):
                     await ensure_knowledge_base_indexes(app.state.database)
+                readiness.indexes["knowledge_bases"] = True
             except (PyMongoError, TimeoutError):
                 # This is a performance index, not an ownership/uniqueness constraint.
                 logger.error("Knowledge Base index initialization failed. Retry on restart.")
             try:
                 async with asyncio.timeout(5):
                     await ensure_document_indexes(app.state.database)
+                readiness.indexes["documents"] = True
             except (PyMongoError, TimeoutError):
                 logger.error("Document index initialization failed. Retry on restart.")
             try:
                 async with asyncio.timeout(5):
                     await ensure_chunk_indexes(app.state.database)
+                readiness.indexes["chunks"] = True
             except (PyMongoError, TimeoutError):
                 logger.error("Chunk index initialization failed. Retry on restart.")
             try:
                 async with asyncio.timeout(5):
                     await ensure_history_indexes(app.state.database)
+                readiness.indexes["history"] = True
             except (PyMongoError, TimeoutError):
                 logger.error("Ask history index initialization failed. Retry on restart.")
         # Liveness remains available even if database readiness fails.
+        readiness.initialized = True
         yield
     finally:
+        await readiness.close()
         await close_gemini_provider()
         await close_vector_store()
         app.state.users_index_ready = False
