@@ -19,6 +19,7 @@ from evaluation.dataset import load_dataset, identifier, public_chunk
 from evaluation.query_decomposition import decompose, STRATEGIES, MAX_QUERIES
 from evaluation.retrieval_metrics import covered, expected, retrieval_metrics, valid_hits
 from evaluation.phase13 import measured_rankings
+from evaluation.historical_integrity import recorded_legacy_fingerprint, validate_historical_content, HistoricalIntegrityError
 from rag_context import Context, build_context
 
 ROOT = Path(__file__).resolve().parent
@@ -34,7 +35,17 @@ FIELDS = ("document_id", "chunk_id", "source_filename", "page_start", "page_end"
 
 
 def historical_hashes():
-    return {name: hashlib.sha256((ROOT/"reports"/name).read_bytes()).hexdigest() for name in HISTORICAL}
+    return {name: recorded_legacy_fingerprint('reports/' + name, root=ROOT) for name in HISTORICAL}
+
+
+def load_historical_rankings():
+    """Validate and parse the same frozen bytes; never use this for measurements."""
+    name = 'phase15a_rankings.json'
+    digest = validate_historical_content(name, root=ROOT)
+    raw = (ROOT/name).read_bytes()
+    if hashlib.sha256(raw.replace(b'\r\n', b'\n')).hexdigest() != digest:
+        raise HistoricalIntegrityError('Historical rankings changed during loading')
+    return json.loads(raw)
 
 
 def inputs():
@@ -43,9 +54,12 @@ def inputs():
     return version, corpus, cases, safety["cases"]
 
 
-def fingerprints():
+def fingerprints(*, historical=True):
+    names = ('corpus.json', 'cases.json', 'phase15a_safety.json', 'query_decomposition.py')
+    if historical:
+        return {name: recorded_legacy_fingerprint(name, root=ROOT) for name in names}
     return {name: hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in
-            ("corpus.json", "cases.json", "phase15a_safety.json", "query_decomposition.py")}
+            names}
 
 
 def query_plan(cases):
@@ -208,16 +222,21 @@ async def measure():
     lookup = {identifier(c["id"]):c["id"] for c in corpus}
     revision = (ROOT.parent/".cache/embeddings/models--sentence-transformers--all-MiniLM-L6-v2/refs/main").read_text().strip()
     if len(revision)!=40 or any(c not in "0123456789abcdef" for c in revision): raise ValueError("Invalid cached revision")
-    return dict(version="1.0.0",dataset_version=version,fingerprints=fingerprints(),historical_hashes=historical_hashes(),
+    return dict(version="1.0.0",dataset_version=version,fingerprints=fingerprints(historical=False),historical_hashes=historical_hashes(),
         model="sentence-transformers/all-MiniLM-L6-v2",dimension=dimension,model_revision=revision,
         runtime={k:package_version(k) for k in ("sentence-transformers","qdrant-client","torch")},
         measurement="Cached-only CPU MiniLM, official in-memory Qdrant, production authoritative retrieval validation; all socket connections blocked",
         queries={i:{"text":q,"hits":[{"chunk":lookup[h["chunk_id"]],"score":round(h["score"],8)} for h in hits[i]]} for i,q in queries.items()})
 
 
-def replay(data):
+def replay(data, *, historical=True):
+    expected_fingerprints = fingerprints(historical=historical)
+    if historical:
+        validate_historical_content('fixture_rankings.json', root=ROOT)
+        if data != load_historical_rankings():
+            raise HistoricalIntegrityError('Supplied rankings differ from validated historical evidence')
     _,corpus,cases,safety = inputs()
-    if data["fingerprints"]!=fingerprints() or data["historical_hashes"]!=historical_hashes():
+    if data["fingerprints"]!=expected_fingerprints or data["historical_hashes"]!=historical_hashes():
         raise ValueError("Evaluation input fingerprint mismatch")
     if data["dimension"]!=384 or data["model"]!="sentence-transformers/all-MiniLM-L6-v2": raise ValueError("Model mismatch")
     expected_queries=query_plan(cases+safety)
@@ -237,8 +256,8 @@ def replay(data):
     return rankings
 
 
-def compare(data):
-    rankings=replay(data)
+def compare(data, *, historical=True):
+    rankings=replay(data, historical=historical)
     version,_,cases,safety=inputs()
     specs=[("original","max","original")]+[(s,f,g) for s in STRATEGIES[1:] for f in ("max","rrf") for g in ("original","or")]
     candidates=[evaluate_strategy(cases,*spec,rankings) for spec in specs]
@@ -277,7 +296,7 @@ def compare(data):
          "sources":["authentication-guide.pdf page 1", "operations-guide.pdf page 3", "web-guide.pdf page 1", "web-guide.pdf page 2"],
          "reason":"Signature verification, automation-key expiry, CSRF, and response caching do not specify JWT rotation or emergency revocation. These are synthetic corpus judgments, not an LLM judge."}]
     return dict(version="1.0.0",dataset_version=version,measurement=data["measurement"],model=data["model"],dimension=data["dimension"],model_revision=data["model_revision"],runtime=data["runtime"],
-        historical_hashes=historical_hashes(),fingerprints=fingerprints(),predeclared_criteria=CRITERIA,
+        historical_hashes=historical_hashes(),fingerprints=fingerprints(historical=historical),predeclared_criteria=CRITERIA,
         primary=PRIMARY,secondary=SECONDARY,per_query_top_k=TOP_K,merged_limit=TOP_K,budget=BUDGET,rrf_constant=RRF_K,
         unique_measured_queries=len(data["queries"]),baseline_parity=baseline_parity,candidates=candidates,safety_candidates=safety_results,
         baseline_false_negatives=[r["id"] for r in baseline["cases"] if r["answerable"] and not r["accepted"]],
@@ -345,8 +364,8 @@ def main():
     if args.measure:
         data=asyncio.run(measure())
     else:
-        data=json.loads(measurement.read_text(encoding="utf-8"))
-    report=compare(data)
+        data=load_historical_rankings()
+    report=compare(data, historical=not args.measure)
     out.mkdir(parents=True,exist_ok=True)
     if args.measure:measurement.write_text(json.dumps(data,indent=2)+"\n",encoding="utf-8")
     (out/"phase15a-multi-query.json").write_text(json.dumps(report,indent=2)+"\n",encoding="utf-8")
