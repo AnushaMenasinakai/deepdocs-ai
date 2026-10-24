@@ -2,7 +2,7 @@ import { getAccessToken } from './tokenStorage.js'
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL?.trim() || 'http://127.0.0.1:8000',
+  baseURL: import.meta.env.VITE_API_URL,
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 })
