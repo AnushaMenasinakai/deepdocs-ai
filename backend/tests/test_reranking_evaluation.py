@@ -1,6 +1,7 @@
 """Phase16 mechanics use fake scores only; no inference or cloud access."""
 import ast
 import copy
+import hashlib
 import json
 import sys
 import unittest
@@ -9,7 +10,7 @@ from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evaluation.dataset import public_chunk
-from evaluation.phase16a import ROOT, build_report, markdown, snapshot_hashes, SETTINGS
+from evaluation.phase16a import ROOT, build_report, markdown, snapshot_hashes, SETTINGS, PRODUCTION, HISTORICAL
 from evaluation.phase13 import measured_rankings
 from evaluation.retrieval_metrics import retrieval_metrics
 from evaluation.reranking import (rerank, finite_score, select_context, threshold_sweep,
@@ -143,16 +144,50 @@ class ExperimentalPolicyTests(unittest.TestCase):
         self.assertIsNone(result["unsupported"]["mean"])
 
 
+# Reviewed against c15932bf2a3e16b76dacc8bedd7c2a7a51565a24, not generated at
+# test runtime from the reports' own claims. Only CRLF -> LF is normalized.
+EVIDENCE_SHA256 = {
+    'fixture.json': '53fb503c48dc1bef518114f13acb268dbc5a998c215f8312593fca34f77250ca',
+    'fixture.md': 'efe661a2f2c55c84f16388374db764c9b9e88413d20e00bbaa6d76d89fc030cc',
+    'local-model.json': 'e24e6ceff93f8ea3e2126b9e6d3d8791c0b949126c9cc69e8d342524d189010c',
+    'local-model.md': '8fcdff4f34e7358406b392efd4943dbeef8274bb96e8797da54a3a85954389ca',
+    'phase13-comparison.json': '122c6e835814540da2cb0f180ae8599f9084110f62efff6fa8afbb4e224061c9',
+    'phase13-comparison.md': '56af029c5fe0f4b3c5df1cf6965cb1fbffd41ea7c8aa32390cc3545e755991c7',
+    'phase15a-multi-query.json': 'fec6d794e5c34aab5242ac6e15e4dda077fd26d8d428d34f25d981c9b53913d9',
+    'phase15a-multi-query.md': '7f5bef55173449f386a78121bfcdb4096dd858a5302d9ae3da4a25ecafc9e9c5',
+    'phase16a-reranking.json': '376e997dae86ab96fd0736283e534054597c1ae698c2aa10b6a51459e36d3b88',
+    'phase16a-reranking.md': '534f9e2e38fc4d81f1fdb71f55a090db3d89bd93f6b3f15617bfc6a2a1e07307',
+}
+
+
+def verify_evidence(name, read_bytes):
+    if name not in EVIDENCE_SHA256:
+        raise AssertionError('Unknown historical evidence')
+    digest = hashlib.sha256(read_bytes().replace(b'\r\n', b'\n')).hexdigest()
+    if digest != EVIDENCE_SHA256[name]:
+        raise AssertionError('Historical evidence changed: ' + name)
+
+
+def behavioral_report(report):
+    return {key: value for key, value in report.items() if key != 'production_sha256'}
+
+
 class AuditReplayTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        for name in EVIDENCE_SHA256:
+            verify_evidence(name, (ROOT/'reports'/name).read_bytes)
         cls.saved=json.loads((ROOT/"reports/phase16a-reranking.json").read_text(encoding="utf-8"))
 
     def test_replay_deterministic_no_network_models_or_providers(self):
         with patch("socket.socket.connect",side_effect=AssertionError("network")),patch("socket.socket.connect_ex",side_effect=AssertionError("network")),patch("embeddings.load_model",side_effect=AssertionError("model")),patch("rag.get_gemini_provider",side_effect=AssertionError("provider")):
             first=build_report(self.saved["environment"])
             second=build_report(self.saved["environment"])
-        self.assertEqual(first,second);self.assertEqual(first,self.saved)
+        self.assertEqual(first,second)
+        self.assertEqual(behavioral_report(first),behavioral_report(self.saved))
+        self.assertEqual(first['production_sha256'], {
+            name: hashlib.sha256((ROOT.parent/name).read_bytes()).hexdigest()
+            for name in PRODUCTION})
         self.assertEqual(markdown(first),(ROOT/"reports/phase16a-reranking.md").read_text(encoding="utf-8"))
         self.assertEqual(first["pairs_scored"],0)
         self.assertIsNone(first["reranked_metrics"])
@@ -179,11 +214,57 @@ class AuditReplayTests(unittest.TestCase):
             self.assertIsNone(row["reranker_decision"])
             self.assertTrue(all(h["reranker_score"] is None and h["reranker_rank"] is None for h in row["candidates"]))
 
-    def test_historical_files_and_production_unchanged(self):
-        import hashlib
+    def test_historical_files_and_recorded_provenance_unchanged(self):
+        self.assertEqual(set(EVIDENCE_SHA256), set(HISTORICAL) | {
+            'phase16a-reranking.json', 'phase16a-reranking.md'})
+        for name in EVIDENCE_SHA256:
+            verify_evidence(name, (ROOT/'reports'/name).read_bytes)
         self.assertEqual(snapshot_hashes(),self.saved["historical_report_sha256"])
-        for name,digest in self.saved["production_sha256"].items():
-            self.assertEqual(hashlib.sha256((ROOT.parent/name).read_bytes()).hexdigest(),digest)
+
+    def test_evidence_allows_only_line_ending_variants(self):
+        for name in EVIDENCE_SHA256:
+            raw = (ROOT/'reports'/name).read_bytes().replace(b'\r\n', b'\n')
+            with self.subTest(name=name):
+                for variant in (raw, raw.replace(b'\n', b'\r\n')):
+                    verify_evidence(name, lambda: variant)
+                for tampered in (raw + b' ', raw.replace(b'\n', b' \n', 1), raw[:-1], raw + b'\r'):
+                    with self.assertRaises(AssertionError):
+                        verify_evidence(name, lambda: tampered)
+
+    def test_changed_values_and_recorded_hashes_are_rejected(self):
+        for field in ('production_sha256', 'baseline', 'adoption_criteria'):
+            changed = copy.deepcopy(self.saved)
+            changed[field] = {}
+            with self.subTest(field=field), self.assertRaises(AssertionError):
+                verify_evidence('phase16a-reranking.json', lambda: json.dumps(changed).encode())
+
+    def test_missing_and_unknown_evidence_fail_closed(self):
+        reader = Mock(side_effect=FileNotFoundError('missing evidence'))
+        with self.assertRaises(FileNotFoundError):
+            verify_evidence('phase16a-reranking.json', reader)
+        reader.reset_mock()
+        with self.assertRaises(AssertionError):
+            verify_evidence('unknown.json', reader)
+        reader.assert_not_called()
+
+    def test_configuration_source_change_affects_only_provenance(self):
+        original = Path.read_bytes
+        config_path = ROOT.parent/'config.py'
+        changed = original(config_path) + b'\n# Legitimate configuration maintenance\n'
+        def read(path):
+            return changed if path == config_path else original(path)
+        with patch.object(Path, 'read_bytes', read), patch('socket.socket.connect', side_effect=AssertionError('network')), patch('socket.socket.connect_ex', side_effect=AssertionError('network')), patch('embeddings.load_model', side_effect=AssertionError('model')), patch('rag.get_gemini_provider', side_effect=AssertionError('provider')):
+            report = build_report(self.saved['environment'])
+        self.assertEqual(report['production_sha256']['config.py'], hashlib.sha256(changed).hexdigest())
+        self.assertNotEqual(report['production_sha256']['config.py'], hashlib.sha256(original(config_path)).hexdigest())
+        self.assertEqual(behavioral_report(report), behavioral_report(self.saved))
+
+    def test_only_production_hashes_excluded_from_behavior(self):
+        for field in self.saved:
+            changed = copy.deepcopy(self.saved)
+            changed[field] = {'deliberate_change': True}
+            with self.subTest(field=field):
+                self.assertEqual(behavioral_report(changed) == behavioral_report(self.saved), field == 'production_sha256')
 
     def test_no_runtime_imports_evaluation_and_no_model_loader_in_new_modules(self):
         for source in ROOT.parent.glob("*.py"):
