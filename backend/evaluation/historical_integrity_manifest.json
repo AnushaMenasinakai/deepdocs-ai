@@ -1,0 +1,217 @@
+{
+  "schema_version": 1,
+  "normalization": "CRLF to LF only; reject remaining CR",
+  "artifacts": {
+    "corpus.json": {
+      "content_sha256_lf": "c36abb37510e90db2a2a5af20bf648d41f48f96b3a7d2fb3447ef0a67cf9842a",
+      "revision": "9d07554b33081d6686d63ff162b65fd5ace09635",
+      "legacy_sha256": "5ef1539ec9309424f16e50c1ea0b49a0b2debc89f3d4d6c37c109df560abbb1c",
+      "legacy_source": {
+        "revision": "6c18f959a869981ee33986a2f6d39b7687da5ba7",
+        "path": "phase15a_rankings.json",
+        "field": "fingerprints",
+        "key": "corpus.json"
+      }
+    },
+    "cases.json": {
+      "content_sha256_lf": "5948eee400d8f112deea3b03ed68c381b6424673a75d682d58026da391e55a9a",
+      "revision": "9d07554b33081d6686d63ff162b65fd5ace09635",
+      "legacy_sha256": "94d1d72ac05c063e94dd1be802ae7c3980b22a4f2140d9604d2087245fa9ce95",
+      "legacy_source": {
+        "revision": "6c18f959a869981ee33986a2f6d39b7687da5ba7",
+        "path": "phase15a_rankings.json",
+        "field": "fingerprints",
+        "key": "cases.json"
+      }
+    },
+    "fixture_rankings.json": {
+      "content_sha256_lf": "1e10469769cb037d4dbcc15f165bd1e73834e71447c69eb03ade1849d649b5e8",
+      "revision": "9d07554b33081d6686d63ff162b65fd5ace09635",
+      "legacy_sha256": null,
+      "legacy_source": null
+    },
+    "reports/fixture.json": {
+      "content_sha256_lf": "53fb503c48dc1bef518114f13acb268dbc5a998c215f8312593fca34f77250ca",
+      "revision": "9d07554b33081d6686d63ff162b65fd5ace09635",
+      "legacy_sha256": "d8c5295ca7d07ace96e37cfdfa7dc54dafb76aad8389c6977abe4b10db9ef51d",
+      "legacy_source": {
+        "revision": "bc152b24e9e2a12a903745ac907b0bbd5c86596c",
+        "path": "phase16a_real_scores.json",
+        "field": "historical_hashes",
+        "key": "fixture.json"
+      }
+    },
+    "reports/fixture.md": {
+      "content_sha256_lf": "efe661a2f2c55c84f16388374db764c9b9e88413d20e00bbaa6d76d89fc030cc",
+      "revision": "9d07554b33081d6686d63ff162b65fd5ace09635",
+      "legacy_sha256": "72af67adf6eeca0ca69e2951704b3180a184f20c3e96a0c5843bcd55fc172147",
+      "legacy_source": {
+        "revision": "bc152b24e9e2a12a903745ac907b0bbd5c86596c",
+        "path": "phase16a_real_scores.json",
+        "field": "historical_hashes",
+        "key": "fixture.md"
+      }
+    },
+    "reports/local-model.json": {
+      "content_sha256_lf": "e24e6ceff93f8ea3e2126b9e6d3d8791c0b949126c9cc69e8d342524d189010c",
+      "revision": "9d07554b33081d6686d63ff162b65fd5ace09635",
+      "legacy_sha256": "d934000d1d912c10219cf2ccfb5b882269086fcb2c010ca17b6923a45ea3e501",
+      "legacy_source": {
+        "revision": "bc152b24e9e2a12a903745ac907b0bbd5c86596c",
+        "path": "phase16a_real_scores.json",
+        "field": "historical_hashes",
+        "key": "local-model.json"
+      }
+    },
+    "reports/local-model.md": {
+      "content_sha256_lf": "8fcdff4f34e7358406b392efd4943dbeef8274bb96e8797da54a3a85954389ca",
+      "revision": "9d07554b33081d6686d63ff162b65fd5ace09635",
+      "legacy_sha256": "f36e1b5dc652ef4a388513df14ffe70d4910423e501129061691e31ff972efc2",
+      "legacy_source": {
+        "revision": "bc152b24e9e2a12a903745ac907b0bbd5c86596c",
+        "path": "phase16a_real_scores.json",
+        "field": "historical_hashes",
+        "key": "local-model.md"
+      }
+    },
+    "reports/phase13-comparison.json": {
+      "content_sha256_lf": "122c6e835814540da2cb0f180ae8599f9084110f62efff6fa8afbb4e224061c9",
+      "revision": "b131ee53b8813c6dd9b8bc2f7f61069bb365287f",
+      "legacy_sha256": "8879ee134930b4106df9ffec23a51ebd691d29353e7a19a7805f1169ccf6e989",
+      "legacy_source": {
+        "revision": "bc152b24e9e2a12a903745ac907b0bbd5c86596c",
+        "path": "phase16a_real_scores.json",
+        "field": "historical_hashes",
+        "key": "phase13-comparison.json"
+      }
+    },
+    "reports/phase13-comparison.md": {
+      "content_sha256_lf": "56af029c5fe0f4b3c5df1cf6965cb1fbffd41ea7c8aa32390cc3545e755991c7",
+      "revision": "b131ee53b8813c6dd9b8bc2f7f61069bb365287f",
+      "legacy_sha256": "6e9e143875c92d8ce7eddb15fc0c3c99ede11bfb733b2f36ea0ba98f96d2141d",
+      "legacy_source": {
+        "revision": "bc152b24e9e2a12a903745ac907b0bbd5c86596c",
+        "path": "phase16a_real_scores.json",
+        "field": "historical_hashes",
+        "key": "phase13-comparison.md"
+      }
+    },
+    "phase15a_safety.json": {
+      "content_sha256_lf": "b0e16786aee8c90b2ba5029c4e89ea6931afd03d46022177fe7b0d3ba894c1fe",
+      "revision": "6c18f959a869981ee33986a2f6d39b7687da5ba7",
+      "legacy_sha256": "b1fc60472cf35a614142af19d40aea3a2234995fb6c12f5c93b834805e8d0741",
+      "legacy_source": {
+        "revision": "6c18f959a869981ee33986a2f6d39b7687da5ba7",
+        "path": "phase15a_rankings.json",
+        "field": "fingerprints",
+        "key": "phase15a_safety.json"
+      }
+    },
+    "query_decomposition.py": {
+      "content_sha256_lf": "4621ca64d9808677bdd4d2823a3440c611f7033a84d091c1e0acaf703573485f",
+      "revision": "6c18f959a869981ee33986a2f6d39b7687da5ba7",
+      "legacy_sha256": "81bc6d701535acd217173914b0369052a65473a005a2f0e1df28a0bc7d5262ff",
+      "legacy_source": {
+        "revision": "6c18f959a869981ee33986a2f6d39b7687da5ba7",
+        "path": "phase15a_rankings.json",
+        "field": "fingerprints",
+        "key": "query_decomposition.py"
+      }
+    },
+    "phase15a_rankings.json": {
+      "content_sha256_lf": "e5e670c0c16e2eb5acd76c3cfd095c87b2704eecb4bf947b93c23572d99b3ac1",
+      "revision": "6c18f959a869981ee33986a2f6d39b7687da5ba7",
+      "legacy_sha256": null,
+      "legacy_source": null
+    },
+    "reports/phase15a-multi-query.json": {
+      "content_sha256_lf": "fec6d794e5c34aab5242ac6e15e4dda077fd26d8d428d34f25d981c9b53913d9",
+      "revision": "6c18f959a869981ee33986a2f6d39b7687da5ba7",
+      "legacy_sha256": "f08b4b8ce8d957e0081df88b9499c3a6a13140dba319f18a33d69d03ed49254f",
+      "legacy_source": {
+        "revision": "bc152b24e9e2a12a903745ac907b0bbd5c86596c",
+        "path": "phase16a_real_scores.json",
+        "field": "historical_hashes",
+        "key": "phase15a-multi-query.json"
+      }
+    },
+    "reports/phase15a-multi-query.md": {
+      "content_sha256_lf": "7f5bef55173449f386a78121bfcdb4096dd858a5302d9ae3da4a25ecafc9e9c5",
+      "revision": "6c18f959a869981ee33986a2f6d39b7687da5ba7",
+      "legacy_sha256": "b309dd5e46453e2678df4bdb36c3877c20bf52f6722741ffd3c8bf5a6d6e8aa5",
+      "legacy_source": {
+        "revision": "bc152b24e9e2a12a903745ac907b0bbd5c86596c",
+        "path": "phase16a_real_scores.json",
+        "field": "historical_hashes",
+        "key": "phase15a-multi-query.md"
+      }
+    },
+    "reports/phase16a-reranking.json": {
+      "content_sha256_lf": "376e997dae86ab96fd0736283e534054597c1ae698c2aa10b6a51459e36d3b88",
+      "revision": "c15932bf2a3e16b76dacc8bedd7c2a7a51565a24",
+      "legacy_sha256": "890be3331a4e541bad945ebe5e6ec58bf90516181afbeaad745bbfde080e1a12",
+      "legacy_source": {
+        "revision": "bc152b24e9e2a12a903745ac907b0bbd5c86596c",
+        "path": "phase16a_real_scores.json",
+        "field": "historical_hashes",
+        "key": "phase16a-reranking.json"
+      }
+    },
+    "reports/phase16a-reranking.md": {
+      "content_sha256_lf": "534f9e2e38fc4d81f1fdb71f55a090db3d89bd93f6b3f15617bfc6a2a1e07307",
+      "revision": "c15932bf2a3e16b76dacc8bedd7c2a7a51565a24",
+      "legacy_sha256": "d632bcafd8b1d5a57898611842f30efa495cb5de0b61223dc2c4df233d1ec9e0",
+      "legacy_source": {
+        "revision": "bc152b24e9e2a12a903745ac907b0bbd5c86596c",
+        "path": "phase16a_real_scores.json",
+        "field": "historical_hashes",
+        "key": "phase16a-reranking.md"
+      }
+    },
+    "phase16a_real_scores.json": {
+      "content_sha256_lf": "e8a7c50a325805fe421c7e448e9d62c686021e94ffc6f8e87ccc04d3e3cfc7e9",
+      "revision": "bc152b24e9e2a12a903745ac907b0bbd5c86596c",
+      "legacy_sha256": null,
+      "legacy_source": null
+    },
+    "reports/phase16a-reranking-measured.json": {
+      "content_sha256_lf": "05815f4cda00e3ee56e8c2d28ea3179982754bc1169febf8295b8030d8178f2e",
+      "revision": "bc152b24e9e2a12a903745ac907b0bbd5c86596c",
+      "legacy_sha256": null,
+      "legacy_source": null
+    },
+    "reports/phase16a-reranking-measured.md": {
+      "content_sha256_lf": "d1d0362de49bd795cee9e1ec5b2416ea63a299e6a81874a13fc8e43200040b9a",
+      "revision": "bc152b24e9e2a12a903745ac907b0bbd5c86596c",
+      "legacy_sha256": null,
+      "legacy_source": null
+    },
+    "reports/phase16a-reranking-timing.json": {
+      "content_sha256_lf": "81c15e90a0e564a0d060c0555e94107a9d54589c1047874c6c3eca1406fc6cd7",
+      "revision": "bc152b24e9e2a12a903745ac907b0bbd5c86596c",
+      "legacy_sha256": null,
+      "legacy_source": null
+    },
+    "reports/phase16a-reranking-offline-check.json": {
+      "content_sha256_lf": "911db5105f1df8f9df5890b404bcbfa303c799420522c3f3cd7ff4c379916f1e",
+      "revision": "bc152b24e9e2a12a903745ac907b0bbd5c86596c",
+      "legacy_sha256": null,
+      "legacy_source": null
+    }
+  },
+  "datasets": {
+    "original": {
+      "members": [
+        "corpus.json",
+        "cases.json",
+        "fixture_rankings.json"
+      ],
+      "legacy_sha256": "fda9eca10cd07f40c3a8edef966b423006c851604c0042a9d33e286f2db1902a",
+      "legacy_source": {
+        "revision": "9d07554b33081d6686d63ff162b65fd5ace09635",
+        "path": "reports/local-model.json",
+        "field": "dataset_sha256"
+      }
+    }
+  }
+}
