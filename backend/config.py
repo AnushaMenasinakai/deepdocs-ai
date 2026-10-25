@@ -13,6 +13,56 @@ class ConfigurationError(ValueError):
     """A safe, public configuration message that never includes input values."""
 
 
+# Explicit upper bounds prevent accidental resource amplification. These settings
+# are not loaded by application startup until authentication integration is approved.
+AUTH_PROTECTION_BOUNDS = {
+    "password_max_concurrent": (1, 8),
+    "login_ip_burst": (1, 1000),
+    "login_ip_refill_per_minute": (1, 1000),
+    "login_account_burst": (1, 100),
+    "login_account_refill_per_minute": (1, 100),
+    "register_ip_burst": (1, 100),
+    "register_ip_refill_per_hour": (1, 1000),
+    "limiter_max_entries": (2, 65536),
+    "limiter_idle_seconds": (60, 86400),
+}
+
+
+@dataclass(frozen=True)
+class AuthProtectionSettings:
+    password_max_concurrent: int = 2
+    login_ip_burst: int = 10
+    login_ip_refill_per_minute: int = 20
+    login_account_burst: int = 5
+    login_account_refill_per_minute: int = 1
+    register_ip_burst: int = 3
+    register_ip_refill_per_hour: int = 5
+    limiter_max_entries: int = 4096
+    limiter_idle_seconds: int = 3600
+
+    def __post_init__(self):
+        for name, (lower, upper) in AUTH_PROTECTION_BOUNDS.items():
+            value = getattr(self, name)
+            if type(value) is not int or not lower <= value <= upper:
+                raise ConfigurationError("Invalid authentication protection configuration.")
+
+
+def load_auth_protection_settings() -> AuthProtectionSettings:
+    import re
+    try:
+        values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+        defaults = AuthProtectionSettings()
+        parsed = {}
+        for name in AUTH_PROTECTION_BOUNDS:
+            raw = values.get("AUTH_" + name.upper(), str(getattr(defaults, name)))
+            if not isinstance(raw, str) or not re.fullmatch(r"[0-9]+", raw.strip()):
+                raise ValueError
+            parsed[name] = int(raw.strip())
+        return AuthProtectionSettings(**parsed)
+    except (OSError, UnicodeError, TypeError, ValueError):
+        raise ConfigurationError("Invalid authentication protection configuration.") from None
+
+
 def load_cors_origins() -> list[str]:
     """Explicit browser origins only; process environment overrides dotenv."""
     import ipaddress
