@@ -16,7 +16,8 @@ from unittest.mock import patch
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evaluation.dataset import identifier
-from evaluation.multi_query import inputs, replay, confusion
+from evaluation.multi_query import inputs, replay, confusion, load_historical_rankings
+from evaluation.historical_integrity import recorded_legacy_fingerprint
 from evaluation.phase13 import measured_rankings
 from evaluation.retrieval_metrics import covered, expected, retrieval_metrics
 from evaluation.reranking import ADOPTION_CRITERIA
@@ -67,7 +68,7 @@ def cache_inventory():
 
 
 def snapshot_hashes():
-    return {name:hashlib.sha256((ROOT/"reports"/name).read_bytes()).hexdigest() for name in HISTORICAL}
+    return {name:recorded_legacy_fingerprint('reports/' + name, root=ROOT) for name in HISTORICAL}
 
 
 def audit_cases(cases, rankings):
@@ -110,7 +111,7 @@ def build_report(inventory):
     cases,rankings,_ = measured_rankings()
     baseline = audit_cases(cases,rankings)
     _,_,_,safety=inputs()
-    measured = replay(json.loads((ROOT/"phase15a_rankings.json").read_text(encoding="utf-8")))
+    measured = replay(load_historical_rankings())
     safety_rankings = {case["id"]:measured[identifier(case["question"])] for case in safety}
     if (baseline["decision"]["fn"]!=8 or baseline["decision"]["fp"]!=2 or baseline["complete_evidence"]!=14 or baseline["multi_complete"]!=4):
         raise ValueError("Historical baseline mismatch; investigate before evaluation")
