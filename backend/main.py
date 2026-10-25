@@ -13,8 +13,19 @@ from search_routes import router as search_router
 from rag_routes import router as rag_router
 from history_routes import router as history_router
 from dashboard_routes import router as dashboard_router
+from contextlib import asynccontextmanager
+from auth_protection import auth_protection_lifespan
 
-app = FastAPI(title="DeepDocs AI API", lifespan=database_lifespan)
+
+@asynccontextmanager
+async def application_lifespan(app):
+    # Drain password work before the existing dependency lifecycle is closed.
+    async with database_lifespan(app):
+        async with auth_protection_lifespan(app):
+            yield
+
+
+app = FastAPI(title="DeepDocs AI API", lifespan=application_lifespan)
 app.include_router(auth_router)
 app.include_router(knowledge_base_router)
 app.include_router(document_router)

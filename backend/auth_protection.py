@@ -1,4 +1,4 @@
-"""Isolated, process-local authentication primitives; no route integration.
+"""Process-local authentication protection owned by an application lifespan.
 
 Client addresses must come from a separately verified ASGI/proxy trust policy.
 Account strings must use the application's validated email normalization. No
@@ -15,8 +15,11 @@ import math
 import secrets
 import threading
 import time
+from contextlib import asynccontextmanager
 
-from config import AuthProtectionSettings
+from fastapi import HTTPException, Request
+
+from config import AuthProtectionSettings, load_auth_protection_settings
 
 
 def normalize_client_address(address):
@@ -123,7 +126,8 @@ class PasswordExecutor:
 
 Use within one application lifespan. Cancellation cannot stop a running native
 call: its slot remains occupied until the concurrent future actually completes.
-The owner must await aclose(), including after a cancelled shutdown waiter.
+    The owner must await aclose(). Cancellation is propagated only after draining
+    the executor, including when the shutdown waiter is cancelled repeatedly.
 """
     def __init__(self, max_outstanding=2, *, executor_factory=ThreadPoolExecutor):
         if type(max_outstanding) is not int or not 1 <= max_outstanding <= 8:
@@ -176,4 +180,63 @@ The owner must await aclose(), including after a cancelled shutdown waiter.
         if self._shutdown_task is None:
             self._shutdown_task = asyncio.create_task(asyncio.to_thread(
                 self._executor.shutdown, wait=True, cancel_futures=True))
-        await asyncio.shield(self._shutdown_task)
+        cancelled = False
+        while True:
+            try:
+                await asyncio.shield(self._shutdown_task)
+                break
+            except asyncio.CancelledError:
+                cancelled = True
+        if cancelled:
+            raise asyncio.CancelledError
+
+
+def too_many_requests(retry_after):
+    return HTTPException(429, "Too many authentication requests. Please try again later.",
+                         headers={"Retry-After": str(max(1, retry_after)), "Cache-Control": "no-store"})
+
+
+class AuthProtection:
+    def __init__(self, settings, *, clock=time.monotonic):
+        self.limiter = AuthRateLimiter(settings, clock=clock)
+        self.passwords = PasswordExecutor(settings.password_max_concurrent)
+        self.closed = False
+
+    def admit(self, action, request, account):
+        if self.closed:
+            raise too_many_requests(1)
+        # ASGI identity only. Deployment must verify Uvicorn/proxy trust;
+        # forwarded headers are never interpreted by this application.
+        address = request.client.host if request.client else None
+        decision = self.limiter.check(action, address, account)
+        if not decision.allowed:
+            raise too_many_requests(decision.retry_after)
+
+    async def aclose(self):
+        self.closed = True
+        await self.passwords.aclose()
+
+
+def get_auth_protection(request: Request):
+    service = getattr(request.app.state, "auth_protection", None)
+    if service is None:
+        raise HTTPException(503, "Authentication service is temporarily unavailable.")
+    return service
+
+
+@asynccontextmanager
+async def auth_protection_lifespan(app):
+    app.state.auth_protection = None
+    try:
+        service = AuthProtection(load_auth_protection_settings())
+    except Exception:
+        # Do not start serving authentication without validated protection.
+        raise RuntimeError("Authentication protection initialization failed.") from None
+    app.state.auth_protection = service
+    try:
+        yield
+    finally:
+        try:
+            await service.aclose()
+        finally:
+            app.state.auth_protection = None

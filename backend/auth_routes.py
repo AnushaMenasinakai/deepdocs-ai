@@ -10,6 +10,8 @@ from auth import authentication_error, create_access_token, get_auth_settings, g
 from config import JWTSettings
 from security import verify_password
 from users import create_user, find_user_by_email
+import asyncio
+from auth_protection import get_auth_protection, PasswordCapacityExceeded, too_many_requests
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -19,11 +21,15 @@ async def register(
     registration: RegistrationRequest,
     request: Request,
     database: AsyncDatabase = Depends(get_database),
+    protection=Depends(get_auth_protection),
 ):
+    protection.admit("register", request, str(registration.email))
     if not getattr(request.app.state, "users_index_ready", False):
         raise HTTPException(503, "Registration is unavailable. Please try again later.")
     try:
-        return await create_user(database, registration)
+        return await create_user(database, registration, password_executor=protection.passwords)
+    except PasswordCapacityExceeded:
+        raise too_many_requests(1) from None
     except DuplicateKeyError:
         # The database unique index is the final arbiter, including concurrent requests.
         raise HTTPException(409, "Registration conflicts with an existing account.") from None
@@ -37,15 +43,23 @@ async def register(
 async def login(
     credentials: LoginRequest,
     response: Response,
+    request: Request,
     settings: JWTSettings = Depends(get_auth_settings),
     database: AsyncDatabase = Depends(get_database),
+    protection=Depends(get_auth_protection),
 ):
+    protection.admit("login", request, str(credentials.email))
     try:
         document = await find_user_by_email(database, str(credentials.email))
     except (PyMongoError, TimeoutError):
         raise HTTPException(503, "Authentication is temporarily unavailable.") from None
     stored_hash = document.get("password_hash") if document else None
-    valid = await verify_password(credentials.password.get_secret_value(), stored_hash)
+    try:
+        valid = await verify_password(credentials.password.get_secret_value(), stored_hash, executor=protection.passwords)
+    except PasswordCapacityExceeded:
+        raise too_many_requests(1) from None
+    if asyncio.current_task().cancelling():
+        raise asyncio.CancelledError
     if not valid or document is None:
         raise authentication_error("Invalid email or password")
     response.headers["Cache-Control"] = "no-store"

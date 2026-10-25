@@ -21,12 +21,15 @@ from auth import create_access_token
 from config import ConfigurationError, JWTSettings, load_jwt_settings
 from database import get_database
 from main import app
+from auth_protection import AuthProtection, get_auth_protection
+from config import AuthProtectionSettings
 
 
-async def request(method, path, payload=None, authorization=None):
+async def request(method, path, payload=None, authorization=None, *, application=app, client=("test", 123), extra_headers=()):
     messages = []
     body = json.dumps(payload).encode() if payload is not None else b""
     headers = [(b"content-type", b"application/json")]
+    headers.extend(extra_headers)
     if authorization is not None:
         headers.append((b"authorization", authorization.encode()))
 
@@ -36,11 +39,11 @@ async def request(method, path, payload=None, authorization=None):
     async def send(message):
         messages.append(message)
 
-    await app({
+    await application({
         "type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1",
         "method": method, "scheme": "http", "path": path, "raw_path": path.encode(),
         "query_string": b"", "root_path": "", "headers": headers,
-        "server": ("test", 80), "client": ("test", 123),
+        "server": ("test", 80), "client": client,
     }, receive, send)
     start = next(m for m in messages if m["type"] == "http.response.start")
     response_body = b"".join(m.get("body", b"") for m in messages if m["type"] == "http.response.body")
@@ -60,6 +63,8 @@ class AuthTests(unittest.IsolatedAsyncioTestCase):
         self.collection = SimpleNamespace(find_one=AsyncMock())
         self.database = SimpleNamespace(get_collection=MagicMock(return_value=self.collection))
         self.overrides = app.dependency_overrides.copy()
+        self.protection = AuthProtection(AuthProtectionSettings())
+        app.dependency_overrides[get_auth_protection] = lambda: self.protection
         app.dependency_overrides[get_database] = lambda: self.database
         self.user = {
             "_id": ObjectId(), "name": "Example User", "email": "user@example.com",
@@ -68,6 +73,7 @@ class AuthTests(unittest.IsolatedAsyncioTestCase):
         self.collection.find_one.return_value = self.user
 
     async def asyncTearDown(self):
+        await self.protection.aclose()
         self.settings_patch.stop()
         app.dependency_overrides.clear()
         app.dependency_overrides.update(self.overrides)

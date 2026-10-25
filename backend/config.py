@@ -13,8 +13,8 @@ class ConfigurationError(ValueError):
     """A safe, public configuration message that never includes input values."""
 
 
-# Explicit upper bounds prevent accidental resource amplification. These settings
-# are not loaded by application startup until authentication integration is approved.
+# Explicit upper bounds prevent accidental resource amplification. The owning
+# authentication lifespan validates these settings before serving requests.
 AUTH_PROTECTION_BOUNDS = {
     "password_max_concurrent": (1, 8),
     "login_ip_burst": (1, 1000),

@@ -231,9 +231,11 @@ class ExecutorTests(unittest.IsolatedAsyncioTestCase):
         closing = asyncio.create_task(self.gate.aclose())
         await asyncio.to_thread(self.worker.shutdown_started.wait, 5)
         closing.cancel(); closing.cancel()
-        with self.assertRaises(asyncio.CancelledError): await closing
+        await asyncio.sleep(0)  # Scheduler checkpoint, not a timing delay.
+        self.assertFalse(closing.done())
         with self.assertRaises(PasswordCapacityExceeded): await self.gate.run(lambda: None)
         self.worker.shutdown_release.set()
+        with self.assertRaises(asyncio.CancelledError): await closing
         await self.gate.aclose()
         await self.gate.aclose()
 

@@ -14,8 +14,10 @@ _hasher = PasswordHasher(
 )
 
 
-async def hash_password(password: str) -> str:
+async def hash_password(password: str, *, executor=None) -> str:
     # CPU/memory-intensive work must not block FastAPI's event loop.
+    if executor is not None:
+        return await executor.run(_hasher.hash, password)
     return await run_in_threadpool(_hasher.hash, password)
 
 
@@ -25,7 +27,7 @@ def _dummy_hash() -> str:
     return _hasher.hash(secrets.token_urlsafe(32))
 
 
-async def verify_password(password: str, password_hash: str | None) -> bool:
+async def verify_password(password: str, password_hash: str | None, *, executor=None) -> bool:
     def verify():
         candidate = password_hash if isinstance(password_hash, str) else _dummy_hash()
         try:
@@ -34,4 +36,6 @@ async def verify_password(password: str, password_hash: str | None) -> bool:
         except (VerificationError, InvalidHashError, UnicodeError):
             return False
 
+    if executor is not None:
+        return await executor.run(verify)
     return await run_in_threadpool(verify)

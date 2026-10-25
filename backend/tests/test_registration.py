@@ -18,6 +18,8 @@ from config import Settings
 from database import database_lifespan, get_database
 from main import app
 from security import hash_password
+from auth_protection import AuthProtection, get_auth_protection
+from config import AuthProtectionSettings
 
 
 async def post_registration(payload):
@@ -49,6 +51,8 @@ class RegistrationTests(unittest.IsolatedAsyncioTestCase):
         self.collection = SimpleNamespace(insert_one=AsyncMock(), create_index=AsyncMock())
         self.database = SimpleNamespace(get_collection=MagicMock(return_value=self.collection))
         self.previous_overrides = app.dependency_overrides.copy()
+        self.protection = AuthProtection(AuthProtectionSettings(register_ip_burst=100))
+        app.dependency_overrides[get_auth_protection] = lambda: self.protection
         app.dependency_overrides[get_database] = lambda: self.database
         self.previous_ready = getattr(app.state, "users_index_ready", False)
         app.state.users_index_ready = True
@@ -58,6 +62,7 @@ class RegistrationTests(unittest.IsolatedAsyncioTestCase):
         self.payload = {"name": " Example User ", "email": " USER@Example.com ", "password": "example-password"}
 
     async def asyncTearDown(self):
+        await self.protection.aclose()
         self.hasher.stop()
         app.dependency_overrides.clear()
         app.dependency_overrides.update(self.previous_overrides)
@@ -78,7 +83,7 @@ class RegistrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(document["password_hash"], "mock-encoded-hash")
         self.assertNotIn(self.payload["password"], json.dumps(response))
         self.assertNotIn("mock-encoded-hash", json.dumps(response))
-        self.hash_mock.assert_awaited_once_with("example-password")
+        self.hash_mock.assert_awaited_once_with("example-password", executor=self.protection.passwords)
         self.collection.create_index.assert_not_awaited()
 
     async def test_invalid_values_are_422_and_never_inserted_or_echoed(self):
@@ -109,7 +114,7 @@ class RegistrationTests(unittest.IsolatedAsyncioTestCase):
     async def test_password_spaces_are_not_trimmed(self):
         payload = {**self.payload, "password": "  a long password  "}
         self.assertEqual((await post_registration(payload))[0], 201)
-        self.hash_mock.assert_awaited_once_with(payload["password"])
+        self.hash_mock.assert_awaited_once_with(payload["password"], executor=self.protection.passwords)
 
     async def test_duplicate_key_maps_to_409_without_driver_details(self):
         self.collection.insert_one.side_effect = DuplicateKeyError("private-driver-detail")

@@ -1,5 +1,6 @@
 """Small MongoDB operations for the users collection; no ODM."""
 from datetime import datetime, timezone
+import asyncio
 
 from bson import ObjectId
 from pymongo import ASCENDING
@@ -16,8 +17,10 @@ async def ensure_user_indexes(database: AsyncDatabase) -> None:
     )
 
 
-async def create_user(database: AsyncDatabase, registration: RegistrationRequest) -> UserResponse:
-    password_hash = await hash_password(registration.password.get_secret_value())
+async def create_user(database: AsyncDatabase, registration: RegistrationRequest, *, password_executor=None) -> UserResponse:
+    password_hash = await hash_password(registration.password.get_secret_value(), executor=password_executor)
+    if asyncio.current_task().cancelling():
+        raise asyncio.CancelledError
     # Explicit allowlist: never insert a dump of the request model.
     document = {
         "_id": ObjectId(),
