@@ -66,6 +66,11 @@ class LocalCrossEncoderAdapterTests(unittest.TestCase):
 class RealScoreReplayTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        from evaluation.historical_integrity import validate_historical_content
+        for name in ('phase16a_real_scores.json', 'reports/phase16a-reranking-timing.json',
+                     'reports/phase16a-reranking-measured.json', 'reports/phase16a-reranking-measured.md',
+                     'reports/phase16a-reranking-offline-check.json'):
+            validate_historical_content(name)
         cls.data=json.loads(SCORES.read_text(encoding="utf-8"))
         cls.timing=json.loads(TIMING.read_text(encoding="utf-8"))
         cls.saved=json.loads((ROOT/"reports/phase16a-reranking-measured.json").read_text(encoding="utf-8"))

@@ -13,7 +13,8 @@ if __package__ in (None, ""):
     sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from evaluation import cross_encoder_local as adapter
 from evaluation.dataset import identifier
-from evaluation.multi_query import inputs, replay
+from evaluation.multi_query import inputs, replay, load_historical_rankings
+from evaluation.historical_integrity import recorded_legacy_fingerprint, validate_historical_content, HistoricalIntegrityError
 from evaluation.phase13 import measured_rankings
 from evaluation.phase16a import ROOT, SETTINGS, audit_cases, snapshot_hashes
 from evaluation.reranking import (ADOPTION_CRITERIA, rerank, threshold_sweep,
@@ -31,14 +32,28 @@ PRACTICAL_SECONDS_PER_QUESTION = 2.
 
 
 def historical_hashes():
-    return {**snapshot_hashes(), **{name:hashlib.sha256((ROOT/"reports"/name).read_bytes()).hexdigest()
+    return {**snapshot_hashes(), **{name:recorded_legacy_fingerprint('reports/' + name, root=ROOT)
         for name in ("phase16a-reranking.json","phase16a-reranking.md")}}
+
+
+def _load_historical_json(name):
+    digest = validate_historical_content(name, root=ROOT)
+    raw = (ROOT/name).read_bytes()
+    if hashlib.sha256(raw.replace(b'\r\n', b'\n')).hexdigest() != digest:
+        raise HistoricalIntegrityError('Historical evidence changed during loading')
+    return json.loads(raw)
+
+
+def load_historical_measurement():
+    """Frozen replay inputs only; fresh measurement never enters this boundary."""
+    return (_load_historical_json('phase16a_real_scores.json'),
+            _load_historical_json('reports/phase16a-reranking-timing.json'))
 
 
 def candidate_sets():
     cases,ranking,_=measured_rankings()
     _,_,_,safety=inputs()
-    measured=replay(json.loads((ROOT/"phase15a_rankings.json").read_text(encoding="utf-8")))
+    measured=replay(load_historical_rankings())
     safety_ranking={c["id"]:measured[identifier(c["question"])] for c in safety}
     return cases,ranking,safety,safety_ranking
 
@@ -260,7 +275,8 @@ def main():
         data,timing=measure()
         SCORES.write_text(json.dumps(data,indent=2)+"\n",encoding="utf-8")
         TIMING.write_text(json.dumps(timing,indent=2)+"\n",encoding="utf-8")
-    data=json.loads(SCORES.read_text(encoding="utf-8"));timing=json.loads(TIMING.read_text(encoding="utf-8"))
+    else:
+        data,timing=load_historical_measurement()
     if args.verify_offline:
         repeated,repeat_timing=measure()
         if repeated["candidate_fingerprint"]!=data["candidate_fingerprint"]:raise ValueError("Candidate drift")
