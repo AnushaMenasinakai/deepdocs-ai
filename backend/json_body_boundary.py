@@ -1,12 +1,10 @@
-"""Opt-in ASGI byte boundary, not yet installed in the application.
+"""ASGI byte boundary and registered FastAPI route selection.
 
 ``select(scope)`` must match method/path before routing; scope['route'] is not
-available here. Integration must derive its predicate after route registration
-from ordered APIRoute metadata (body_field, excluding Form), including dynamic
-paths, and validate coverage when the route table is finalized. Do not select
-by Content-Type: FastAPI buffers unsuitable media types too. Exclude multipart
-and bodyless routes. Rebuild/validate the matcher if routes are subsequently
-added. A coverage test must compare all JSON-body routes with the matcher.
+available here. JSONRouteSelector derives its predicate from ordered effective
+APIRoute metadata, including prefixes and dynamic paths. Do not select by
+Content-Type: FastAPI buffers unsuitable media types too. Multipart and bodyless
+routes are excluded. Metadata is revalidated when routes are subsequently added.
 
 The component buffers no body. Downstream may buffer up to the limit, and the
 server has already allocated each incoming event. This is not a global memory
@@ -16,8 +14,75 @@ from collections.abc import Callable
 
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
+from fastapi.params import Body, Form
+from fastapi.routing import APIRoute, iter_route_contexts
+from starlette.routing import Match, Route, WebSocketRoute
+from config import load_json_body_settings
 
 DETAIL = "JSON request body exceeds the configured size limit."
+
+
+class JSONRouteSelector:
+    """Use effective registered routes, including prefixes and hidden endpoints.
+
+    Validate before serving; rederive contexts on requests so later additions
+    cannot silently bypass a frozen inventory. Unknown route types fail closed.
+    The same first full match as the router wins, including bodyless shadows.
+    """
+    def __init__(self, router):
+        self.router = router
+        self.entries()
+
+    def entries(self):
+        try:
+            result = []
+            for context in iter_route_contexts(self.router.routes):
+                original = context.original_route
+                if isinstance(original, WebSocketRoute):
+                    continue
+                if not isinstance(original, Route) or not context.methods:
+                    raise ValueError
+                protected = False
+                if isinstance(original, APIRoute):
+                    field = context.body_field
+                    if field is not None:
+                        info = field.field_info
+                        if isinstance(info, Form):
+                            pass
+                        elif isinstance(info, Body) and (info.media_type == 'application/json' or
+                                info.media_type.startswith('application/') and info.media_type.endswith('+json')):
+                            protected = True
+                        else:
+                            raise ValueError
+                    else:
+                        # Manual multipart parsing has no body_field. Do not
+                        # silently accept a manually documented JSON endpoint.
+                        content = (context.openapi_extra or {}).get('requestBody', {}).get('content', {})
+                        if any(key != 'multipart/form-data' for key in content):
+                            raise ValueError
+                elif context.methods - {'GET', 'HEAD', 'OPTIONS'}:
+                    raise ValueError
+                result.append((context, protected))
+            return result
+        except (AttributeError, TypeError, ValueError):
+            raise RuntimeError('JSON request boundary route metadata is unsupported.') from None
+
+    def __call__(self, scope):
+        for context, protected in self.entries():
+            if context.matches(scope)[0] == Match.FULL:
+                return protected and scope['method'] not in {'GET', 'HEAD', 'OPTIONS'}
+        return False
+
+
+class RegisteredJSONBodyBoundary:
+    """Lazy middleware construction validates config/routes before lifespan work."""
+    def __init__(self, app, *, router):
+        settings = load_json_body_settings()
+        self.boundary = JSONBodyBoundary(app, max_bytes=settings.max_body_bytes,
+                                         select=JSONRouteSelector(router))
+
+    async def __call__(self, scope, receive, send):
+        await self.boundary(scope, receive, send)
 
 
 class BodyLimitExceeded(Exception):

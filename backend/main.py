@@ -15,6 +15,7 @@ from history_routes import router as history_router
 from dashboard_routes import router as dashboard_router
 from contextlib import asynccontextmanager
 from auth_protection import auth_protection_lifespan
+from json_body_boundary import RegisteredJSONBodyBoundary
 
 
 @asynccontextmanager
@@ -46,6 +47,9 @@ async def validation_error_handler(request, error):
     return JSONResponse(status_code=422, content={"detail": details})
 
 # Local Vite origins plus explicitly validated frontend origins.
+# Starlette inserts later middleware outside earlier middleware: CORS wraps
+# the boundary, including responses emitted directly by its receive guard.
+app.add_middleware(RegisteredJSONBodyBoundary, router=app.router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=load_cors_origins(),
