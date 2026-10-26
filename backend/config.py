@@ -13,6 +13,27 @@ class ConfigurationError(ValueError):
     """A safe, public configuration message that never includes input values."""
 
 
+@dataclass(frozen=True)
+class JSONBodySettings:
+    max_body_bytes: int = 65536
+
+    def __post_init__(self):
+        if type(self.max_body_bytes) is not int or not 16384 <= self.max_body_bytes <= 1048576:
+            raise ConfigurationError("Invalid JSON request body configuration.")
+
+
+def load_json_body_settings() -> JSONBodySettings:
+    import re
+    try:
+        values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+        raw = values.get("JSON_MAX_BODY_BYTES", "65536")
+        if not isinstance(raw, str) or not re.fullmatch(r"[0-9]+", raw.strip()):
+            raise ValueError
+        return JSONBodySettings(int(raw.strip()))
+    except (OSError, UnicodeError, TypeError, ValueError):
+        raise ConfigurationError("Invalid JSON request body configuration.") from None
+
+
 # Explicit upper bounds prevent accidental resource amplification. The owning
 # authentication lifespan validates these settings before serving requests.
 AUTH_PROTECTION_BOUNDS = {
