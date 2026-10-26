@@ -8,7 +8,7 @@ const USER={id:'507f1f77bcf86cd799439011',name:'Example User',email:'user@exampl
   let passed=0;
   async function scenario({token=null,meStatus=200,network=false,delay=0,width=1440}={},run) {
     const context=await browser.newContext({viewport:{width,height:900}});
-    const state={meStatus,network,delay,meBody:USER,loginStatus:200};
+    const state={meStatus,network,delay,meBody:USER,loginStatus:200,registerStatus:201};
     const requests=[]; const errors=[]; const logs=[];
     await context.addInitScript(({token})=>{
       if(!sessionStorage.getItem('test_initialized')) {
@@ -38,7 +38,7 @@ const USER={id:'507f1f77bcf86cd799439011',name:'Example User',email:'user@exampl
         assert.equal(req.headers().authorization,undefined);
         return route.fulfill({status:state.loginStatus,json:state.loginStatus===200?{access_token:TOKEN,token_type:'bearer'}:{detail:'PRIVATE_DETAIL'},headers});
       }
-      if(path==='/api/auth/register') return route.fulfill({status:201,json:USER,headers});
+      if(path==='/api/auth/register') return route.fulfill({status:state.registerStatus,json:state.registerStatus===201?USER:{detail:'PRIVATE_RATE_DETAILS'},headers});
       throw new Error('Unexpected request: '+path);
     });
     const page=await context.newPage();
@@ -144,6 +144,30 @@ const USER={id:'507f1f77bcf86cd799439011',name:'Example User',email:'user@exampl
       assert.equal(await page.evaluate(()=>localStorage.length),0);
     });
     console.log('PASS login -> /me -> context -> destination, post-login failures, and logout');
+
+    for(const action of ['login','register']) await scenario({},async({page,state,go,heading,requests})=>{
+      state[action+'Status']=429;
+      await go('/'+action); await heading(action==='login'?'Welcome back':'Create your account');
+      if(action==='register') await page.getByLabel('Name',{exact:true}).fill('Example User');
+      await page.getByLabel('Email',{exact:true}).fill('USER@Example.com');
+      await page.getByLabel('Password',{exact:true}).fill('offline-password');
+      if(action==='register') await page.getByLabel('Confirm password',{exact:true}).fill('offline-password');
+      const submit=page.getByRole('button',{name:action==='login'?'Sign in':'Create account',exact:true});
+      await submit.click();
+      await page.getByRole('alert').filter({hasText:'Too many authentication requests. Please try again later.'}).waitFor();
+      assert.equal(new URL(page.url()).pathname,'/'+action);
+      assert.equal(await submit.isEnabled(),true);
+      assert.equal(await page.evaluate(()=>localStorage.length),0);
+      assert(!((await page.locator('body').innerText()).includes('PRIVATE_')));
+      assert.equal(requests.filter(r=>r.path==='/api/auth/'+action).length,1);
+      assert(!requests.some(r=>r.path==='/api/auth/me'));
+      // Only an explicit user submission retries; no timer or Retry-After is required.
+      state[action+'Status']=action==='login'?200:201;
+      await submit.click();
+      await heading('Welcome back',action==='login');
+      assert.equal(requests.filter(r=>r.path==='/api/auth/'+action).length,2);
+    });
+    console.log('PASS login/register 429 safe message, released guard and explicit retry');
 
     await scenario({},async({page,go,heading,login})=>{
       await go('/documents'); await heading('Welcome back');

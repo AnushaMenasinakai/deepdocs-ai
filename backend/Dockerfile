@@ -36,4 +36,6 @@ RUN --network=none python -c "import main, pymupdf, argon2, torch; from config i
 EXPOSE 8000
 # No health probe here: existing liveness is not complete service readiness.
 # Persistent PDF storage must be attached in Docker-B before real uploads.
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Direct access: do not let forwarded headers rewrite authentication limiter identity.
+# A future reverse proxy requires an explicit, verified trusted-proxy policy.
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-proxy-headers"]

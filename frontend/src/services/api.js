@@ -14,6 +14,7 @@ function safeError(error, action) {
   if (!error.response) message = 'Unable to connect. Please check your connection and try again.'
   else if (status === 409 && action === 'register') message = 'An account with this email already exists.'
   else if (status === 401 && action === 'login') message = 'Invalid email or password.'
+  else if (status === 429 && (action === 'login' || action === 'register')) message = 'Too many authentication requests. Please try again later.'
   else if (status === 422) message = 'Please check your details and try again.'
   else if (status === 503) message = 'Authentication service is temporarily unavailable.'
   // Never pass Axios errors (which contain the request body) or server details to the UI.
