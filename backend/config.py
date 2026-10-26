@@ -13,6 +13,46 @@ class ConfigurationError(ValueError):
     """A safe, public configuration message that never includes input values."""
 
 
+EXPENSIVE_ADMISSION_BOUNDS = {
+    "upload_max_inflight": (1, 4),
+    "document_operation_max_inflight": (1, 2),
+    "query_max_inflight": (1, 4),
+    "expensive_cpu_max_outstanding": (1, 2),
+    "gemini_max_inflight": (1, 2),
+}
+
+
+@dataclass(frozen=True)
+class ExpensiveAdmissionSettings:
+    upload_max_inflight: int = 2
+    document_operation_max_inflight: int = 1
+    query_max_inflight: int = 2
+    expensive_cpu_max_outstanding: int = 1
+    gemini_max_inflight: int = 2
+
+    def __post_init__(self):
+        for name, (lower, upper) in EXPENSIVE_ADMISSION_BOUNDS.items():
+            value = getattr(self, name)
+            if type(value) is not int or not lower <= value <= upper:
+                raise ConfigurationError("Invalid expensive operation admission configuration.")
+
+
+def load_expensive_admission_settings() -> ExpensiveAdmissionSettings:
+    import re
+    try:
+        values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+        defaults = ExpensiveAdmissionSettings()
+        parsed = {}
+        for name in EXPENSIVE_ADMISSION_BOUNDS:
+            raw = values.get(name.upper(), str(getattr(defaults, name)))
+            if not isinstance(raw, str) or not re.fullmatch(r"[0-9]+", raw.strip()):
+                raise ValueError
+            parsed[name] = int(raw.strip())
+        return ExpensiveAdmissionSettings(**parsed)
+    except (OSError, UnicodeError, TypeError, ValueError):
+        raise ConfigurationError("Invalid expensive operation admission configuration.") from None
+
+
 @dataclass(frozen=True)
 class JSONBodySettings:
     max_body_bytes: int = 65536
