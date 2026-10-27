@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from pymongo.asynchronous.database import AsyncDatabase
 from config import load_cors_origins, load_expensive_admission_settings
 from admission_lifecycle import AdmissionService
+from cpu_workers import CPUWorkers
 
 from database import UNAVAILABLE_MESSAGE, database_lifespan, get_database, ping_database
 from auth_routes import router as auth_router
@@ -25,20 +26,28 @@ from json_body_boundary import RegisteredJSONBodyBoundary
 async def application_lifespan(app):
     # Validate before external startup; each lifespan owns fresh local state.
     app.state.expensive_admission = None
+    app.state.cpu_workers = None
     service = AdmissionService(load_expensive_admission_settings())
     dependencies = AsyncExitStack()
+    workers = None
     try:
+        workers = CPUWorkers(service)
         await dependencies.enter_async_context(database_lifespan(app))
         await dependencies.enter_async_context(auth_protection_lifespan(app))
         app.state.expensive_admission = service
+        app.state.cpu_workers = workers
         yield
     finally:
         service.begin_shutdown()
+        if workers is not None:
+            workers.begin_shutdown()
         exception = sys.exc_info()
 
         async def cleanup():
             # Keep clients alive even if the lifespan waiter is cancelled again.
             await service.aclose()
+            if workers is not None:
+                await workers.aclose()
             await dependencies.__aexit__(*exception)
 
         # One owned cleanup task per lifespan, not a work/admission queue.
@@ -57,6 +66,7 @@ async def application_lifespan(app):
                 raise asyncio.CancelledError
         finally:
             app.state.expensive_admission = None
+            app.state.cpu_workers = None
 
 
 app = FastAPI(title="DeepDocs AI API", lifespan=application_lifespan)
