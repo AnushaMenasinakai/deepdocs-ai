@@ -3,7 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pymongo.asynchronous.database import AsyncDatabase
-from config import load_cors_origins
+from config import load_cors_origins, load_expensive_admission_settings
+from admission_lifecycle import AdmissionService
 
 from database import UNAVAILABLE_MESSAGE, database_lifespan, get_database, ping_database
 from auth_routes import router as auth_router
@@ -13,17 +14,49 @@ from search_routes import router as search_router
 from rag_routes import router as rag_router
 from history_routes import router as history_router
 from dashboard_routes import router as dashboard_router
-from contextlib import asynccontextmanager
+import asyncio
+import sys
+from contextlib import AsyncExitStack, asynccontextmanager
 from auth_protection import auth_protection_lifespan
 from json_body_boundary import RegisteredJSONBodyBoundary
 
 
 @asynccontextmanager
 async def application_lifespan(app):
-    # Drain password work before the existing dependency lifecycle is closed.
-    async with database_lifespan(app):
-        async with auth_protection_lifespan(app):
-            yield
+    # Validate before external startup; each lifespan owns fresh local state.
+    app.state.expensive_admission = None
+    service = AdmissionService(load_expensive_admission_settings())
+    dependencies = AsyncExitStack()
+    try:
+        await dependencies.enter_async_context(database_lifespan(app))
+        await dependencies.enter_async_context(auth_protection_lifespan(app))
+        app.state.expensive_admission = service
+        yield
+    finally:
+        service.begin_shutdown()
+        exception = sys.exc_info()
+
+        async def cleanup():
+            # Keep clients alive even if the lifespan waiter is cancelled again.
+            await service.aclose()
+            await dependencies.__aexit__(*exception)
+
+        # One owned cleanup task per lifespan, not a work/admission queue.
+        closing = asyncio.create_task(cleanup())
+        cancelled = False
+        try:
+            while True:
+                try:
+                    await asyncio.shield(closing)
+                    break
+                except asyncio.CancelledError:
+                    if closing.cancelled():
+                        raise
+                    cancelled = True
+            if cancelled:
+                raise asyncio.CancelledError
+        finally:
+            app.state.expensive_admission = None
 
 
 app = FastAPI(title="DeepDocs AI API", lifespan=application_lifespan)

@@ -53,6 +53,7 @@ class Admission:
         self._used = dict.fromkeys(Resource, 0)
         self._lock = threading.RLock()
         self._closed = False
+        self._changed = lambda: None
 
     @property
     def outstanding(self):
@@ -83,6 +84,7 @@ class Reservation:
         self._resources = resources
         self._state = 'held'
         self._future = None
+        self._group = None
 
     def __enter__(self):
         return self
@@ -96,9 +98,14 @@ class Reservation:
             if self._state != 'held' or not names <= self._resources:
                 raise ValueError('Reservation cannot transfer those resources.')
             child = Reservation(self._owner, names)
+            child._group = self._group
+            if self._group is not None:
+                self._group.add(child)
             self._resources = self._resources - names
             if not self._resources:
                 self._state = 'released'
+                if self._group is not None:
+                    self._group.discard(self)
             return child
 
     def _release(self):
@@ -107,6 +114,9 @@ class Reservation:
                 self._owner._used[name] -= 1
             self._state = 'released'
             self._resources = frozenset()
+            if self._group is not None:
+                self._group.discard(self)
+            self._owner._changed()
 
     def release(self):
         """Release request ownership only; cannot release worker-owned capacity."""
