@@ -211,3 +211,30 @@ class ProtocolTests(unittest.TestCase):
             with self.subTest(field=field):
                 with self.assertRaises(p.ProtocolError):
                     replace(self.limits, **{field: value})
+
+    def test_adversarial_utf8_and_incomplete_states(self):
+        for data in [b'\xf0\x9f\x99', b'\xc0\xaf', b'\xed\xa0\x80']:
+            with self.subTest(data=data):
+                frames = [p._frame(p.Record.START, 0, p.PAGE.pack(1)),
+                          p._frame(p.Record.CHUNK, 1, p.CHUNK.pack(0, 1, 1, 1)),
+                          p._frame(p.Record.TEXT, 2, data),
+                          p._frame(p.Record.END_CHUNK, 3)]
+                with self.assertRaises(p.ProtocolError):
+                    self.decode(frames)
+        start = p._frame(p.Record.START, 0, p.PAGE.pack(2))
+        metadata = p._frame(p.Record.CHUNK, 1, p.CHUNK.pack(0, 2, 2, 1))
+        for frames in [
+            [start, p._frame(p.Record.TEXT, 1, b'x')],
+            [start, p._frame(p.Record.END_CHUNK, 1)],
+            [start, metadata, p._frame(p.Record.CHUNK, 2, p.CHUNK.pack(1, 2, 2, 1))],
+            [start, metadata, p._frame(p.Record.SUCCESS, 2, p.SUMMARY.pack(0, 0, 0))],
+            [start, p._frame(p.Record.CHUNK, 2**64 - 1, p.CHUNK.pack(0, 1, 1, 1))],
+            [start, metadata, metadata],
+            [start, p._frame(p.Record.SUCCESS, 1, b'')],
+            [p._frame(p.Record.START, 0, b'')],
+        ]:
+            with self.subTest(count=len(frames)):
+                with self.assertRaises(p.ProtocolError):
+                    self.decode(frames)
+        with self.assertRaises(p.ProtocolError):
+            list(p.encode_success((2, [chunk('a', page=2), chunk('b', 1, 1)]), self.limits))

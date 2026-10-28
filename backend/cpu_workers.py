@@ -5,11 +5,11 @@ slot and their lane until close AND actual native completion. A single-slot
 mailbox hands accepted embedding work to one thread; it is not an admission
 waiting queue. Excess sessions/batches are rejected before submission.
 
-The PDF lane is an interface only. Its trusted, non-blocking submitter must
+The PDF lane uses an application-owned lazy spawn supervisor. Its submitter must
 return a concurrent Future representing genuine completion (including process
 exit/reaping on failure). It may raise SubmissionRejected ONLY before dispatch.
 Other submission failures retain ownership: completion cannot be invented.
-No subprocess supervisor, IPC transport or crash-recovery policy is supplied.
+No business operation uses the PDF supervisor yet. No crash recovery is supplied.
 """
 import asyncio
 from concurrent.futures import Future
@@ -76,6 +76,7 @@ class CPUWorkers:
         self._idle = self._loop.create_future()
         self._idle_scheduled = False
         self._join_task = None
+        self._pdf_supervisor = None
         self._mailbox = Queue(maxsize=1)
         self._thread = Thread(target=self._work, name='deepdocs-embedding', daemon=False)
         try:
@@ -104,6 +105,15 @@ class CPUWorkers:
         except Full:
             raise SubmissionRejected('CPU work was not dispatched.') from None
         return future
+
+    def _submit_pdf(self, path, settings):
+        from pdf_subprocess import PDFSupervisor, PDFSubmissionRejected
+        try:
+            if self._pdf_supervisor is None:
+                self._pdf_supervisor = PDFSupervisor()
+            return self._pdf_supervisor.submit(path, settings)
+        except PDFSubmissionRejected:
+            raise SubmissionRejected('PDF work was not dispatched.') from None
 
     def session(self, workflow, lane=Lane.EMBEDDING):
         task = asyncio.current_task()
@@ -155,6 +165,8 @@ class CPUWorkers:
         # There can still be a cancelled, never-started mailbox item. This
         # blocking handoff and join run outside the event loop.
         def join():
+            if self._pdf_supervisor is not None:
+                self._pdf_supervisor.close()
             self._mailbox.put(None)
             self._thread.join()
         await asyncio.to_thread(join)
@@ -253,10 +265,25 @@ class ExecutionSession:
         return self._submit(self._owner._submit_embedding, function, *args, **kwargs)
 
     def submit_pdf(self, submitter, *args, **kwargs):
-        """Deferred supervision interface; never accepts an asyncio Task."""
+        """Trusted completion adapter; never accepts an asyncio Task."""
         if self._lane is not Lane.PDF:
             raise ValueError('This session is not a PDF lane.')
         return self._submit(submitter, *args, **kwargs)
+
+    async def run_pdf(self, path, settings):
+        """Use the application supervisor; input settings must be primitives."""
+        task = asyncio.current_task()
+        if task is not None and task.cancelling():
+            self.close()
+            raise asyncio.CancelledError
+        result = self.submit_pdf(self._owner._submit_pdf, path, settings)
+        wrapped = asyncio.wrap_future(result)
+        wrapped.add_done_callback(lambda done: None if done.cancelled() else done.exception())
+        try:
+            return await asyncio.shield(wrapped)
+        except asyncio.CancelledError:
+            self.close()  # completion future remains owned until reap/IPC close
+            raise
 
     async def run(self, function, *args, **kwargs):
         task = asyncio.current_task()
