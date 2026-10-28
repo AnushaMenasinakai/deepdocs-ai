@@ -27,6 +27,16 @@ class ClaimCollection(Collection):
 
 
 class ClaimTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        from admission_lifecycle import AdmissionService
+        from config import ExpensiveAdmissionSettings
+        from cpu_workers import CPUWorkers
+        self.admission = AdmissionService(ExpensiveAdmissionSettings())
+        self.workers = CPUWorkers(self.admission)
+
+    async def asyncTearDown(self):
+        await self.admission.aclose()
+        await self.workers.aclose()
     def setUp(self):
         self.owner, self.identifier, self.base = ObjectId(), ObjectId(), ObjectId()
         self.collection = ClaimCollection()
@@ -185,10 +195,10 @@ class ClaimTests(unittest.IsolatedAsyncioTestCase):
                     storage = MagicMock()
                     calls = {
                         "process": lambda: document_processing.process_document(self.database, storage, self.owner, self.identifier, settings),
-                        "embed": lambda: document_embeddings.generate_embeddings(self.database, self.owner, self.identifier, settings),
+                        "embed": lambda: document_embeddings.generate_embeddings(self.database, self.owner, self.identifier, settings, workers=self.workers),
                         "delete": lambda: documents.delete_document(self.database, storage, self.owner, self.identifier),
                         "bulk_delete": lambda: document_bulk.delete_documents(self.database, storage, self.owner, self.base, [str(self.identifier), str(ObjectId())]),
-                        "bulk_reindex": lambda: document_bulk.reindex_documents(self.database, self.owner, self.base, [str(self.identifier), str(ObjectId())], settings),
+                        "bulk_reindex": lambda: document_bulk.reindex_documents(self.database, self.owner, self.base, [str(self.identifier), str(ObjectId())], settings, workers=self.workers),
                     }
                     with patch.object(self.collection, "find_one_and_update", side_effect=interrupted) as write, patch.object(
                             self.collection, "update_one", side_effect=AssertionError("Downstream write or unlock")):
@@ -236,7 +246,7 @@ class ClaimTests(unittest.IsolatedAsyncioTestCase):
                     if operation == "delete":
                         report = await document_bulk.delete_documents(self.database, MagicMock(), self.owner, self.base, ids)
                     else:
-                        report = await document_bulk.reindex_documents(self.database, self.owner, self.base, ids, SimpleNamespace())
+                        report = await document_bulk.reindex_documents(self.database, self.owner, self.base, ids, SimpleNamespace(), workers=self.workers)
                 self.assertEqual(write.await_count, 1)
                 self.assertEqual((report.succeeded, report.failed, report.not_attempted), (0, 1, 1))
                 self.assertEqual(report.results[0].code, "service_unavailable")

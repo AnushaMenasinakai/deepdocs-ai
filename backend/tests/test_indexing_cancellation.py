@@ -66,9 +66,12 @@ class IndexingCancellationTests(unittest.IsolatedAsyncioTestCase):
     async def test_encoding_checkpoint_cancels_before_qdrant_mutation(self):
         identifier, later = await self.prepared(), await self.prepared()
         encode = self.model.encode
+        loop = asyncio.get_running_loop()
         def cancel(*args, **kwargs):
             result = encode(*args, **kwargs)
-            asyncio.current_task().cancel()
+            # Encoding is worker-owned; cancel the requesting task on its loop
+            # before the worker reports completion to that same loop.
+            loop.call_soon_threadsafe(task.cancel)
             return result
         with patch.object(self.model, "encode", side_effect=cancel), \
                 patch.object(self.vector_store, "ensure_collection", new_callable=AsyncMock) as setup:

@@ -8,9 +8,9 @@ from gemini_provider import get_gemini_provider
 INSUFFICIENT_ANSWER = "I couldn't find enough relevant information in this Knowledge Base to answer that question."
 
 
-async def answer_question(database, owner_id, base_id, question, embedding_settings, settings):
+async def answer_question(database, owner_id, base_id, question, embedding_settings, settings, *, workers=None):
     results = await retrieval.search_chunks(database, owner_id, base_id,
-        SearchRequest(query=question, top_k=settings.top_k), embedding_settings)
+        SearchRequest(query=question, top_k=settings.top_k), embedding_settings, workers=workers)
     context = build_context(results, settings)
     if not context.chunks:
         return {"status": "insufficient_context", "answer": INSUFFICIENT_ANSWER, "retrieved_chunk_count": 0, "sources": [], "citation_version": 1, "claims": []}

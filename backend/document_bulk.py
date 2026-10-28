@@ -39,7 +39,15 @@ async def delete_documents(database, storage, owner_id, base_id, document_ids):
     return BulkDeleteResponse(requested=len(document_ids), results=results, **counts)
 
 
-async def reindex_documents(database, owner_id, base_id, document_ids, settings):
+async def reindex_documents(database, owner_id, base_id, document_ids, settings, *, workers=None):
+    if workers is None:
+        raise EmbeddingFailure()
+    # One execution lease prevents a mid-bulk admission failure after writes.
+    with workers.embedding_session() as session:
+        return await _reindex_documents(database, owner_id, base_id, document_ids, settings, session)
+
+
+async def _reindex_documents(database, owner_id, base_id, document_ids, settings, session):
     """Sequential existing-chunk indexing; never extract PDFs or retry operations."""
     results = []
     stopped = False
@@ -50,6 +58,7 @@ async def reindex_documents(database, owner_id, base_id, document_ids, settings)
                 indexed = await document_embeddings.generate_embeddings(
                     database, owner_id, ObjectId(identifier), settings,
                     expected_knowledge_base_id=base_id,
+                    session=session,
                 )
                 outcome = "succeeded" if indexed is not None else "failed"
                 code = None if indexed is not None else "not_found"

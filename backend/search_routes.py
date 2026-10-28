@@ -11,6 +11,8 @@ from knowledge_base_routes import parse_id, require_found
 import knowledge_bases
 from search_schemas import SearchRequest, SearchResponse
 from retrieval import search_chunks
+from cpu_workers import get_cpu_workers
+from expensive_admission import CapacityExceeded, capacity_unavailable
 
 router = APIRouter(tags=["Search"])
 
@@ -25,11 +27,13 @@ def search_settings():
 @router.post("/api/knowledge-bases/{knowledge_base_id}/search", response_model=SearchResponse)
 async def search(knowledge_base_id: str, data: SearchRequest,
                  current_user=Depends(get_current_user), database=Depends(get_database),
-                 settings=Depends(search_settings)):
+                 settings=Depends(search_settings), workers=Depends(get_cpu_workers)):
     owner_id, base_id = ObjectId(current_user.id), parse_id(knowledge_base_id)
     try:
         require_found(await knowledge_bases.get_knowledge_base(database, owner_id, base_id))
-        results = await search_chunks(database, owner_id, base_id, data, settings)
+        results = await search_chunks(database, owner_id, base_id, data, settings, workers=workers)
         return SearchResponse(query=data.query, results=results)
+    except CapacityExceeded:
+        raise capacity_unavailable() from None
     except (PyMongoError, EmbeddingFailure, VectorFailure, OSError, TimeoutError):
         raise HTTPException(503, "Search service is temporarily unavailable.") from None

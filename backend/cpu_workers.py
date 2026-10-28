@@ -13,11 +13,28 @@ No subprocess supervisor, IPC transport or crash-recovery policy is supplied.
 """
 import asyncio
 from concurrent.futures import Future
+from contextlib import contextmanager
+from fastapi import Request
 from enum import Enum
 from queue import Queue, Full
 from threading import Thread
 
-from expensive_admission import CapacityExceeded, Resource
+from expensive_admission import CapacityExceeded, Resource, capacity_unavailable
+
+
+def get_cpu_workers(request: Request):
+    workers = getattr(request.app.state, 'cpu_workers', None)
+    if workers is None:
+        raise capacity_unavailable()
+    return workers
+
+
+@contextmanager
+def embedding_capacity_errors():
+    try:
+        yield
+    except CapacityExceeded:
+        raise capacity_unavailable() from None
 
 
 class Lane(str, Enum):
@@ -111,6 +128,22 @@ class CPUWorkers:
         if self._closing and not any(self._lanes.values()) and not self._idle_scheduled:
             self._idle_scheduled = True
             self._loop.call_soon_threadsafe(self._idle.set_result, None)
+
+    @contextmanager
+    def embedding_session(self):
+        """CPU-only workflow: no query or document admission is enabled here."""
+        with self._lock:
+            if self._closing or self._lanes[Lane.EMBEDDING] is not None:
+                raise CapacityExceeded()
+            workflow = self._admission.workflow(Resource.CPU)
+            session = ExecutionSession(self, Lane.EMBEDDING)
+            workflow.reservation.submit(lambda: session._terminal)
+            self._lanes[Lane.EMBEDDING] = session
+        try:
+            yield session
+        finally:
+            session.close()
+            workflow.finish()
 
     def begin_shutdown(self):
         with self._lock:

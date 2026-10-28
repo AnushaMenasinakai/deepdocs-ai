@@ -5,6 +5,8 @@ from bson import ObjectId
 from document_operations import claim_document, release_document, record_operation_stage, DocumentBusy
 from document_processing import inspect_chunks
 from embeddings import EmbeddingFailure, embed_batches
+from embedding_execution import Batches
+from cpu_workers import WorkerInfrastructureFailure
 from vector_store import get_vector_store, cleanup_document_vectors, VectorFailure
 
 
@@ -27,7 +29,28 @@ async def indexing_checkpoint():
         raise asyncio.CancelledError()
 
 
-async def generate_embeddings(database, owner_id, document_id, settings, expected_knowledge_base_id=None):
+async def generate_embeddings(database, owner_id, document_id, settings, expected_knowledge_base_id=None,
+                              *, workers=None, session=None):
+    # Preserve ownership/missing/busy precedence before reserving execution.
+    scope = {"_id": document_id, "owner_id": owner_id}
+    if expected_knowledge_base_id is not None:
+        scope["knowledge_base_id"] = expected_knowledge_base_id
+    snapshot = await database.get_collection("documents").find_one(scope)
+    if snapshot is None:
+        return None
+    if "_operation" in snapshot:
+        raise DocumentBusy()
+    if session is not None:
+        return await _generate_embeddings(database, owner_id, document_id, settings,
+                                          expected_knowledge_base_id, session)
+    if workers is None:
+        raise EmbeddingFailure()
+    with workers.embedding_session() as acquired:
+        return await _generate_embeddings(database, owner_id, document_id, settings,
+                                          expected_knowledge_base_id, acquired)
+
+
+async def _generate_embeddings(database, owner_id, document_id, settings, expected_knowledge_base_id, session):
     docs = database.get_collection("documents")
     if expected_knowledge_base_id is not None:
         # Read-only early rejection for clearly ineligible bulk selections. This
@@ -98,7 +121,12 @@ async def generate_embeddings(database, owner_id, document_id, settings, expecte
         phase = "encoding"
         await indexing_checkpoint()
         count, dimension = 0, None
-        for batch_dimension, vectors in embed_batches([chunk["text"] for chunk in chunks], settings):
+        batches = Batches([chunk["text"] for chunk in chunks], settings, factory=embed_batches)
+        while True:
+            batch = await session.run(batches.next_batch)
+            if batch is None:
+                break
+            batch_dimension, vectors = batch
             await indexing_checkpoint()
             if dimension is not None and dimension != batch_dimension:
                 raise EmbeddingFailure("Embedding vector validation failed.")
@@ -176,6 +204,10 @@ async def generate_embeddings(database, owner_id, document_id, settings, expecte
         # the finally block releases the claim. No automatic expiry or retry.
         cancelled = True
         raise
+    except WorkerInfrastructureFailure:
+        # Unconfirmed dispatch/completion is not a completed local failure.
+        uncertain = True
+        raise EmbeddingFailure() from None
     except Exception as error:
         # Generic transport/vector errors never prove non-commit. Only a local
         # failure after acknowledged writes may publish failed state and unlock.

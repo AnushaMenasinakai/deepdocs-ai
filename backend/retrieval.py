@@ -3,6 +3,8 @@ import math
 from numbers import Real
 from bson import ObjectId
 import embeddings
+from embedding_execution import query_vector
+from cpu_workers import WorkerInfrastructureFailure, SubmissionRejected
 from vector_store import get_vector_store, VectorFailure, point_id
 
 
@@ -51,7 +53,7 @@ def validated_payload(point, owner_id, base_id, documents):
     return value
 
 
-async def search_chunks(database, owner_id, base_id, data, settings):
+async def search_chunks(database, owner_id, base_id, data, settings, *, workers=None):
     docs = database.get_collection("documents")
     candidates = []
     async for document in docs.find({"owner_id": owner_id, "knowledge_base_id": base_id}):
@@ -66,8 +68,13 @@ async def search_chunks(database, owner_id, base_id, data, settings):
     if not candidates:
         return []
     # Reuses the cached provider. Exactly one encode call for the trimmed query.
-    dimension = embeddings.model_dimension(embeddings.load_model(settings.model_name))
-    vector = embeddings.validate_vector(embeddings.embed_text(data.query, settings), dimension)
+    if workers is None:
+        raise embeddings.EmbeddingFailure()
+    try:
+        with workers.embedding_session() as session:
+            dimension, vector = await session.run(query_vector, data.query, settings)
+    except (WorkerInfrastructureFailure, SubmissionRejected):
+        raise embeddings.EmbeddingFailure() from None
     candidates = [document for document in candidates if eligible(document, settings, store, dimension)]
     if not candidates:
         return []

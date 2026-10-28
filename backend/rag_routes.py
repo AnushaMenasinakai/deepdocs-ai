@@ -16,6 +16,8 @@ from gemini_provider import GeminiFailure
 from rag_context import RAGFailure
 from rag_schemas import AskRequest, AskResponse
 from rag import answer_question
+from cpu_workers import get_cpu_workers
+from expensive_admission import CapacityExceeded, capacity_unavailable
 
 router = APIRouter(tags=["Questions"])
 
@@ -30,15 +32,18 @@ def rag_settings():
 @router.post("/api/knowledge-bases/{knowledge_base_id}/ask", response_model=AskResponse)
 async def ask(knowledge_base_id: str, data: AskRequest,
               current_user=Depends(get_current_user), database=Depends(get_database),
-              embedding_settings=Depends(search_settings), settings=Depends(rag_settings)):
+              embedding_settings=Depends(search_settings), settings=Depends(rag_settings),
+              workers=Depends(get_cpu_workers)):
     owner, base_id = ObjectId(current_user.id), parse_id(knowledge_base_id)
     try:
         require_found(await knowledge_bases.get_knowledge_base(database, owner, base_id))
         result = AskResponse.model_validate(await answer_question(
-            database, owner, base_id, data.question, embedding_settings, settings))
+            database, owner, base_id, data.question, embedding_settings, settings, workers=workers))
         if result.citation_version != 1:
             raise RAGFailure("Invalid answer format.")
         require_found(await ask_history.save_history(database, owner, base_id, data.question, result))
         return result
+    except CapacityExceeded:
+        raise capacity_unavailable() from None
     except (ValidationError, PyMongoError, EmbeddingFailure, VectorFailure, GeminiFailure, RAGFailure, OSError, TimeoutError):
         raise HTTPException(503, "Question-answering service is temporarily unavailable.") from None

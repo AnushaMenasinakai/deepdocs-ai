@@ -116,6 +116,11 @@ async def request(method, path, content=None, filename="notes.pdf", mime="applic
 
 class DocumentTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
+        from admission_lifecycle import AdmissionService
+        from config import ExpensiveAdmissionSettings
+        from cpu_workers import CPUWorkers, get_cpu_workers
+        self.admission = AdmissionService(ExpensiveAdmissionSettings())
+        self.workers = CPUWorkers(self.admission)
         # Temp roots live under ignored verification, never persistent storage.
         verification = Path(__file__).resolve().parents[2] / ".verification"
         verification.mkdir(exist_ok=True)
@@ -135,6 +140,7 @@ class DocumentTests(unittest.IsolatedAsyncioTestCase):
         }
         self.current_owner = self.owner
         self.overrides = app.dependency_overrides.copy()
+        app.dependency_overrides[get_cpu_workers] = lambda: self.workers
         app.dependency_overrides[get_database] = lambda: self.database
         app.dependency_overrides[get_document_storage] = lambda: self.storage
         app.dependency_overrides[upload_settings] = lambda: DocumentSettings(100)
@@ -144,6 +150,8 @@ class DocumentTests(unittest.IsolatedAsyncioTestCase):
         self.path = "/api/knowledge-bases/" + str(self.base_id) + "/documents"
 
     async def asyncTearDown(self):
+        await self.admission.aclose()
+        await self.workers.aclose()
         app.dependency_overrides.clear()
         app.dependency_overrides.update(self.overrides)
         self.temp.cleanup()

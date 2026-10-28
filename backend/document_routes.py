@@ -21,6 +21,7 @@ from document_operations import DocumentBusy
 from pdf_processing import ProcessingFailure
 from config import load_processing_settings, load_embedding_settings
 from embeddings import EmbeddingFailure
+from cpu_workers import get_cpu_workers, embedding_capacity_errors
 from vector_store import VectorFailure, get_vector_store
 from document_operations import claim_document, release_document, record_operation_stage
 import document_embeddings
@@ -223,11 +224,11 @@ def embedding_settings():
 @router.post("/api/documents/{document_id}/embeddings", response_model=EmbeddingResponse)
 async def generate_embeddings(
     document_id: str, current_user=Depends(get_current_user), database=Depends(get_database),
-    settings=Depends(embedding_settings),
+    settings=Depends(embedding_settings), workers=Depends(get_cpu_workers),
 ):
-    with safe_errors():
+    with embedding_capacity_errors(), safe_errors():
         return found(await document_embeddings.generate_embeddings(
-            database, ObjectId(current_user.id), parse_id(document_id), settings,
+            database, ObjectId(current_user.id), parse_id(document_id), settings, workers=workers,
         ))
 
 
@@ -236,12 +237,12 @@ async def generate_embeddings(
 async def bulk_reindex(
     knowledge_base_id: str, data: BulkReindexRequest,
     current_user=Depends(get_current_user), database=Depends(get_database),
-    settings=Depends(embedding_settings),
+    settings=Depends(embedding_settings), workers=Depends(get_cpu_workers),
 ):
     owner, base = ObjectId(current_user.id), parse_id(knowledge_base_id)
-    with safe_errors():
+    with embedding_capacity_errors(), safe_errors():
         found(await knowledge_bases.get_knowledge_base(database, owner, base), "Knowledge Base")
-        return await document_bulk.reindex_documents(database, owner, base, data.document_ids, settings)
+        return await document_bulk.reindex_documents(database, owner, base, data.document_ids, settings, workers=workers)
 
 
 @router.get("/api/health/qdrant")

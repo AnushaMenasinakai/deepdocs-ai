@@ -85,6 +85,12 @@ async def retrieve_dataset(chunks, cases, fixtures, mode="fixture"):
                 "chunk_index": index, "page_start": chunk["page"], "page_end": chunk["page"]})
     database = SimpleNamespace(get_collection=lambda name: {"documents": Records(documents), "document_chunks": Records(records)}[name])
     by_id = {str(c["_id"]): c for c in records}
+    # This standalone evaluation owns its workers, just as an API lifespan does.
+    from admission_lifecycle import AdmissionService
+    from cpu_workers import CPUWorkers
+    from config import ExpensiveAdmissionSettings
+    admission = AdmissionService(ExpensiveAdmissionSettings())
+    workers = CPUWorkers(admission)
     try:
         with patch("embeddings.load_model", return_value=model), patch("retrieval.get_vector_store", return_value=store):
             if client:
@@ -100,8 +106,14 @@ async def retrieve_dataset(chunks, cases, fixtures, mode="fixture"):
                     store.points = [SimpleNamespace(id=point_id(by_id[identifier(h["chunk"])]),
                         payload=payload(by_id[identifier(h["chunk"])]), score=h["score"]) for h in fixtures[case["id"]]]
                 rankings[case["id"]] = await retrieval.search_chunks(database, owner, base,
-                    SearchRequest(query=case["question"], top_k=5), settings)
+                    SearchRequest(query=case["question"], top_k=5), settings, workers=workers)
             return rankings, dimension
     finally:
-        if client:
-            await client.close()
+        try:
+            await admission.aclose()
+        finally:
+            try:
+                await workers.aclose()
+            finally:
+                if client:
+                    await client.close()
