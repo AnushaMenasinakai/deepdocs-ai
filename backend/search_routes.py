@@ -12,7 +12,7 @@ import knowledge_bases
 from search_schemas import SearchRequest, SearchResponse
 from retrieval import search_chunks
 from cpu_workers import get_cpu_workers
-from expensive_admission import CapacityExceeded, capacity_unavailable
+from expensive_admission import CapacityExceeded, Resource, capacity_unavailable
 
 router = APIRouter(tags=["Search"])
 
@@ -31,8 +31,10 @@ async def search(knowledge_base_id: str, data: SearchRequest,
     owner_id, base_id = ObjectId(current_user.id), parse_id(knowledge_base_id)
     try:
         require_found(await knowledge_bases.get_knowledge_base(database, owner_id, base_id))
-        results = await search_chunks(database, owner_id, base_id, data, settings, workers=workers)
-        return SearchResponse(query=data.query, results=results)
+        with workers.workflow(Resource.QUERY) as workflow:
+            results = await search_chunks(database, owner_id, base_id, data, settings,
+                                          workers=workers, workflow=workflow)
+            return SearchResponse(query=data.query, results=results)
     except CapacityExceeded:
         raise capacity_unavailable() from None
     except (PyMongoError, EmbeddingFailure, VectorFailure, OSError, TimeoutError):

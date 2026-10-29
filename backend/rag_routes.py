@@ -17,7 +17,7 @@ from rag_context import RAGFailure
 from rag_schemas import AskRequest, AskResponse
 from rag import answer_question
 from cpu_workers import get_cpu_workers
-from expensive_admission import CapacityExceeded, capacity_unavailable
+from expensive_admission import CapacityExceeded, Resource, capacity_unavailable
 
 router = APIRouter(tags=["Questions"])
 
@@ -37,12 +37,15 @@ async def ask(knowledge_base_id: str, data: AskRequest,
     owner, base_id = ObjectId(current_user.id), parse_id(knowledge_base_id)
     try:
         require_found(await knowledge_bases.get_knowledge_base(database, owner, base_id))
-        result = AskResponse.model_validate(await answer_question(
-            database, owner, base_id, data.question, embedding_settings, settings, workers=workers))
-        if result.citation_version != 1:
-            raise RAGFailure("Invalid answer format.")
-        require_found(await ask_history.save_history(database, owner, base_id, data.question, result))
-        return result
+        with workers.workflow(Resource.QUERY, Resource.GEMINI) as workflow:
+            gemini = workflow.reservation.split(Resource.GEMINI)
+            result = AskResponse.model_validate(await answer_question(
+                database, owner, base_id, data.question, embedding_settings, settings,
+                workers=workers, workflow=workflow, generation_unneeded=gemini.release))
+            if result.citation_version != 1:
+                raise RAGFailure("Invalid answer format.")
+            require_found(await ask_history.save_history(database, owner, base_id, data.question, result))
+            return result
     except CapacityExceeded:
         raise capacity_unavailable() from None
     except (ValidationError, PyMongoError, EmbeddingFailure, VectorFailure, GeminiFailure, RAGFailure, OSError, TimeoutError):

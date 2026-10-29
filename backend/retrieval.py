@@ -53,7 +53,7 @@ def validated_payload(point, owner_id, base_id, documents):
     return value
 
 
-async def search_chunks(database, owner_id, base_id, data, settings, *, workers=None):
+async def search_chunks(database, owner_id, base_id, data, settings, *, workers=None, workflow=None):
     docs = database.get_collection("documents")
     candidates = []
     async for document in docs.find({"owner_id": owner_id, "knowledge_base_id": base_id}):
@@ -71,7 +71,9 @@ async def search_chunks(database, owner_id, base_id, data, settings, *, workers=
     if workers is None:
         raise embeddings.EmbeddingFailure()
     try:
-        with workers.embedding_session() as session:
+        # Production routes pass their admitted owner; standalone evaluation
+        # callers retain the existing CPU-only execution path.
+        with (workers.session(workflow) if workflow is not None else workers.embedding_session()) as session:
             dimension, vector = await session.run(query_vector, data.query, settings)
     except (WorkerInfrastructureFailure, SubmissionRejected):
         raise embeddings.EmbeddingFailure() from None

@@ -232,7 +232,7 @@ class MigrationTests(unittest.IsolatedAsyncioTestCase):
                     await task
                 self.assertFalse(terminal.done())
                 self.assertEqual(self.admission._admission.outstanding[Resource.CPU], 1)
-                self.assertEqual(self.admission._admission.outstanding[Resource.QUERY], 0)
+                self.assertEqual(self.admission._admission.outstanding[Resource.QUERY], 1)
                 search.assert_not_awaited()
             finally:
                 release.set()
@@ -240,6 +240,7 @@ class MigrationTests(unittest.IsolatedAsyncioTestCase):
                 if terminal is not None:
                     await asyncio.wrap_future(terminal)
             search.assert_not_awaited()
+            self.assertEqual(self.admission._admission.outstanding[Resource.QUERY], 0)
 
     async def test_bulk_holds_one_session_between_documents(self):
         first, second = await self.prepare(), await self.prepare()
