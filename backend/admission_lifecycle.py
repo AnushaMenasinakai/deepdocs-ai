@@ -11,6 +11,7 @@ Submitters must obey Reservation.submit's contract. Never register an asyncio
 Task as proof of native completion. A broken submitter deliberately blocks drain.
 """
 import asyncio
+from concurrent.futures import Future
 
 from expensive_admission import Admission, CapacityExceeded
 
@@ -43,11 +44,27 @@ class AdmissionService:
 
     def _check_drained(self):
         # Called under the admission lock, including from worker threads.
-        if self._closing and not self._active and not any(self._admission._used.values()):
+        if self._closing and not self._owners and not any(self._admission._used.values()):
             self._admission.close()
             if not self._drained_scheduled:
                 self._drained_scheduled = True
                 self._loop.call_soon_threadsafe(self._drained.set_result, None)
+
+    def cleanup_workflow(self):
+        """Track an existing request's cleanup, without admitting resource work.
+
+        One registration per request; no queue or resource capacity is allocated.
+        This does not enable UPLOAD admission or alter other pool limits.
+        """
+        task = asyncio.current_task()
+        if task is not None and task.cancelling():
+            raise asyncio.CancelledError
+        with self._admission._lock:
+            if self._closing:
+                raise CapacityExceeded()
+            workflow = Workflow(self, None)
+            self._owners.add(workflow)
+            return workflow
 
     def begin_shutdown(self):
         with self._admission._lock:
@@ -73,8 +90,9 @@ class Workflow:
     def __init__(self, service, reservation):
         self._service = service
         self.reservation = reservation
-        self._reservations = {reservation}
-        reservation._group = self._reservations
+        self._reservations = set() if reservation is None else {reservation}
+        if reservation is not None:
+            reservation._group = self._reservations
         self._finished = False
         self._native = {}
         self._released = False
@@ -96,6 +114,13 @@ class Workflow:
             self._native[terminal] = session
             terminal.add_done_callback(self._native_finished)
 
+    def own_cleanup(self, owner):
+        """Attach a trusted owner, never an asyncio cancellation wrapper."""
+        terminal = owner._terminal
+        if not isinstance(terminal, Future) or not terminal.running() or not callable(owner.close):
+            raise ValueError('Cleanup requires genuine completion ownership.')
+        self._own_session(owner)
+
     def _native_finished(self, terminal):
         with self._service._admission._lock:
             self._native.pop(terminal, None)
@@ -108,7 +133,8 @@ class Workflow:
         for reservation in tuple(self._reservations):
             reservation.release()
         self._service._owners.remove(self)
-        self._service._active -= 1
+        if self.reservation is not None:
+            self._service._active -= 1
         self._service._check_drained()
 
     def __enter__(self):
@@ -132,6 +158,10 @@ class Workflow:
             if self._finished:
                 return
             self._finished = True
-            for session in tuple(self._native.values()):
-                session.close()
+            sessions = tuple(self._native.values())
+        # Native owners may have their own locks. Never invert those locks with
+        # completion callbacks acquiring the admission lock from a worker.
+        for session in sessions:
+            session.close()
+        with self._service._admission._lock:
             self._release_if_complete()

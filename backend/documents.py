@@ -77,7 +77,7 @@ async def upload_document(database, storage, owner_id, base_id, upload, max_byte
     write = None
     save_uncertain = False
     try:
-        lifetime = SaveLifetime(upload)
+        lifetime = getattr(upload, '_deepdocs_save_lifetime', None) or SaveLifetime(upload)
         upload._deepdocs_save_lifetime = lifetime
         write = asyncio.create_task(run_in_threadpool(lifetime.run, storage.save, upload, document_id, max_bytes))
         upload._deepdocs_save_task = write
@@ -131,7 +131,8 @@ async def upload_document(database, storage, owner_id, base_id, upload, max_byte
             raise
         try:
             if stored:
-                await run_in_threadpool(storage.delete, {"_id": document_id, **stored})
+                lifetime.prepare_compensation()
+                await run_in_threadpool(lifetime.compensate, storage.delete, {"_id": document_id, **stored})
             await release_reservation(database, owner_id, base_id, document_id)
         except Exception:
             if isinstance(error, asyncio.CancelledError):

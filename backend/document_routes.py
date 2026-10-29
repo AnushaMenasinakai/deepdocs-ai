@@ -31,6 +31,8 @@ import document_bulk
 from document_inspection import inspect_operation
 from upload_safety import close_upload_form, check_cancellation
 from multipart_cleanup import ParserCleanup
+from upload_lifecycle import OwnedParser
+from expensive_admission import CapacityExceeded, capacity_unavailable
 from document_schemas import OperationStatusResponse
 
 router = APIRouter(tags=["Documents"])
@@ -112,18 +114,25 @@ async def upload(
     knowledge_base_id: str, request: Request,
     current_user=Depends(get_current_user), database=Depends(get_database),
     storage=Depends(get_document_storage), settings=Depends(upload_settings),
+    workers=Depends(get_cpu_workers),
 ):
     owner_id, base_id = ObjectId(current_user.id), parse_id(knowledge_base_id)
     with safe_errors():
         found(await knowledge_bases.get_knowledge_base(database, owner_id, base_id), "Knowledge Base")
-        # Parse/spool only after authentication and ownership have succeeded.
-        form = await parse_upload(request, settings.max_upload_bytes)
         try:
-            return found(await documents.upload_document(
-                database, storage, owner_id, base_id, form["file"], settings.max_upload_bytes,
-            ), "Knowledge Base")
-        finally:
-            await close_upload_form(form)
+            # Cleanup registration only: UPLOAD capacity admission is deferred.
+            with workers.cleanup_workflow() as workflow:
+                parser = OwnedParser(workflow, request, parse_upload, settings.max_upload_bytes)
+                form = await parser.result()
+                try:
+                    check_cancellation()
+                    return found(await documents.upload_document(
+                        database, storage, owner_id, base_id, form["file"], settings.max_upload_bytes,
+                    ), "Knowledge Base")
+                finally:
+                    await close_upload_form(form)
+        except CapacityExceeded:
+            raise capacity_unavailable() from None
 
 
 @router.get("/api/knowledge-bases/{knowledge_base_id}/documents", response_model=list[DocumentResponse])

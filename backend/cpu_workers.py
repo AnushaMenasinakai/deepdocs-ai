@@ -150,6 +150,9 @@ class CPUWorkers:
         """Register with the same per-application owner used by worker handoff."""
         return self._admission.workflow(*resources)
 
+    def cleanup_workflow(self):
+        return self._admission.cleanup_workflow()
+
     def _check_idle(self):
         if self._closing and not any(self._lanes.values()) and not self._idle_scheduled:
             self._idle_scheduled = True

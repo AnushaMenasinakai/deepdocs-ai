@@ -12,8 +12,10 @@ from starlette.datastructures import UploadFile
 from starlette.formparsers import MultiPartParser
 
 
-def unavailable():
-    return HTTPException(503, 'Multipart upload cleanup is unavailable.')
+def unavailable(*, uncertain=False):
+    error = HTTPException(503, 'Multipart upload cleanup is unavailable.')
+    error.upload_cleanup_uncertain = uncertain
+    return error
 
 
 class ParserCleanup:
@@ -61,14 +63,14 @@ class ParserCleanup:
         never reattempt a failed close or change a completed handoff.
         """
         if self.state not in ('normal', 'exception'):
-            raise unavailable()
+            raise unavailable(uncertain=True)
         if self.accounted:
             if self.failure:
-                raise unavailable()
+                raise unavailable(uncertain=True)
             return
         registry = getattr(self.parser, '_files_to_close_on_error', None)
         if type(registry) is not list:
-            raise unavailable()
+            raise unavailable(uncertain=True)
         self.streams = {id(stream): stream for stream in tuple(registry)}
         returned = {id(value.file) for _, value in form.multi_items()
                     if isinstance(value, UploadFile)} if form is not None else set()
@@ -106,4 +108,4 @@ class ParserCleanup:
                 self.closures[key] = 'failed'
         self.accounted = True
         if self.failure:
-            raise unavailable()
+            raise unavailable(uncertain=True)
