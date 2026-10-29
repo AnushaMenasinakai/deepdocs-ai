@@ -40,7 +40,7 @@ async def application_lifespan(app):
     finally:
         service.begin_shutdown()
         if workers is not None:
-            workers.begin_shutdown()
+            workers.begin_drain()
         exception = sys.exc_info()
 
         async def cleanup():

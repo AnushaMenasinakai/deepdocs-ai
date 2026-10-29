@@ -20,6 +20,7 @@ from queue import Queue, Full
 from threading import Thread
 
 from expensive_admission import CapacityExceeded, Resource, capacity_unavailable
+from admission_lifecycle import Workflow
 
 
 def get_cpu_workers(request: Request):
@@ -73,6 +74,7 @@ class CPUWorkers:
         self._loop = asyncio.get_running_loop()
         self._lanes = dict.fromkeys(Lane)
         self._closing = False
+        self._draining = False
         self._idle = self._loop.create_future()
         self._idle_scheduled = False
         self._join_task = None
@@ -116,15 +118,24 @@ class CPUWorkers:
             raise SubmissionRejected('PDF work was not dispatched.') from None
 
     def session(self, workflow, lane=Lane.EMBEDDING):
+        """Dispatch authority belongs to a live registered workflow of this app.
+
+        Allowed during graceful drain, never after the final worker seal.
+        Workflow cleanup closes this session and retains its workflow resources
+        until the session's native work genuinely completes.
+        """
         task = asyncio.current_task()
         if task is not None and task.cancelling():
             raise asyncio.CancelledError
         if not isinstance(lane, Lane):
             raise ValueError('Provide a named CPU lane.')
         with self._lock:
-            if workflow._service is not self._admission:
+            if getattr(workflow, '_service', None) is not self._admission:
                 raise ValueError('Workflow belongs to another application.')
-            if self._closing or self._admission._closing or self._lanes[lane] is not None:
+            if not isinstance(workflow, Workflow) or workflow not in self._admission._owners:
+                raise CapacityExceeded()
+            workflow._authorize(self._admission)
+            if self._closing or self._lanes[lane] is not None:
                 raise CapacityExceeded()
             reservation = workflow.acquire(Resource.CPU)
             session = ExecutionSession(self, lane)
@@ -132,6 +143,7 @@ class CPUWorkers:
             # cancel this signal while a native operation is still alive.
             reservation.submit(lambda: session._terminal)
             self._lanes[lane] = session
+            workflow._own_session(session)
             return session
 
     def _check_idle(self):
@@ -147,7 +159,7 @@ class CPUWorkers:
         The session spans publication too; no second CPU acquisition is needed.
         """
         with self._lock:
-            if self._closing or self._lanes[Lane.PDF] is not None:
+            if self._closing or self._draining or self._lanes[Lane.PDF] is not None:
                 raise CapacityExceeded()
             workflow = self._admission.workflow(Resource.DOCUMENT, Resource.CPU)
             session = ExecutionSession(self, Lane.PDF)
@@ -163,7 +175,7 @@ class CPUWorkers:
     def embedding_session(self):
         """CPU-only workflow: no query or document admission is enabled here."""
         with self._lock:
-            if self._closing or self._lanes[Lane.EMBEDDING] is not None:
+            if self._closing or self._draining or self._lanes[Lane.EMBEDDING] is not None:
                 raise CapacityExceeded()
             workflow = self._admission.workflow(Resource.CPU)
             session = ExecutionSession(self, Lane.EMBEDDING)
@@ -174,6 +186,16 @@ class CPUWorkers:
         finally:
             session.close()
             workflow.finish()
+
+    def begin_drain(self):
+        """Reject unrelated sessions; live workflow owners may still dispatch.
+
+        Do not latch idle here: an admitted workflow may not need CPU until later.
+        The lifespan must drain workflows before calling aclose's final seal.
+        """
+        with self._lock:
+            self._admission.begin_shutdown()
+            self._draining = True
 
     def begin_shutdown(self):
         with self._lock:

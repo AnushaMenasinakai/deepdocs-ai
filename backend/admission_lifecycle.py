@@ -1,8 +1,10 @@
 """Application-owned workflow drain; no executors, queues or recovery.
 
 Register with ``with service.workflow(Resource.QUERY) as workflow`` and split
-workflow.reservation for worker dispatch. Exit releases held reservations only;
-real concurrent Future completion retains ownership after request cancellation.
+workflow.reservation for worker dispatch. CPUWorkers.session(workflow) explicitly
+authorizes staged dispatch and attaches genuine session completion ownership.
+Exit closes attached sessions and defers held reservation release until they
+complete; real concurrent Future completion survives request cancellation.
 Existing workflows may acquire additional stage reservations during drain;
 acquisition is always non-waiting and never promises future capacity.
 Submitters must obey Reservation.submit's contract. Never register an asyncio
@@ -21,6 +23,7 @@ class AdmissionService:
         self._closing = False
         self._drained_scheduled = False
         self._active = 0
+        self._owners = set()
         # Even workflows which split/release all slots remain bounded.
         self._max_workflows = sum(self._admission._limits.values())
         self._admission._changed = self._check_drained
@@ -34,7 +37,9 @@ class AdmissionService:
                 raise CapacityExceeded()
             reservation = self._admission.acquire(*resources)
             self._active += 1
-            return Workflow(self, reservation)
+            workflow = Workflow(self, reservation)
+            self._owners.add(workflow)
+            return workflow
 
     def _check_drained(self):
         # Called under the admission lock, including from worker threads.
@@ -71,6 +76,40 @@ class Workflow:
         self._reservations = {reservation}
         reservation._group = self._reservations
         self._finished = False
+        self._native = {}
+        self._released = False
+
+    def _authorize(self, service):
+        # Identity membership, not just a matching service attribute.
+        if service is not self._service or self not in service._owners or self._finished:
+            raise CapacityExceeded()
+
+    def _own_session(self, session):
+        """Internal handoff of a non-cancellable genuine session terminal.
+
+        Request cleanup closes sessions, but never fabricates native completion.
+        Only worker adapters may supply these signals; asyncio tasks are not proof.
+        """
+        with self._service._admission._lock:
+            self._authorize(self._service)
+            terminal = session._terminal
+            self._native[terminal] = session
+            terminal.add_done_callback(self._native_finished)
+
+    def _native_finished(self, terminal):
+        with self._service._admission._lock:
+            self._native.pop(terminal, None)
+            self._release_if_complete()
+
+    def _release_if_complete(self):
+        if not self._finished or self._native or self._released:
+            return
+        self._released = True
+        for reservation in tuple(self._reservations):
+            reservation.release()
+        self._service._owners.remove(self)
+        self._service._active -= 1
+        self._service._check_drained()
 
     def __enter__(self):
         return self
@@ -81,8 +120,7 @@ class Workflow:
     def acquire(self, *resources):
         """Non-waiting stage admission for this still-owned workflow."""
         with self._service._admission._lock:
-            if self._finished:
-                raise CapacityExceeded()
+            self._authorize(self._service)
             reservation = self._service._admission.acquire(*resources)
             reservation._group = self._reservations
             self._reservations.add(reservation)
@@ -94,7 +132,6 @@ class Workflow:
             if self._finished:
                 return
             self._finished = True
-            for reservation in tuple(self._reservations):
-                reservation.release()
-            self._service._active -= 1
-            self._service._check_drained()
+            for session in tuple(self._native.values()):
+                session.close()
+            self._release_if_complete()
