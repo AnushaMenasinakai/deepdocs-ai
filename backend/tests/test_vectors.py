@@ -176,7 +176,7 @@ class VectorLifecycleTests(unittest.IsolatedAsyncioTestCase):
     async def test_reprocess_fewer_chunks_removes_old_vectors(self):
         body = await self.index()
         old_generation = self.docs.documents[ObjectId(body["id"])]["chunk_generation"]
-        with patch("document_processing.extract_chunks", return_value=(1, [{"text": "new text", "chunk_index": 0, "page_start": 1, "page_end": 1, "character_count": 8}])):
+        with patch("cpu_workers.ExecutionSession.run_pdf", return_value=(1, [{"text": "new text", "chunk_index": 0, "page_start": 1, "page_end": 1, "character_count": 8}])):
             self.assertEqual((await self.process(body))[0], 200)
         self.assertFalse(self.qdrant.points[self.vector_store.collection])
         record = self.docs.documents[ObjectId(body["id"])]

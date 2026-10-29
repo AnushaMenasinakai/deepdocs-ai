@@ -12,6 +12,7 @@ import test_processing as processing_helpers
 import test_documents as document_helpers
 from test_documents import request
 from config import EmbeddingSettings, load_embedding_settings, ConfigurationError
+from pdf_worker_protocol import ParsingFailure, FailureCode
 from embeddings import embed_batches, embed_text, validate_vector, model_dimension, load_model, _load_model, EmbeddingFailure
 from document_routes import embedding_settings
 from main import app
@@ -320,7 +321,7 @@ class EmbeddingTests(unittest.IsolatedAsyncioTestCase):
         body = await self.prepare()
         with patch("embeddings.load_model", return_value=FakeModel()):
             await self.embed(body)
-        with patch("document_processing.extract_chunks", side_effect=ProcessingFailure("No extractable text was found.")):
+        with patch("cpu_workers.ExecutionSession.run_pdf", return_value=ParsingFailure(FailureCode.NO_TEXT)):
             self.assertEqual((await self.process(body))[0], 422)
         record = self.docs.documents[ObjectId(body["id"])]
         self.assertEqual(record["embedding"], {"status": "not_generated"})

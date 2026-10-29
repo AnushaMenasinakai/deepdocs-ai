@@ -47,6 +47,13 @@ _FAILURES = {
 }
 
 
+def recognized_failure_details(code):
+    """Trusted status/message for an already validated failure envelope."""
+    if type(code) is not FailureCode:
+        raise ValueError('Invalid PDF failure code.')
+    return next(details for details, value in _FAILURES.items() if value == code)
+
+
 def child_entry(connection, path, values, version):
     try:
         # No environment-based service configuration is needed by extraction.

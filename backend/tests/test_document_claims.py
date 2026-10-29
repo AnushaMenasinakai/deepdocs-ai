@@ -194,7 +194,7 @@ class ClaimTests(unittest.IsolatedAsyncioTestCase):
                     settings = SimpleNamespace()
                     storage = MagicMock()
                     calls = {
-                        "process": lambda: document_processing.process_document(self.database, storage, self.owner, self.identifier, settings),
+                        "process": lambda: document_processing.process_document(self.database, storage, self.owner, self.identifier, settings, workers=self.workers),
                         "embed": lambda: document_embeddings.generate_embeddings(self.database, self.owner, self.identifier, settings, workers=self.workers),
                         "delete": lambda: documents.delete_document(self.database, storage, self.owner, self.identifier),
                         "bulk_delete": lambda: document_bulk.delete_documents(self.database, storage, self.owner, self.base, [str(self.identifier), str(ObjectId())]),

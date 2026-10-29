@@ -105,7 +105,7 @@ class ProcessingMetadataTests(unittest.IsolatedAsyncioTestCase):
     async def test_local_failure_releases_and_legacy_claim_is_untouched(self):
         body = await self.make_document()
         identifier = ObjectId(body['id'])
-        with patch('document_processing.extract_chunks', side_effect=ValueError('PRIVATE')):
+        with patch.object(self.storage, 'processing_path', side_effect=ValueError('PRIVATE')):
             self.assertEqual((await self.process(body))[0], 503)
         row = self.docs.documents[identifier]
         self.assertEqual(row['status'], 'failed')

@@ -2,9 +2,16 @@
 import asyncio
 import logging
 from datetime import datetime, timezone
+from dataclasses import asdict
 from bson import ObjectId
 from document_operations import claim_document, release_document, record_operation_stage
-from pdf_processing import extract_chunks, ProcessingFailure
+from pdf_processing import ProcessingFailure
+from document_operations import DocumentBusy
+from cpu_workers import SubmissionRejected
+from expensive_admission import CapacityExceeded, capacity_unavailable
+from pdf_subprocess import PDFExecutionNotStarted
+from pdf_worker_protocol import ParsingFailure
+from pdf_worker_child import recognized_failure_details
 from vector_store import cleanup_document_vectors
 
 logger = logging.getLogger(__name__)
@@ -23,7 +30,25 @@ async def processing_checkpoint():
     if task is not None and task.cancelling():
         raise asyncio.CancelledError()
 
-async def process_document(database, storage, owner_id, document_id, settings):
+async def process_document(database, storage, owner_id, document_id, settings, *, workers=None):
+    # Read-only precedence check. The unchanged exact-token claim below remains
+    # authoritative if another operation races this read.
+    existing = await database.get_collection('documents').find_one(
+        {'_id': document_id, 'owner_id': owner_id})
+    if existing is None:
+        return None
+    if '_operation' in existing:
+        raise DocumentBusy()
+    if workers is None:
+        raise capacity_unavailable()
+    try:
+        with workers.pdf_processing_session() as session:
+            return await _process_document(database, storage, owner_id, document_id, settings, session)
+    except CapacityExceeded:
+        raise capacity_unavailable() from None
+
+
+async def _process_document(database, storage, owner_id, document_id, settings, session):
     docs = database.get_collection("documents")
     chunks = database.get_collection("document_chunks")
     generation = ObjectId()
@@ -67,9 +92,19 @@ async def process_document(database, storage, owner_id, document_id, settings):
             raise ProcessingFailure("Processing requires service review.", 503)
         await record("extraction", "claimed")
         phase = "local_extraction"
-        # Synchronous PyMuPDF: no detached worker or concurrent parser execution.
         path = storage.processing_path(document)
-        page_count, values = extract_chunks(path, settings)
+        primitive_settings = asdict(settings)
+        phase = 'worker_extraction'
+        try:
+            extracted = await session.run_pdf(str(path), primitive_settings)
+        except (SubmissionRejected, PDFExecutionNotStarted):
+            phase = 'local_extraction'  # positive evidence execution never began
+            raise ProcessingFailure('PDF processing failed. Please retry.', 503) from None
+        if isinstance(extracted, ParsingFailure):
+            status, message = recognized_failure_details(extracted.code)
+            phase = 'local_extraction'  # envelope AND clean child exit confirmed
+            raise ProcessingFailure(message, status)
+        page_count, values = extracted
         await processing_checkpoint()
         now = datetime.now(timezone.utc)
         staged = [{

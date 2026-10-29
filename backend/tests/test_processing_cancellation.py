@@ -32,12 +32,13 @@ class ProcessingCancellationTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_local_cancellation_checkpoint_stops_insertion(self):
         body = await self.make_document()
-        original = processing.extract_chunks
-        def cancel(*args):
-            result = original(*args)
+        from cpu_workers import ExecutionSession
+        original = ExecutionSession.run_pdf
+        async def cancel(*args):
+            result = await original(*args)
             asyncio.current_task().cancel()
             return result
-        with patch("document_processing.extract_chunks", side_effect=cancel), \
+        with patch("cpu_workers.ExecutionSession.run_pdf", new=cancel), \
                 patch.object(self.chunks, "insert_many", new_callable=AsyncMock) as insert:
             task = asyncio.create_task(self.process(body))
             with self.assertRaises(asyncio.CancelledError):

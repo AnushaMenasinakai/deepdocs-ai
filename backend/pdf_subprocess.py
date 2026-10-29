@@ -27,6 +27,10 @@ class PDFSubmissionRejected(RuntimeError):
         super().__init__('PDF work was not dispatched.')
 
 
+class PDFExecutionNotStarted(PDFInfrastructureFailure):
+    """Construction failed before Process.start; no extraction could execute."""
+
+
 class PDFSupervisor:
     def __init__(self, *, _context=None, _target=child_entry):
         # Private injection is for deterministic supervisor tests only.
@@ -122,7 +126,7 @@ class PDFSupervisor:
             except BaseException:
                 self._retain(process, reader, writer)
                 return False, None
-            return True, PDFInfrastructureFailure()
+            return True, PDFExecutionNotStarted()
 
     def _work(self):
         while True:

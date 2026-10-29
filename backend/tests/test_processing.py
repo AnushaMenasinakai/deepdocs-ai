@@ -15,6 +15,7 @@ from config import ProcessingSettings, ConfigurationError, load_processing_setti
 from document_routes import processing_settings
 from document_processing import ensure_chunk_indexes
 from pdf_processing import normalize_text, chunk_page, extract_chunks, ProcessingFailure
+from pdf_worker_protocol import ParsingFailure, FailureCode
 from main import app
 from auth import get_current_user
 import test_documents as document_test_helpers
@@ -165,11 +166,11 @@ class ProcessingTests(unittest.IsolatedAsyncioTestCase):
         record = self.docs.documents[ObjectId(body["id"])]
         path = self.root / record["stored_filename"]
         path.unlink()
-        with patch("document_processing.extract_chunks") as extract:
+        with patch("cpu_workers.ExecutionSession.run_pdf") as extract:
             self.assertEqual((await self.process(body))[0], 503)
             extract.assert_not_called()
         record["storage_path"] = "../private.pdf"
-        with patch("document_processing.extract_chunks") as extract:
+        with patch("cpu_workers.ExecutionSession.run_pdf") as extract:
             self.assertEqual((await self.process(body))[0], 503)
             extract.assert_not_called()
         self.assertFalse(self.chunks.documents)
@@ -178,7 +179,7 @@ class ProcessingTests(unittest.IsolatedAsyncioTestCase):
         body = await self.make_document()
         await self.process(body)
         _, original, _ = await self.inspect(body)
-        with patch("document_processing.extract_chunks", side_effect=ProcessingFailure("No extractable text was found. OCR is not supported.")):
+        with patch("cpu_workers.ExecutionSession.run_pdf", return_value=ParsingFailure(FailureCode.NO_TEXT)):
             self.assertEqual((await self.process(body))[0], 422)
         self.assertEqual((await self.inspect(body))[1], original)
         self.assertEqual(self.docs.documents[ObjectId(body["id"])]["status"], "failed")
@@ -313,12 +314,14 @@ class ProcessingTests(unittest.IsolatedAsyncioTestCase):
         body = await self.make_document()
         await self.process(body)
         _, original, _ = await self.inspect(body)
-        with patch("pdf_processing.chunk_page", side_effect=RuntimeError("private-internal-details")):
+        from pdf_subprocess_helpers import chunk_failure_child
+        with patch.object(self.workers._pdf_supervisor, '_target', chunk_failure_child):
             status, result, _ = await self.process(body)
         self.assertEqual(status, 503)
         self.assertNotIn("private-internal", str(result))
         self.assertEqual((await self.inspect(body))[1], original)
-        self.assertNotIn("private-internal", self.docs.documents[ObjectId(body["id"])]["processing_error"])
+        self.assertIsNone(self.docs.documents[ObjectId(body["id"])]["processing_error"])
+        self.assertIn('_operation', self.docs.documents[ObjectId(body['id'])])
 
     async def test_chunk_database_failure_and_processing_config_errors_are_safe(self):
         body = await self.make_document()

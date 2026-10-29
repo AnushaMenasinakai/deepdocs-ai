@@ -7,6 +7,14 @@ from types import ModuleType
 import pdf_worker_protocol as p
 
 
+def chunk_failure_child(connection, path, settings, version):
+    """Unknown native extraction failure must not become an ordinary failure."""
+    from unittest.mock import patch
+    from pdf_worker_child import child_entry
+    with patch('pdf_processing.chunk_page', side_effect=RuntimeError('private-internal-details')):
+        child_entry(connection, path, settings, version)
+
+
 def synthetic_child(connection, path, settings, version, *, entered=None, release=None):
     mode = Path(path).name
     try:

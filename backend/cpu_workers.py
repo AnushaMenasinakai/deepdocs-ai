@@ -140,6 +140,26 @@ class CPUWorkers:
             self._loop.call_soon_threadsafe(self._idle.set_result, None)
 
     @contextmanager
+    def pdf_processing_session(self):
+        """Atomic DOCUMENT/CPU/lane admission before any document claim.
+
+        Both resources remain worker-owned after cancellation until reaping.
+        The session spans publication too; no second CPU acquisition is needed.
+        """
+        with self._lock:
+            if self._closing or self._lanes[Lane.PDF] is not None:
+                raise CapacityExceeded()
+            workflow = self._admission.workflow(Resource.DOCUMENT, Resource.CPU)
+            session = ExecutionSession(self, Lane.PDF)
+            workflow.reservation.submit(lambda: session._terminal)
+            self._lanes[Lane.PDF] = session
+        try:
+            yield session
+        finally:
+            session.close()
+            workflow.finish()
+
+    @contextmanager
     def embedding_session(self):
         """CPU-only workflow: no query or document admission is enabled here."""
         with self._lock:

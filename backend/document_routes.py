@@ -187,10 +187,11 @@ def processing_settings():
 async def process(
     document_id: str, current_user=Depends(get_current_user), database=Depends(get_database),
     storage=Depends(get_document_storage), settings=Depends(processing_settings),
+    workers=Depends(get_cpu_workers),
 ):
     with safe_errors():
         document = found(await document_processing.process_document(
-            database, storage, ObjectId(current_user.id), parse_id(document_id), settings,
+            database, storage, ObjectId(current_user.id), parse_id(document_id), settings, workers=workers,
         ))
         return documents.public_document(document)
 
