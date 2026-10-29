@@ -7,7 +7,7 @@ from typing import Annotated
 from management import DocumentQuery, DocumentPage, browse
 from pymongo.errors import PyMongoError
 from starlette.datastructures import UploadFile
-from starlette.formparsers import MultiPartParser, MultiPartException
+from starlette.formparsers import MultiPartException
 from python_multipart.exceptions import MultipartParseError
 from auth import get_current_user
 from config import ConfigurationError, load_document_settings
@@ -30,6 +30,7 @@ from document_schemas import BulkDeleteRequest, BulkDeleteResponse, BulkReindexR
 import document_bulk
 from document_inspection import inspect_operation
 from upload_safety import close_upload_form, check_cancellation
+from multipart_cleanup import ParserCleanup
 from document_schemas import OperationStatusResponse
 
 router = APIRouter(tags=["Documents"])
@@ -90,15 +91,15 @@ async def parse_upload(request, max_bytes):
                 raise HTTPException(413, "PDF exceeds the configured upload limit.")
             yield chunk
 
+    cleanup = ParserCleanup(request.headers, bounded_stream())
     try:
-        form = await MultiPartParser(
-            request.headers, bounded_stream(), max_files=1, max_fields=0,
-        ).parse()
+        form = await cleanup.parse()
     except (MultiPartException, MultipartParseError, ValueError):
         raise HTTPException(422, "Provide exactly one PDF in the file field.") from None
     if len(form.multi_items()) != 1 or not isinstance(form.get("file"), UploadFile):
-        await form.close()
+        cleanup.account()
         raise HTTPException(422, "Provide exactly one PDF in the file field.")
+    cleanup.account(form)
     return form
 
 
