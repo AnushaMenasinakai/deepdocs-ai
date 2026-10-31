@@ -7,6 +7,7 @@ from document_processing import inspect_chunks
 from embeddings import EmbeddingFailure, embed_batches
 from embedding_execution import Batches
 from cpu_workers import WorkerInfrastructureFailure
+from expensive_admission import Resource
 from vector_store import get_vector_store, cleanup_document_vectors, VectorFailure
 
 
@@ -45,9 +46,10 @@ async def generate_embeddings(database, owner_id, document_id, settings, expecte
                                           expected_knowledge_base_id, session)
     if workers is None:
         raise EmbeddingFailure()
-    with workers.embedding_session() as acquired:
-        return await _generate_embeddings(database, owner_id, document_id, settings,
-                                          expected_knowledge_base_id, acquired)
+    with workers.workflow(Resource.DOCUMENT) as workflow:
+        with workers.session(workflow) as acquired:
+            return await _generate_embeddings(database, owner_id, document_id, settings,
+                                              expected_knowledge_base_id, acquired)
 
 
 async def _generate_embeddings(database, owner_id, document_id, settings, expected_knowledge_base_id, session):

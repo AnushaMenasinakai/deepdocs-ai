@@ -8,9 +8,10 @@ from document_schemas import BulkDeleteItem, BulkDeleteResponse, BulkReindexItem
 from embeddings import EmbeddingFailure
 from pdf_processing import ProcessingFailure
 from vector_store import VectorFailure
+from expensive_admission import Resource
 
 
-async def delete_documents(database, storage, owner_id, base_id, document_ids):
+async def delete_documents(database, storage, owner_id, base_id, document_ids, *, workflow=None):
     """Caller validates the entire request and KB ownership before entering here.
 
     No rollback or automatic retry. A service failure may follow partial cleanup.
@@ -25,6 +26,7 @@ async def delete_documents(database, storage, owner_id, base_id, document_ids):
                 deleted = await documents.delete_document(
                     database, storage, owner_id, ObjectId(identifier),
                     expected_knowledge_base_id=base_id,
+                    workflow=workflow,
                 )
                 outcome = "succeeded" if deleted else "failed"
                 code = None if deleted else "not_found"
@@ -43,8 +45,9 @@ async def reindex_documents(database, owner_id, base_id, document_ids, settings,
     if workers is None:
         raise EmbeddingFailure()
     # One execution lease prevents a mid-bulk admission failure after writes.
-    with workers.embedding_session() as session:
-        return await _reindex_documents(database, owner_id, base_id, document_ids, settings, session)
+    with workers.workflow(Resource.DOCUMENT) as workflow:
+        with workers.session(workflow) as session:
+            return await _reindex_documents(database, owner_id, base_id, document_ids, settings, session)
 
 
 async def _reindex_documents(database, owner_id, base_id, document_ids, settings, session):

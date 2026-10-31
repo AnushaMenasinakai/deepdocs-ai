@@ -33,6 +33,7 @@ from upload_safety import close_upload_form, check_cancellation
 from multipart_cleanup import ParserCleanup
 from upload_lifecycle import OwnedParser
 from expensive_admission import CapacityExceeded, Resource, capacity_unavailable
+from dependency_diagnostics import get_diagnostics
 from document_schemas import OperationStatusResponse
 
 router = APIRouter(tags=["Documents"])
@@ -166,10 +167,15 @@ async def get_one(document_id: str, current_user=Depends(get_current_user), data
 @router.delete("/api/documents/{document_id}", status_code=204)
 async def delete(
     document_id: str, current_user=Depends(get_current_user), database=Depends(get_database),
-    storage=Depends(get_document_storage),
+    storage=Depends(get_document_storage), workers=Depends(get_cpu_workers),
 ):
-    with safe_errors():
-        found(await documents.delete_document(database, storage, ObjectId(current_user.id), parse_id(document_id)))
+    owner, identifier = ObjectId(current_user.id), parse_id(document_id)
+    with embedding_capacity_errors(), safe_errors():
+        document = found(await documents.find_document(database, owner, identifier))
+        if '_operation' in document:
+            raise DocumentBusy()
+        with workers.workflow(Resource.DOCUMENT) as workflow:
+            found(await documents.delete_document(database, storage, owner, identifier, workflow=workflow))
     return Response(status_code=204)
 
 
@@ -178,12 +184,14 @@ async def delete(
 async def bulk_delete(
     knowledge_base_id: str, data: BulkDeleteRequest,
     current_user=Depends(get_current_user), database=Depends(get_database),
-    storage=Depends(get_document_storage),
+    storage=Depends(get_document_storage), workers=Depends(get_cpu_workers),
 ):
     owner, base = ObjectId(current_user.id), parse_id(knowledge_base_id)
-    with safe_errors():
+    with embedding_capacity_errors(), safe_errors():
         found(await knowledge_bases.get_knowledge_base(database, owner, base), "Knowledge Base")
-        return await document_bulk.delete_documents(database, storage, owner, base, data.document_ids)
+        with workers.workflow(Resource.DOCUMENT) as workflow:
+            return await document_bulk.delete_documents(database, storage, owner, base, data.document_ids,
+                                                        workflow=workflow)
 
 
 def processing_settings():
@@ -257,15 +265,25 @@ async def bulk_reindex(
 
 
 @router.get("/api/health/qdrant")
-async def qdrant_health():
+async def qdrant_health(diagnostics=Depends(get_diagnostics)):
     with safe_errors():
-        await get_vector_store().health()
+        await diagnostics.run('qdrant', lambda: get_vector_store().health())
         return {"status": "ok", "message": "Qdrant is reachable"}
 
 
 @router.get("/api/documents/{document_id}/vector-status")
-async def vector_status(document_id: str, current_user=Depends(get_current_user), database=Depends(get_database)):
+async def vector_status(document_id: str, current_user=Depends(get_current_user), database=Depends(get_database),
+                        workers=Depends(get_cpu_workers)):
     owner, identifier = ObjectId(current_user.id), parse_id(document_id)
+    with embedding_capacity_errors(), safe_errors():
+        document = found(await documents.find_document(database, owner, identifier))
+        if '_operation' in document:
+            raise DocumentBusy()
+        with workers.workflow(Resource.DOCUMENT):
+            return await _vector_status(database, owner, identifier, document_id)
+
+
+async def _vector_status(database, owner, identifier, document_id):
     with safe_errors():
         document, token = await claim_document(database, owner, identifier, operation_type="vector_inspection")
         found(document)

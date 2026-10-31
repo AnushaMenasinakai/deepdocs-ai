@@ -149,7 +149,8 @@ class MigrationTests(unittest.IsolatedAsyncioTestCase):
                     await task
                 self.assertEqual(self.admission._admission.outstanding[Resource.CPU], 1)
                 self.assertEqual(self.admission._admission.outstanding[Resource.QUERY], 0)
-                self.assertEqual(self.admission._admission.outstanding[Resource.DOCUMENT], 0)
+                # Indexing now retains DOCUMENT with the cancelled native work.
+                self.assertEqual(self.admission._admission.outstanding[Resource.DOCUMENT], 1)
                 self.assertIn('_operation', self.docs.documents[ObjectId(body['id'])])
                 upsert.assert_not_awaited()
                 self.admission.begin_shutdown()
@@ -162,6 +163,7 @@ class MigrationTests(unittest.IsolatedAsyncioTestCase):
                     await closing
         self.assertEqual(self.admission._admission.outstanding[Resource.CPU], 0)
         self.assertIn('_operation', self.docs.documents[ObjectId(body['id'])])
+        self.assertEqual(self.admission._admission.outstanding[Resource.DOCUMENT], 0)
 
     async def test_cancel_before_dispatch_does_not_claim(self):
         body = await self.prepare()

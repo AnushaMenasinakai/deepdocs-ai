@@ -6,6 +6,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 from config import load_cors_origins, load_expensive_admission_settings
 from admission_lifecycle import AdmissionService
 from cpu_workers import CPUWorkers
+from dependency_diagnostics import DependencyDiagnostics, get_diagnostics
 
 from database import UNAVAILABLE_MESSAGE, database_lifespan, get_database, ping_database
 from auth_routes import router as auth_router
@@ -28,6 +29,8 @@ async def application_lifespan(app):
     app.state.expensive_admission = None
     app.state.cpu_workers = None
     service = AdmissionService(load_expensive_admission_settings())
+    diagnostics = DependencyDiagnostics()
+    app.state.dependency_diagnostics = diagnostics
     dependencies = AsyncExitStack()
     workers = None
     try:
@@ -39,6 +42,7 @@ async def application_lifespan(app):
         yield
     finally:
         service.begin_shutdown()
+        diagnostics.begin_shutdown()
         if workers is not None:
             workers.begin_drain()
         exception = sys.exc_info()
@@ -48,6 +52,7 @@ async def application_lifespan(app):
             await service.aclose()
             if workers is not None:
                 await workers.aclose()
+            await diagnostics.close()
             await dependencies.__aexit__(*exception)
 
         # One owned cleanup task per lifespan, not a work/admission queue.
@@ -107,8 +112,8 @@ def health():
 
 
 @app.get("/api/health/database")
-async def database_health(database: AsyncDatabase = Depends(get_database)):
-    if not await ping_database(database):
+async def database_health(database: AsyncDatabase = Depends(get_database), diagnostics=Depends(get_diagnostics)):
+    if not await diagnostics.run('database', lambda: ping_database(database)):
         raise HTTPException(status_code=503, detail=UNAVAILABLE_MESSAGE)
     return {"status": "ok", "message": "MongoDB is reachable"}
 

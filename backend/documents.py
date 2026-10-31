@@ -1,5 +1,7 @@
 """Owner-scoped metadata operations and compensating filesystem cleanup."""
 import asyncio
+import threading
+from concurrent.futures import Future
 from datetime import datetime, timezone
 from bson import ObjectId
 from bson import BSON
@@ -160,7 +162,36 @@ async def deletion_checkpoint():
     check_cancellation()
 
 
-async def delete_document(database, storage, owner_id, document_id, expected_knowledge_base_id=None):
+class _DeletionWork:
+    """One registered filesystem call; wrapper cancellation is not completion."""
+    def __init__(self, workflow):
+        self._terminal = Future()
+        self._terminal.set_running_or_notify_cancel()
+        self._lock = threading.Lock()
+        self._state = 'pending'
+        workflow.own_cleanup(self)
+
+    def close(self):
+        with self._lock:
+            if self._state == 'pending':
+                self._state = 'sealed'
+                self._terminal.set_result(None)
+
+    def run(self, function, document):
+        with self._lock:
+            if self._state != 'pending':
+                raise PyMongoError('Document deletion requires service review.')
+            self._state = 'running'
+        try:
+            return function(document)
+        finally:
+            with self._lock:
+                self._state = 'finished'
+                self._terminal.set_result(None)
+
+
+async def delete_document(database, storage, owner_id, document_id, expected_knowledge_base_id=None,
+                          *, workflow=None):
     document, token = await claim_document(
         database, owner_id, document_id, expected_knowledge_base_id, operation_type="deletion",
     )
@@ -208,7 +239,14 @@ async def delete_document(database, storage, owner_id, document_id, expected_kno
             acknowledged = "vector_deletion"
         await record("pdf_deletion", acknowledged)
         dispatched = True  # A cancelled await does not stop the filesystem worker.
-        await run_in_threadpool(storage.delete, document)
+        if workflow is None:
+            await run_in_threadpool(storage.delete, document)
+        else:
+            work = _DeletionWork(workflow)
+            try:
+                await run_in_threadpool(work.run, storage.delete, document)
+            finally:
+                work.close()  # Seal undispatched work; running calls retain ownership.
         await deletion_checkpoint()
         await record("chunk_deletion", "pdf_deletion")
         await database.get_collection("document_chunks").delete_many(
