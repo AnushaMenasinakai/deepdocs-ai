@@ -1,6 +1,9 @@
 """Synthetic parser-instance cleanup checks; no services or PDF extraction."""
 import asyncio
 import io
+from importlib.metadata import version, requires
+from pathlib import Path
+from packaging.requirements import Requirement
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -21,6 +24,20 @@ async def chunks(raw):
 
 
 class CleanupTests(unittest.IsolatedAsyncioTestCase):
+    def test_pinned_runtime_satisfies_fastapi_and_adapter_contract(self):
+        pins = (Path(__file__).resolve().parents[1] / 'requirements.txt').read_text().splitlines()
+        for package, expected in (('starlette', '1.6.0'), ('python-multipart', '0.0.32')):
+            with self.subTest(package=package):
+                self.assertIn(f'{package}=={expected}', pins)
+                self.assertEqual(version(package), expected)
+                constraints = [Requirement(item) for item in requires('fastapi')
+                               if Requirement(item).name == package]
+                self.assertTrue(constraints)
+                self.assertTrue(all(expected in item.specifier for item in constraints))
+        self.assertEqual(version('fastapi'), '0.141.1')
+        adapter = self.adapter(b'')
+        self.assertEqual(adapter.state, 'pending')
+
     def adapter(self, raw):
         return ParserCleanup(Headers({'content-type': 'multipart/form-data; boundary=b'}), chunks(raw))
 
