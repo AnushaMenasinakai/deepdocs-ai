@@ -12,6 +12,7 @@ from fastapi import Header, HTTPException
 from auth import get_current_user
 from main import app
 from upload_lifecycle import OwnedParser
+from expensive_admission import Resource
 import test_documents as fixtures
 from test_documents import PDF, PUBLIC
 from test_multipart_cleanup import HEADER
@@ -57,7 +58,7 @@ class UploadHTTPTests(unittest.IsolatedAsyncioTestCase):
             except HTTPError as error:
                 response = error
             with response:
-                return response.status, json.load(response)
+                return response.status, json.load(response), dict(response.headers)
         async def slow():
             reader, writer = await asyncio.open_connection('127.0.0.1', port)
             writer.write((f'POST {self.path} HTTP/1.1\r\nHost: localhost\r\n'
@@ -70,7 +71,7 @@ class UploadHTTPTests(unittest.IsolatedAsyncioTestCase):
         try:
             await asyncio.wait_for(ready.wait(), 5)
             complete = HEADER + PDF + b'\r\n--b--\r\n'
-            status, body = await asyncio.to_thread(http, self.path, complete)
+            status, body, _ = await asyncio.to_thread(http, self.path, complete)
             self.assertEqual(status, 201)
             self.assertEqual(set(body), PUBLIC)
             self.assertEqual((await asyncio.to_thread(http, self.path, complete, False))[0], 401)
@@ -84,6 +85,31 @@ class UploadHTTPTests(unittest.IsolatedAsyncioTestCase):
             reservations = list(self.bases.documents[self.base_id]['_document_ids'])
             revision = self.bases.documents[self.base_id]['_document_revision']
             with patch('document_routes.OwnedParser', ObservedParser):
+                first = await slow()
+                second = await slow()
+                try:
+                    self.assertEqual(self.admission._admission.outstanding[Resource.UPLOAD], 2)
+                    status, body, headers = await asyncio.to_thread(http, self.path, complete)
+                    self.assertEqual(status, 503)
+                    self.assertEqual(body, {'detail': 'Service is busy. Please try again later.'})
+                    self.assertEqual(headers['retry-after'], '1')
+                    self.assertEqual(headers['cache-control'], 'no-store')
+                    self.assertEqual((await asyncio.to_thread(http, self.path, complete, False))[0], 401)
+                    self.current_owner = self.other
+                    self.assertEqual((await asyncio.to_thread(http, self.path, complete))[0], 404)
+                    self.current_owner = self.owner
+                    missing = self.path.replace(str(self.base_id), str(self.other))
+                    self.assertEqual((await asyncio.to_thread(http, missing, complete))[0], 404)
+                    self.assertEqual(len(parsers), 2)
+                    self.assertTrue(entered.empty())
+                    self.assertEqual((await asyncio.to_thread(http, '/api/health'))[0], 200)
+                finally:
+                    self.current_owner = self.owner
+                    for _, writer, _ in (first, second):
+                        writer.close()
+                        await writer.wait_closed()
+                    await asyncio.wait_for(asyncio.gather(*owners), 5)
+                self.assertEqual(self.admission._admission.outstanding[Resource.UPLOAD], 0)
                 # A disconnected client aborts only the body receiver.
                 reader, writer, parser = await slow()
                 writer.close()

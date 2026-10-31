@@ -32,7 +32,7 @@ from document_inspection import inspect_operation
 from upload_safety import close_upload_form, check_cancellation
 from multipart_cleanup import ParserCleanup
 from upload_lifecycle import OwnedParser
-from expensive_admission import CapacityExceeded, capacity_unavailable
+from expensive_admission import CapacityExceeded, Resource, capacity_unavailable
 from document_schemas import OperationStatusResponse
 
 router = APIRouter(tags=["Documents"])
@@ -120,8 +120,8 @@ async def upload(
     with safe_errors():
         found(await knowledge_bases.get_knowledge_base(database, owner_id, base_id), "Knowledge Base")
         try:
-            # Cleanup registration only: UPLOAD capacity admission is deferred.
-            with workers.cleanup_workflow() as workflow:
+            # Reserve before parsing/spool allocation; native cleanup owns release.
+            with workers.workflow(Resource.UPLOAD) as workflow:
                 parser = OwnedParser(workflow, request, parse_upload, settings.max_upload_bytes)
                 form = await parser.result()
                 try:
