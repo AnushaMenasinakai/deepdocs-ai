@@ -7,7 +7,7 @@ import Icon from './Icon.jsx'
 
 export default function AuthForm({ mode }) {
   const isRegister = mode === 'register'
-  const { authenticate } = useAuth()
+  const { authenticate, logoutWarning } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const formRef = useRef(null)
@@ -73,6 +73,7 @@ export default function AuthForm({ mode }) {
 
   return (
     <>
+      {logoutWarning && <p className="auth-error" role="alert">{logoutWarning}</p>}
       {!isRegister && location.state?.registered && <p className="auth-success" role="status">Account created. Sign in to continue.</p>}
       <form ref={formRef} onSubmit={submit} noValidate aria-busy={submitting}>
         <div aria-live="polite" aria-atomic="true">

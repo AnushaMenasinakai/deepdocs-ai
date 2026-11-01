@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [isLoading, setIsLoading] = useState(() => Boolean(getAccessToken()))
   const [error, setError] = useState('')
+  const [logoutWarning, setLogoutWarning] = useState('')
   const operation = useRef(null)
 
   const beginOperation = useCallback(() => {
@@ -23,7 +24,8 @@ export function AuthProvider({ children }) {
   const handleUserFailure = useCallback((failure) => {
     setUser(null)
     if (failure.status === 401) {
-      clearAccessToken()
+      const removed = clearAccessToken()
+      setLogoutWarning(removed ? '' : 'Signed out of this page, but stored sign-in removal could not be confirmed. Clear browser data before reloading or leaving a shared device.')
       setError('')
     } else {
       setError(UNAVAILABLE)
@@ -68,6 +70,7 @@ export function AuthProvider({ children }) {
       const token = await login(credentials, controller.signal)
       if (controller.signal.aborted) return null
       setAccessToken(token)
+      setLogoutWarning('')
       tokenIssued = true
       const currentUser = await getCurrentUser(token, controller.signal)
       if (controller.signal.aborted) return null
@@ -90,7 +93,8 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     operation.current?.abort()
-    clearAccessToken()
+    const removed = clearAccessToken()
+    setLogoutWarning(removed ? '' : 'Signed out of this page, but stored sign-in removal could not be confirmed. Clear browser data before reloading or leaving a shared device.')
     setUser(null)
     setError('')
     setIsLoading(false)
@@ -98,7 +102,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, isAuthenticated: Boolean(user), isLoading, error,
+      user, isAuthenticated: Boolean(user), isLoading, error, logoutWarning,
       authenticate, logout, refreshCurrentUser,
     }}>
       {children}

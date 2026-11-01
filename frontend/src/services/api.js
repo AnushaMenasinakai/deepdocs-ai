@@ -1,6 +1,23 @@
 import { getAccessToken } from './tokenStorage.js'
 import axios from 'axios'
 
+// Uploads get a finite two-minute budget; all other defaults remain unchanged.
+const UPLOAD_TIMEOUT_MS = 120000
+const BUSY_MESSAGE = 'The service is busy. This operation was not admitted. Please try again later.'
+function admissionRejected(error) {
+  const headers = error.response?.headers
+  return error.response?.status === 503 &&
+    error.response?.data?.detail === 'Service is busy. Please try again later.' &&
+    String(headers?.get?.('retry-after') ?? headers?.['retry-after']) === '1'
+}
+function busyError() {
+  const safe = new Error(BUSY_MESSAGE)
+  safe.status = 503
+  safe.notAdmitted = true
+  return safe
+}
+
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   timeout: 15000,
@@ -83,6 +100,7 @@ async function knowledgeBaseRequest(method, id, data, signal) {
     return response.data
   } catch (error) {
     if (axios.isCancel(error)) throw error
+    if (admissionRejected(error)) throw busyError()
     const status = error.response?.status
     let message = 'Knowledge Base service is temporarily unavailable. Please try again.'
     if (!error.response) message = 'Unable to connect. Please check your connection and try again.'
@@ -104,6 +122,7 @@ async function browseRequest(url, params, signal, documents = false) {
     response = await api.get(url, { params, signal, headers: { Authorization: 'Bearer ' + getAccessToken() } })
   } catch (error) {
     if (axios.isCancel(error)) throw error
+    if (admissionRejected(error)) throw busyError()
     const safe = new Error(error.response?.status === 404 ? 'This Knowledge Base is no longer available.' : 'Unable to load results. Please try again.')
     safe.status = error.response?.status
     throw safe
@@ -138,6 +157,7 @@ async function documentRequest(method, url, data, signal) {
   try {
     const response = await api.request({
       method, url, data, signal,
+      ...(data instanceof FormData ? { timeout: UPLOAD_TIMEOUT_MS } : {}),
       headers: {
         Authorization: 'Bearer ' + getAccessToken(),
         // Clear the instance JSON default; the browser supplies the boundary.
@@ -149,11 +169,13 @@ async function documentRequest(method, url, data, signal) {
     return response.data
   } catch (error) {
     if (axios.isCancel(error)) throw error
+    if (admissionRejected(error)) throw busyError()
     const status = error.response?.status
     let message = 'Document service is temporarily unavailable. Please try again.'
     if (!error.response) message = 'Unable to confirm the request. Check your connection and refresh the document list before trying again.'
     if (status === 401) message = 'Your session has expired. Please sign in again.'
     if (status === 404) message = 'This document or Knowledge Base is no longer available.'
+    if (status === 409 && method === 'delete') message = 'This document has an operation in progress. Inspect or refresh its state before trying deletion again.'
     if (status === 413) message = 'The PDF exceeds the upload limit. Choose a PDF up to 10 MiB; the server may have a lower limit.'
     if (status === 415 || status === 422) message = 'Choose a valid, non-empty PDF file and try again.'
     const safe = new Error(message)
@@ -184,6 +206,7 @@ export async function processDocument(documentId, signal) {
     return response.data
   } catch (error) {
     if (axios.isCancel(error)) throw error
+    if (admissionRejected(error)) throw busyError()
     const status = error.response?.status
     const safe = new Error(status === 401 ? 'Your session has expired. Please sign in again.'
       : status === 403 ? 'You do not have access to process this document.'
@@ -207,6 +230,7 @@ export async function inspectDocumentOperation(documentId, signal) {
     })
   } catch (error) {
     if (axios.isCancel(error)) throw error
+    if (admissionRejected(error)) throw busyError()
     const status = error.response?.status
     const safe = new Error(status === 401 ? 'Your session has expired. Please sign in again.'
       : status === 404 ? 'This document is no longer available.'
@@ -247,6 +271,7 @@ async function bulkDocumentRequest(knowledgeBaseId, documentIds, operation, sign
       { document_ids: ids }, { signal, timeout: 300000, headers: { Authorization: 'Bearer ' + getAccessToken() } })
   } catch (error) {
     if (axios.isCancel(error)) throw error
+    if (admissionRejected(error)) throw busyError()
     const status = error.response?.status
     const safe = new Error(status === 401 ? 'Your session has expired. Please sign in again.'
       : status === 404 ? 'This Knowledge Base is no longer available. Refresh your collections.'
@@ -287,6 +312,7 @@ export async function askKnowledgeBase(knowledgeBaseId, question, signal) {
       })
   } catch (error) {
     if (axios.isCancel(error)) throw error
+    if (admissionRejected(error)) throw busyError()
     const status = error.response?.status
     let message = 'Answer service is temporarily unavailable. Please try again.'
     if (!error.response) message = 'Unable to connect to the answer service. Please try again.'
@@ -362,6 +388,7 @@ async function historyRequest(method, knowledgeBaseId, entryId, signal) {
     })
   } catch (error) {
     if (axios.isCancel(error)) throw error
+    if (admissionRejected(error)) throw busyError()
     const status = error.response?.status
     let message = 'Ask history is temporarily unavailable. Please try again.'
     if (!error.response) message = 'Unable to connect to Ask history. Please try again.'
@@ -379,7 +406,7 @@ async function historyRequest(method, knowledgeBaseId, entryId, signal) {
     if (response.status !== 200 || !Array.isArray(response.data) || response.data.length > 100) throw new Error()
     return response.data.map(item => {
       if (!item || typeof item.id !== 'string' || !item.id || typeof item.question !== 'string' ||
-          !item.question.trim() || item.question.length > 1000 || typeof item.created_at !== 'string' ||
+          !item.question.trim() || Array.from(item.question).length > 1000 || typeof item.created_at !== 'string' ||
           !Number.isFinite(Date.parse(item.created_at))) throw new Error()
       return { id: item.id, question: item.question, created_at: item.created_at, ...publicAskResult(item) }
     })
@@ -398,6 +425,7 @@ export async function getDashboardSummary(signal) {
     response = await api.get('/api/dashboard/summary', { signal, headers: { Authorization: 'Bearer ' + getAccessToken() } })
   } catch (error) {
     if (axios.isCancel(error)) throw error
+    if (admissionRejected(error)) throw busyError()
     const safe = new Error('Workspace overview is temporarily unavailable. Please try again.')
     safe.status = error.response?.status
     throw safe
@@ -420,6 +448,7 @@ export async function getRecentDocuments(signal) {
     response = await api.get('/api/dashboard/recent-documents', { signal, headers: { Authorization: 'Bearer ' + getAccessToken() } })
   } catch (error) {
     if (axios.isCancel(error)) throw error
+    if (admissionRejected(error)) throw busyError()
     const safe = new Error('Recent documents are temporarily unavailable. Use Refresh overview to try again.')
     safe.status = error.response?.status
     throw safe

@@ -41,7 +41,7 @@ function QuestionForm({ base, refreshBases }) {
     window.visualViewport?.addEventListener('resize', resize)
     return () => { widthObserver.disconnect(); window.removeEventListener('resize', resize); window.visualViewport?.removeEventListener('resize', resize) }
   }, [question])
-  const valid = question.trim().length > 0 && question.length <= 1000
+  const valid = question.trim().length > 0 && Array.from(question).length <= 1000
   async function submit(event) {
     event.preventDefault()
     if (!valid || pending.current || missing) return
@@ -101,11 +101,11 @@ function QuestionForm({ base, refreshBases }) {
     <section className="panel ask-composer">
       <form onSubmit={submit}>
         <label htmlFor="ask-question">Your question</label>
-        <textarea ref={input} id="ask-question" rows={1} value={question} maxLength={1000} required disabled={busy || missing}
+        <textarea ref={input} id="ask-question" rows={1} value={question} required disabled={busy || missing}
           placeholder="What would you like to understand?" aria-describedby="ask-hint ask-count"
-          onChange={event => { setQuestion(event.target.value); setError('') }} />
+          onChange={event => { setQuestion(Array.from(event.target.value).slice(0, 1000).join('')); setError('') }} />
         <div className="ask-input-footer"><p id="ask-hint">One question at a time. Answers use your retrieved document context.</p>
-          <span id="ask-count">{question.length}/1,000</span></div>
+          <span id="ask-count">{Array.from(question).length}/1,000</span></div>
         <button className="kb-primary" type="submit" disabled={!valid || busy || missing}>{busy ? 'Finding an answer…' : 'Ask DeepDocs'}</button>
       </form>
     </section>

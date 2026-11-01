@@ -224,7 +224,7 @@ function DocumentCollection({ base, onBusy, onRefreshBases }) {
         setProcessError(controller.signal.aborted || error.code === 'ERR_CANCELED'
           ? 'The processing outcome could not be confirmed. Processing may still be running. Refresh or inspect document status before taking further action.' : error.message)
         // Do not offer a replay of an uncertain mutation from this mounted view.
-        setUncertainIds(current => [...current, item.id])
+        if (!error.notAdmitted) setUncertainIds(current => [...current, item.id])
         setSelection({ key: '', ids: [] })
       }
     } finally {

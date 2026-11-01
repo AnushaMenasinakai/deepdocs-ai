@@ -103,6 +103,7 @@ app.add_middleware(
     allow_origins=load_cors_origins(),
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["*"],
+    expose_headers=["Retry-After"],
 )
 
 

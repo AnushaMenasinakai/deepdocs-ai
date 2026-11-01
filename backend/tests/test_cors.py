@@ -128,3 +128,46 @@ def test_unreadable_configuration_fails_safely():
         with pytest.raises(ConfigurationError) as error:
             load_cors_origins()
     assert "private-path" not in str(error.value)
+
+
+@pytest.mark.parametrize("origin", [LOCAL[0], "https://evil.example.com", None])
+def test_admission_retry_header_exposure_preserves_origin_policy(origin):
+    from fastapi.middleware.cors import CORSMiddleware
+    from expensive_admission import capacity_unavailable
+    from httpx import ASGITransport, AsyncClient
+
+    app = configured(app=True)
+    cors = next(item for item in app.user_middleware if item.cls is CORSMiddleware)
+    assert cors.kwargs["expose_headers"] == ["Retry-After"]
+    assert cors.kwargs["allow_origins"] == LOCAL
+    assert cors.kwargs["allow_methods"] == ["GET", "POST", "PATCH", "DELETE"]
+    assert cors.kwargs["allow_headers"] == ["*"]
+    assert not cors.kwargs.get("allow_credentials", False)
+
+    @app.get("/test-admission")
+    async def saturated():
+        raise capacity_unavailable()
+
+    async def run():
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            headers = {} if origin is None else {"Origin": origin}
+            busy = await client.get("/test-admission", headers=headers)
+            assert busy.status_code == 503
+            assert busy.json() == {"detail": "Service is busy. Please try again later."}
+            assert busy.headers["retry-after"] == "1"
+            assert busy.headers["cache-control"] == "no-store"
+            if origin in LOCAL:
+                assert busy.headers["access-control-allow-origin"] == origin
+                assert busy.headers["access-control-expose-headers"] == "Retry-After"
+            else:
+                assert "access-control-allow-origin" not in busy.headers
+            assert "access-control-allow-credentials" not in busy.headers
+            # CORS adds exposure metadata without changing ordinary or auth responses.
+            for path in ["/api/health", "/api/auth/me"]:
+                plain = await client.get(path)
+                cross = await client.get(path, headers=headers)
+                assert cross.status_code == plain.status_code == (200 if path.endswith("health") else 401)
+                assert cross.json() == plain.json()
+                if origin in LOCAL:
+                    assert cross.headers["access-control-expose-headers"] == "Retry-After"
+    asyncio.run(run())
