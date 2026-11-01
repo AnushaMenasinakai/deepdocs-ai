@@ -1,3 +1,4 @@
+const { artifactPath } = require('./artifacts.cjs');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert = require('node:assert/strict');
 const BASE=(process.env.FRONTEND_TEST_URL || 'http://127.0.0.1:5176');
@@ -192,13 +193,13 @@ const USER={id:'507f1f77bcf86cd799439011',name:'Example User',email:'user@exampl
       await go('/'); await heading('Welcome back',true);
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
       assert(await page.getByRole('button',{name:'Log out',exact:true}).isVisible());
-      await page.screenshot({path:'E:/deepdocs-ai/.verification/authenticated-'+width+'.png',fullPage:true});
+      await page.screenshot({path:artifactPath('authenticated-'+width+'.png'),fullPage:true});
       await page.getByRole('button',{name:'Log out',exact:true}).click(); await heading('Welcome back');
     });
     await scenario({token:TOKEN,meStatus:503,width:390},async({page,go,heading})=>{
       await go('/ask');await heading('Unable to verify your account');
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-      await page.screenshot({path:'E:/deepdocs-ai/.verification/auth-failure-390.png',fullPage:true});
+      await page.screenshot({path:artifactPath('auth-failure-390.png'),fullPage:true});
       await page.getByRole('button',{name:'Sign in again',exact:true}).click(); await heading('Welcome back');
       assert.equal(await page.evaluate(()=>localStorage.length),0);
     });

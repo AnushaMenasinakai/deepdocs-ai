@@ -1,3 +1,4 @@
+const { artifactPath } = require('./artifacts.cjs');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert=require('node:assert/strict');
 const BASE=(process.env.FRONTEND_TEST_URL || 'http://127.0.0.1:5176'), TOKEN='mockheader.mockpayload.mocksignature';
@@ -81,7 +82,7 @@ const fixture={name:'notes.pdf',mimeType:'application/pdf',buffer:Buffer.from('%
    const text=await page.locator('body').innerText();
    for(const forbidden of [TOKEN,'PRIVATE_DETAIL','storage_path','stored_filename','owner_id'])assert(!text.includes(forbidden));
    passed++;console.log('PASS '+name);
-  }catch(e){await page.screenshot({path:'E:/deepdocs-ai/.verification/document-test-failure.png',fullPage:true}); console.log('Failed scenario: '+name); console.log('Runtime errors: '+errors.length); throw e;}finally{state.gate?.resolve();await context.close();}
+  }catch(e){await page.screenshot({path:artifactPath('document-test-failure.png'),fullPage:true}); console.log('Failed scenario: '+name); console.log('Runtime errors: '+errors.length); throw e;}finally{state.gate?.resolve();await context.close();}
  }
  try{
   await scenario('KB loading, first selection and empty document list',async({page,state,go})=>{
@@ -256,10 +257,31 @@ const fixture={name:'notes.pdf',mimeType:'application/pdf',buffer:Buffer.from('%
     doc('d','base-a','Uploaded.pdf'),
    ];await ready();
    assert.deepEqual(await page.locator('.document-status').allTextContents(),['Failed','Indexed','Processed','Uploaded']);
+   await page.evaluate(() => {
+    window.menuDiagnostics = [];
+    for (const type of ['scroll', 'click', 'toggle']) document.addEventListener(type, event => {
+     window.menuDiagnostics.push({type, target:event.target?.getAttribute?.('aria-label') || event.target?.className || event.target?.nodeName,
+      state:event.newState, y:scrollY, active:document.activeElement?.textContent});
+    }, true);
+   });
    for(const filename of ['Failed.pdf','Indexed.pdf','Processed.pdf','Uploaded.pdf']){
-    await page.getByRole('button',{name:'Actions for '+filename,exact:true}).click();
+    const trigger = page.getByRole('button',{name:'Actions for '+filename,exact:true});
+    // Finish browser auto-scrolling before opening a menu that intentionally
+    // dismisses on page scroll. Keep the eligibility assertions unchanged.
+    await trigger.scrollIntoViewIfNeeded();
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await trigger.click();
+    assert.equal(await trigger.getAttribute('aria-expanded'),'true');
     assert.equal(await page.getByRole('menuitem',{name:'Process PDF',exact:true}).count(),filename==='Uploaded.pdf'?1:0);
-    assert.equal(await page.getByRole('menuitem',{name:'Inspect status',exact:true}).isEnabled(),true);
+    try {
+     assert.equal(await page.getByRole('menuitem',{name:'Inspect status',exact:true}).isEnabled(),true);
+    } catch (error) {
+     console.log('MENU DIAGNOSTICS', filename, JSON.stringify(await page.evaluate(() => ({
+      events:window.menuDiagnostics, open:[...document.querySelectorAll(':popover-open')].map(e=>e.id),
+      triggers:[...document.querySelectorAll('.dropdown-trigger')].map(e=>({label:e.getAttribute('aria-label'),expanded:e.getAttribute('aria-expanded')}))
+     }))));
+     throw error;
+    }
     assert.equal(await page.getByRole('menuitem',{name:'Delete',exact:true}).isEnabled(),true);
     await page.keyboard.press('Escape');
    }
@@ -286,7 +308,7 @@ const fixture={name:'notes.pdf',mimeType:'application/pdf',buffer:Buffer.from('%
    const uploadBounds=await page.getByRole('dialog',{name:'Upload PDF',exact:true}).boundingBox();assert(uploadBounds.x>=0&&uploadBounds.x+uploadBounds.width<=width);
    await button('Close dialog').click();await page.waitForFunction(()=>!document.querySelector('dialog:modal'));
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-   await page.screenshot({path:'E:/deepdocs-ai/.verification/documents-'+width+'.png',fullPage:true});
+   await page.screenshot({path:artifactPath('documents-'+width+'.png'),fullPage:true});
    const trigger=page.locator('.document-card').getByRole('button',{name:/^Actions for /});
    await trigger.scrollIntoViewIfNeeded();await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
    await trigger.click();

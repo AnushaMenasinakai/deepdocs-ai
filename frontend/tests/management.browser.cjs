@@ -1,3 +1,4 @@
+const { artifactPath } = require('./artifacts.cjs');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict');
 const ROOT=process.env.FRONTEND_TEST_URL||'http://127.0.0.1:5176',date='2026-01-01T00:00:00Z';
@@ -77,7 +78,7 @@ function paginate(rows,p,docs){
   await scenario('Ask selector retains all 25 KBs',async({page,go})=>{await go('/ask');const selector=page.getByLabel('Knowledge Base',{exact:true});await selector.waitFor();assert.equal(await selector.locator('option').count(),25);await selector.selectOption('kb-25')});
   await scenario('expired session',async({page,state,go})=>{state.status=401;await go('/knowledge-bases');await page.getByRole('heading',{name:'Welcome back',exact:true}).waitFor();assert.equal(await page.evaluate(()=>localStorage.getItem('deepdocs_access_token')),null)});
   for(const width of [1440,768,390])for(const path of ['/knowledge-bases','/documents'])await scenario('responsive '+width+' '+path,async({page,state,go,ready})=>{
-   const text='<img src=x onerror=alert(1)> '+'LongName'.repeat(14);state.bases[0].name=text;state.docs[0].filename=text+'.pdf';await go(path+'?sort='+(path==='/documents'?'filename':'name')+'&order=asc');await ready();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.equal(await page.locator('.kb-card img,.document-card img').count(),0);await page.screenshot({path:'.verification/management-'+width+path.replace('/','-')+'.png',fullPage:true});
+   const text='<img src=x onerror=alert(1)> '+'LongName'.repeat(14);state.bases[0].name=text;state.docs[0].filename=text+'.pdf';await go(path+'?sort='+(path==='/documents'?'filename':'name')+'&order=asc');await ready();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.equal(await page.locator('.kb-card img,.document-card img').count(),0);await page.screenshot({path:artifactPath('management-'+width+path.replace('/','-')+'.png'),fullPage:true});
   },width);
   console.log('Management: '+passed+' scenarios passed; no unexpected console/runtime errors.');
  }finally{await browser.close()}

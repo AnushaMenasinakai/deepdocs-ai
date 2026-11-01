@@ -1,3 +1,4 @@
+const { artifactPath } = require('./artifacts.cjs');
 // All API requests are intercepted; no real accounts, PDFs, or external services.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const assert=require('node:assert/strict');
@@ -121,7 +122,7 @@ const doc=n=>({id:id(n+100),knowledge_base_id:id(1),filename:'Reference '+n+'.pd
   });
   await scenario('401 preserves centralized logout behavior',async({page,state,go,select,open,confirm})=>{await go();await select();await open('delete');state.status=401;await confirm('delete');await page.getByRole('heading',{name:'Welcome back',exact:true}).waitFor();assert.equal(await page.evaluate(()=>localStorage.getItem('deepdocs_access_token')),null)});
   for(const width of [1440,768,390])await scenario('responsive selection confirmation and partial results '+width,async({page,state,go,select,open,confirm})=>{
-   state.docs[6].filename='LongFilename'.repeat(16)+'.pdf';state.codes=['busy',null];await go();await select(2);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await open('reindex');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await confirm('reindex');await page.getByText(/1 succeeded, 1 failed/).waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:'.verification/document-bulk-'+width+'.png',fullPage:true});
+   state.docs[6].filename='LongFilename'.repeat(16)+'.pdf';state.codes=['busy',null];await go();await select(2);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await open('reindex');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await confirm('reindex');await page.getByText(/1 succeeded, 1 failed/).waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:artifactPath('document-bulk-'+width+'.png'),fullPage:true});
   },width);
   console.log('Document bulk: '+passed+' scenarios passed; no unexpected console/runtime errors.');
  }finally{await browser.close()}

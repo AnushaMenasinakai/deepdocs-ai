@@ -1,3 +1,4 @@
+const { artifactPath } = require('./artifacts.cjs');
 // Offline citation rendering/contracts. No live backend or provider calls.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert = require('node:assert/strict');
@@ -127,7 +128,7 @@ const legacy = () => ({status:'answered',answer:'Legacy answer [1] stays plain t
    assert.equal(await page.evaluate(()=>document.activeElement.classList.contains('source-card')),true);
    const drawer=page.getByRole('dialog',{name:'Supporting sources'});const bounds=await drawer.boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=width+1);
    await page.setViewportSize({width,height:400});const content=drawer.locator('.side-drawer-content');assert.ok(await content.evaluate(e=>e.scrollHeight>e.clientHeight));await content.evaluate(e=>{e.scrollTop=e.scrollHeight});assert.ok(await content.evaluate(e=>e.scrollTop)>0);
-   await page.screenshot({path:'.verification/phase14-citations-'+width+'.png',fullPage:true});
+   await page.screenshot({path:artifactPath('phase14-citations-'+width+'.png'),fullPage:true});
   },width);
   for(const dismissal of ['Escape','close','backdrop'])await scenario('source selection, focus restoration and no requests '+dismissal,async({page,state,ready,ask})=>{
    await ready();await ask();await page.locator('.history-select').waitFor();const before=[...state.requests];const marker=page.getByRole('button',{name:'Source 2: guide.pdf, Pages 3–4'});

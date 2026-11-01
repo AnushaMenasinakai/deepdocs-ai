@@ -1,3 +1,4 @@
+const { artifactPath } = require('./artifacts.cjs');
 // Offline browser checks. Use an existing Playwright installation via PLAYWRIGHT_MODULE.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert = require('node:assert/strict');
@@ -53,7 +54,27 @@ const answer = {status:'answered',answer:'Grounded answer.\n\nAnother paragraph.
     await scenario('KB loading and first selection',async({page,state,go,input})=>{state.baseDelay=500;await go();await page.getByText('Loading Knowledge Bases…',{exact:true}).waitFor();await input().waitFor();assert.equal(await page.getByLabel('Knowledge Base',{exact:true}).inputValue(),'base-a')});
     await scenario('empty Knowledge Bases',async({page,state,go})=>{state.bases=[];await go();await page.getByRole('heading',{name:'Create a Knowledge Base first'}).waitFor();assert.equal(await page.getByLabel('Your question').count(),0)});
     await scenario('KB error and retry',async({page,state,go,input})=>{state.baseStatus=503;await go();await page.getByRole('button',{name:'Try again',exact:true}).waitFor();state.baseStatus=200;await page.getByRole('button',{name:'Try again',exact:true}).click();await input().waitFor()});
-    await scenario('empty whitespace and maximum length',async({ready,input,button,page,state})=>{await ready();assert.equal(await button().isDisabled(),true);await input().fill('   ');assert.equal(await button().isDisabled(),true);assert.equal(await input().getAttribute('maxlength'),'1000');await input().fill('x'.repeat(1000));assert.equal(await button().isEnabled(),true);await input().press('End');await input().press('x');assert.equal((await input().inputValue()).length,1000);assert.equal(state.calls.length,0)});
+    await scenario('empty whitespace and maximum length',async({ready,input,button,page,state})=>{
+      await ready(); assert.equal(await button().isDisabled(),true);
+      await input().fill('   '); assert.equal(await button().isDisabled(),true);
+      for (const character of ['x', '\u{1F600}']) {
+        const boundary = character.repeat(1000);
+        await input().fill(boundary);
+        assert.equal(await input().inputValue(),boundary);
+        assert.equal(await page.locator('#ask-count').textContent(),'1000/1,000');
+        assert.equal(await button().isEnabled(),true);
+        await input().fill(character.repeat(1001));
+        assert.equal(await input().inputValue(),boundary);
+        await input().press('End'); await input().press('x');
+        assert.equal(await input().inputValue(),boundary);
+        assert.equal(await page.locator('#ask-count').textContent(),'1000/1,000');
+        assert.equal(state.calls.length,0);
+      }
+      await button().click(); await page.getByRole('heading',{name:'Answer',exact:true}).waitFor();
+      assert.equal(state.calls.length,1);
+      assert.equal(state.calls[0].body.question,'\u{1F600}'.repeat(1000));
+      assert.equal(Array.from(state.calls[0].body.question).length,1000);
+    });
     await scenario('answer paragraphs and source pages',async({page,ready,ask,state})=>{await ready();await ask();await page.getByRole('heading',{name:'Answer',exact:true}).waitFor();assert.equal(state.calls.length,1);assert.equal(state.calls[0].body.question,'How does this work?');assert.equal(await page.locator('.source-card').count(),2);await page.getByRole('button',{name:'Supporting sources',exact:true}).click();await page.getByText('Page 1',{exact:true}).waitFor();await page.getByText('Pages 3–4',{exact:true}).waitFor();assert.equal(await page.locator('.answer-text').textContent(),answer.answer)});
     await scenario('safe text and defensive source deduplication',async({page,state,ready,ask})=>{state.result.answer='<img src=x onerror=alert(1)> harmless text';state.result.sources=[source,source];await ready();await ask();await page.locator('.answer-text').waitFor();assert.equal(await page.locator('.answer-text img').count(),0);assert.equal(await page.locator('.source-card').count(),1);assert.match(await page.locator('.answer-text').textContent(),/<img/)});
     await scenario('duplicate submission prevented',async({page,state,ready,ask})=>{state.delay=500;await ready();await ask();assert.equal(await page.getByRole('button',{name:'Finding an answer…'}).isDisabled(),true);await page.locator('.ask-composer form').evaluate(form=>{form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))});await page.locator('.answer-text').waitFor();assert.equal(state.calls.length,1)});
@@ -63,7 +84,7 @@ const answer = {status:'answered',answer:'Grounded answer.\n\nAnother paragraph.
     for(const bad of [null,{...answer,sources:null},{...answer,sources:[{...source,page_start:0}]},{...answer,sources:[{...source,source_filename:'C:/private.pdf'}]},{...answer,status:'unknown'}]) await scenario('malformed response safely rejected',async({page,state,ready,ask})=>{state.result=bad;await ready();await ask();await page.getByText('We could not read the answer. Please try again.').waitFor();assert.equal(await page.locator('.answer-text').count(),0)});
     await scenario('switch cancels old response',async({page,state,ready,ask})=>{state.delay=700;state.result.answer='OLD ANSWER';await ready();await ask();await page.getByLabel('Knowledge Base',{exact:true}).selectOption('base-b');state.delay=0;state.result.answer='NEW ANSWER';await ask();await page.getByText('NEW ANSWER',{exact:true}).waitFor();await page.waitForTimeout(800);assert.equal(await page.getByText('OLD ANSWER',{exact:true}).count(),0);assert.equal(state.calls.at(-1).path,'/api/knowledge-bases/base-b/ask')});
     await scenario('unmount cancels pending request',async({page,state,ready,ask})=>{state.delay=500;await ready();await ask();await page.getByRole('link',{name:'Dashboard',exact:true}).click();await page.waitForTimeout(650);assert.equal(await page.locator('.answer-text').count(),0)});
-    for(const width of [1440,768,390]) await scenario('responsive '+width,async({page,state,ready,ask})=>{state.result.sources[0].source_filename='long-filename-'.repeat(30)+'.pdf';state.result.answer='Readable answer.\n\n'+'longword'.repeat(80);await ready();await ask();await page.getByRole('button',{name:'Supporting sources',exact:true}).click();await page.locator('.source-card').first().waitFor();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);assert.equal(await page.getByLabel('Knowledge Base',{exact:true}).isVisible(),true);await page.screenshot({path:'.verification/phase9-'+width+'.png',fullPage:true})},width);
+    for(const width of [1440,768,390]) await scenario('responsive '+width,async({page,state,ready,ask})=>{state.result.sources[0].source_filename='long-filename-'.repeat(30)+'.pdf';state.result.answer='Readable answer.\n\n'+'longword'.repeat(80);await ready();await ask();await page.getByRole('button',{name:'Supporting sources',exact:true}).click();await page.locator('.source-card').first().waitFor();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);assert.equal(await page.getByLabel('Knowledge Base',{exact:true}).isVisible(),true);await page.screenshot({path:artifactPath('phase9-'+width+'.png'),fullPage:true})},width);
     for (const outcome of ['answered', 'insufficient_context', 'failure']) await scenario('loader lifecycle '+outcome, async ({page,state,ready,ask}) => {
       state.delay=500;
       if(outcome==='failure') state.status=503;
@@ -83,7 +104,7 @@ const answer = {status:'answered',answer:'Grounded answer.\n\nAnother paragraph.
       await page.locator('.ask-loading').waitFor();
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
       assert.equal(await page.locator('.ask-loading-dots span').first().evaluate(dot=>getComputedStyle(dot).animationName),'ask-dot-pulse');
-      await page.screenshot({path:'.verification/phase9-loader-'+width+'.png',fullPage:true});
+      await page.screenshot({path:artifactPath('phase9-loader-'+width+'.png'),fullPage:true});
       await page.emulateMedia({reducedMotion:'reduce'});
       assert.deepEqual(await page.locator('.ask-loading-dots span').evaluateAll(dots=>dots.map(dot=>getComputedStyle(dot).animationName)),['none','none','none']);
       assert.equal(await page.getByRole('heading',{name:'Finding your answer',exact:true}).isVisible(),true);
