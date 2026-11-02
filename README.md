@@ -1,56 +1,165 @@
 # DeepDocs AI
 
-AI-Powered Document Intelligence & Advanced RAG Platform.
+DeepDocs AI is a document intelligence application with a React frontend and FastAPI backend. Users register and sign in, manage private knowledge bases, upload and process PDFs, index their text with MiniLM embeddings in Qdrant, and ask questions with validated source citations and persistent question history.
 
-Phase 1 provides the dashboard, knowledge-base and document empty states, and Ask DeepDocs preview. Phase 2A adds backend MongoDB configuration and connectivity only. No AI or document-processing features are implemented.
+MongoDB stores users, document metadata, chunks and history. PDFs live in local storage. CPU embedding work uses a bounded dedicated worker, PDF extraction uses a supervised spawned process, and expensive workflows have non-waiting admission limits. Authentication uses Argon2id passwords and signed JWTs with owner-scoped access.
 
-Stack: React, JavaScript, Vite, Python 3.13.15 (64-bit), FastAPI, Uvicorn.
+## Prerequisites and setup
 
-## Setup
+Run commands from your checkout root unless a command explicitly changes directory. The verified Python version is 64-bit Python 3.13.15. Node.js 24.11.1 was used for acceptance; installed Vite 8.3.0 requires Node 20.19+ in the 20.x line or Node 22.12+. Use npm with the committed frontend lockfile.
 
-Run all commands from `E:\deepdocs-ai` in PowerShell. Use the existing system Python; do not install another runtime.
+Prepare a MongoDB database with credentials permitted to create the application's indexes and read/write its collections. MongoDB connections require TLS with valid certificate and hostname verification, including for local instances. A private CA can be supplied through the URI's tlsCAFile option. Isolated MongoDB 8.2.6 was verified locally. Use a dedicated database for demonstrations.
+
+Prepare a Qdrant server or Cloud instance and dedicated collection name. The installed client is pinned to 1.19.1. The application uses a URL-based client; the embedded client used in integration verification is test-only injection. Configure an API key where required. A live demo also needs a Gemini API key with access to the configured model and available quota; requests may incur provider charges.
+
+Create a virtual environment only for a fresh checkout. Reuse a valid existing environment.
+
+Windows PowerShell:
 
 ```powershell
 python --version
-python -m pip --version
-# Preserve the existing backend/.venv; do not recreate it.
-.\backend\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
+python -m venv backend/.venv
+.\backend\.venv\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
 npm.cmd --prefix frontend ci
+if (!(Test-Path backend/.env)) { Copy-Item backend/.env.example backend/.env }
+if (!(Test-Path frontend/.env)) { Copy-Item frontend/.env.example frontend/.env }
 ```
 
-## Run
+macOS/Linux shell:
 
-Backend, in one terminal:
+```sh
+python3.13 --version
+python3.13 -m venv backend/.venv
+backend/.venv/bin/python -m pip install -r backend/requirements-dev.txt
+npm --prefix frontend ci
+cp -n backend/.env.example backend/.env
+cp -n frontend/.env.example frontend/.env
+```
+
+Copy environment examples only when the destination does not exist. Preserve existing private configuration. requirements-dev.txt includes runtime requirements and pytest; runtime-only installations can use backend/requirements.txt.
+
+## Configuration
+
+Edit the untracked backend/.env locally. Process environment variables take precedence over that file.
+
+| Setting | Purpose |
+| --- | --- |
+| MONGODB_URI | Your TLS-enabled MongoDB URI and dedicated database credentials |
+| MONGODB_DB_NAME | Dedicated application database |
+| JWT_SECRET_KEY | Cryptographically random secret of at least 32 bytes; replace the rejected example placeholder |
+| QDRANT_URL | Server origin, HTTPS for remote services or HTTP on loopback |
+| QDRANT_API_KEY | Private instance/Cloud key where required |
+| QDRANT_COLLECTION_NAME | Dedicated vector collection, default deepdocs_chunks |
+| GEMINI_API_KEY | Private generation API key |
+| GEMINI_MODEL | Configured provider model, default gemini-3.1-flash-lite; verify account access before a live demo |
+| EMBEDDING_MODEL_NAME | Default sentence-transformers/all-MiniLM-L6-v2, 384 dimensions |
+| CORS_FRONTEND_ORIGINS | Optional comma-separated explicit additional frontend origins |
+
+The examples document upload, PDF, JSON-body, authentication and expensive-operation limits. Their defaults are validated. Admission is process-local and active on the integrated routes. Use the existing single-worker deployment configuration.
+
+MiniLM loads lazily from backend/.cache/embeddings. First use can download weights if the cache is absent. Prepare the cache before an offline demo, then set HF_HUB_OFFLINE=1 and TRANSFORMERS_OFFLINE=1 in the backend process environment. A cache miss will fail instead of downloading. The Dockerfile packages a pinned model snapshot and enables offline loading.
+
+In frontend/.env, set VITE_API_URL=http://127.0.0.1:8000 for local development. Every production build requires an explicit API origin. Remote deployment origins require HTTPS. Omit the /api suffix, credentials, query strings and fragments. VITE_ values are public build-time data; keep secrets in the backend only. Rebuild after changing the API origin.
+
+CORS allows http://127.0.0.1:5173 and http://localhost:5173 by default. For another port, add its exact origin to CORS_FRONTEND_ORIGINS and restart the backend. Retry-After is exposed for browser error handling. Configure allowed origins, not wildcards.
+
+## Start the application
+
+Start your configured MongoDB and Qdrant services first. Their data directories and credentials belong to your chosen environment. Compose runs only the backend and expects those services to be reachable separately.
+
+Backend on Windows, from the checkout root:
 
 ```powershell
-.\backend\.venv\Scripts\python.exe -m uvicorn main:app --app-dir backend --host 127.0.0.1 --port 8000 --reload
+.\backend\.venv\Scripts\python.exe -m uvicorn main:app --app-dir backend --host 127.0.0.1 --port 8000 --workers 1 --no-proxy-headers
 ```
 
-Frontend, in another terminal:
+On macOS/Linux, use backend/.venv/bin/python with the same arguments. The direct-access command disables forwarded-header rewriting. A future reverse proxy needs a separately verified trust policy.
+
+Frontend in a second terminal:
+
+```sh
+npm --prefix frontend run dev
+```
+
+PowerShell can use npm.cmd. Open http://127.0.0.1:5173. The API reference is at http://127.0.0.1:8000/docs and its schema at /openapi.json. GET /api/health is basic liveness; /api/health/database and /api/health/qdrant report dependency connectivity. /api/ready provides the application's readiness checks. Liveness alone does not establish readiness for ingestion or generation.
+
+Startup initializes users, knowledge-base, document, chunk and history indexes when MongoDB is available. Registration requires confirmed unique-user-index initialization. Logs sanitize initialization failures. PDF storage defaults to backend/storage/documents; preserve it together with MongoDB metadata and Qdrant data. compose.yaml mounts persistent PDF storage and a read-only backend environment file, runs nonroot, and uses one worker. Avoid deleting persistent volumes during cleanup.
+
+## Portfolio demonstration
+
+1. Start the configured services, backend and frontend. Confirm dependency health, model availability and Gemini access before presenting.
+2. Register a synthetic account and log in.
+3. Create a knowledge base and select it in Documents.
+4. Upload a small text-based PDF with a distinctive factual statement. Uploaded confirms storage only. Scanned/image-only documents need OCR, which is outside the implemented scope.
+5. Use the document action menu's Process PDF action and wait for Processed. Then select the processed document and use the Re-index selected action, confirm it, and wait for Indexed. Upload does not automatically process or index a document. Indexed reflects the last confirmed synchronization; inspect status if an operation is uncertain.
+6. Open Ask DeepDocs, select the same knowledge base and ask a question answered by the PDF. Retrieval uses indexed active chunks and relevance gates; insufficient evidence produces an explicit abstention.
+7. Review the answer's citation references, source filename and page metadata. Citations validate provenance, while factual correctness still deserves review.
+8. View the saved question and answer in history. History is persistent Q&A snapshots, not multi-turn conversational memory supplied to generation.
+9. Delete the document with confirmation. Successful deletion removes its PDF, chunks, vectors and metadata. Existing history remains a snapshot until separately deleted. Refresh the document list to confirm removal.
+
+Busy admission returns a generic 503 with retry guidance. Authentication throttling returns 429 and oversized input can return 413. Mutations are not automatically retried. After an ambiguous timeout or interruption, refresh or inspect state before attempting another operation.
+
+## Testing and build
+
+Install requirements-dev.txt and run from the checkout root with the virtual-environment Python:
 
 ```powershell
-npm.cmd --prefix frontend run dev
+.\backend\.venv\Scripts\python.exe -B -m pytest backend/tests -q -p no:cacheprovider
+node --test frontend/tests/reliability.test.mjs frontend/tests/api-configuration.test.mjs
 ```
 
-Open http://127.0.0.1:5173. The page calls http://127.0.0.1:8000/api/health directly and displays the connection status. CORS permits the local Vite origins on port 5173. Refresh the page after restarting the backend.
+Use backend/.venv/bin/python on macOS/Linux. Automated backend tests use mocked service dependencies and synthetic fixtures; tests include spawned workers and loopback HTTP checks. They are distinct from live-service acceptance. Evaluation procedures are documented in backend/evaluation/README.md.
 
-Expected health response:
+The 19 browser suites are standalone Node scripts using the pinned playwright@1.64.1 package and an installed Microsoft Edge browser (channel msedge), headless. They mock API requests. Start only Vite for this acceptance run:
 
-```json
-{"status":"ok","message":"DeepDocs AI API is running"}
+```sh
+npm --prefix frontend run dev -- --host 127.0.0.1 --port 5176 --strictPort
 ```
 
-Production build:
+In a second terminal, run sequentially with no automatic retries. PowerShell:
 
 ```powershell
-npm.cmd --prefix frontend run build
+$env:FRONTEND_TEST_URL = 'http://127.0.0.1:5176'
+$env:FRONTEND_TEST_ARTIFACT_DIR = Join-Path ([IO.Path]::GetTempPath()) ('deepdocs-browser-' + [guid]::NewGuid())
+Get-ChildItem frontend/tests/*.browser.cjs | Sort-Object Name | ForEach-Object {
+    node $_.FullName
+    if ($LASTEXITCODE -ne 0) { throw "Browser suite failed: $($_.Name)" }
+}
 ```
 
-Build output is in `frontend/dist`. Deployment configuration is outside this phase; the API URL currently targets the local backend.
+macOS/Linux with Microsoft Edge installed:
 
-`backend/main.py` creates FastAPI, configures CORS, and defines health endpoints. `backend/config.py` loads settings and `backend/database.py` manages the MongoDB lifecycle and reusable database dependency. Dependencies are listed in `backend/requirements.txt`. The virtual environment is excluded from Git.
+```sh
+export FRONTEND_TEST_URL=http://127.0.0.1:5176
+export FRONTEND_TEST_ARTIFACT_DIR="$(mktemp -d)"
+for suite in frontend/tests/*.browser.cjs; do node "$suite" || exit 1; done
+```
 
-`npm.cmd` works in PowerShell without changing script execution policy.
+The verified browser platform is Windows/Edge. Other platforms/browsers require separate verification. Each script manages its browser contexts and closes the browser. Stop Vite with Ctrl+C afterward. Screenshots go to FRONTEND_TEST_ARTIFACT_DIR or an OS temporary directory by default. Preserve failure console output when diagnosing a run. Keep Vite's normal dependency cache location because component harnesses inspect /node_modules/ dependency URLs. Run one suite at a time on low-memory machines.
+
+For a production build, configure frontend/.env first, then:
+
+```sh
+npm --prefix frontend run build
+```
+
+Output is frontend/dist. The API URL is embedded at build time. A deployed frontend also needs backend CORS configured for its origin.
+
+### Latest verification evidence
+
+- Phase 5D-C7 passed all 19 Playwright suites and 524 browser scenarios, plus 35 frontend Node tests and the production build. Four initial component-harness failures caused by a custom Vite cache path passed unchanged after restoring normal cache configuration.
+- Phase 5D-C6 passed real registration/login, KB creation, PDF upload/extraction/chunking, offline 384-dimensional MiniLM inference, embedded Qdrant storage/retrieval, citations, history and deletion cleanup. It used actual FastAPI routes through an in-process ASGI client, isolated TLS MongoDB 8.2.6 and deterministic mocked Gemini generation.
+- Phase 5D-C5 independently verified offline MiniLM inference and embedded Qdrant insertion/search/deletion. These reports were generated in isolated temporary workspaces and are not bundled as a reusable production integration runner.
+
+### Known limitations
+
+Live Gemini generation was not verified in the final integration journey. Embedded Qdrant does not verify server HTTP, authentication or payload-index behavior. Frontend mocked-API acceptance and backend real-dependency integration ran separately; a browser connected to those real dependencies was not part of final acceptance.
+
+Memory requirements depend on document size, model, workload and concurrent services. The small backend journey observed about 579 MiB peak backend working set and 155 MiB MongoDB working set; these are observations, not minimum system specifications or load-test guarantees. Concurrency limits apply per process. Interrupted cross-service operations may retain claims or partial state and require manual review; no automatic retry, claim unlocking or crash recovery is provided. Shutdown can wait for native work that has not finished.
+
+## Architecture and implementation reference
+
+The phase labels below preserve the project's implementation history and detailed API/lifecycle rationale. Use the current setup, demo and verification sections above for running the completed application. Historical benchmark results describe their recorded datasets and do not establish live-provider behavior.
 
 ## MongoDB configuration (Phase 2A)
 
@@ -60,7 +169,7 @@ Create a local, untracked `backend/.env` based on `backend/.env.example`, and pr
 
 Configuration reads `backend/.env` relative to the module, independent of the shell's working directory. Process environment variables override file values. Empty or missing `MONGODB_URI` raises a configuration error; an explicitly blank database name is invalid. Restart the backend after changing configuration. URI values are excluded from the settings representation, and driver errors are not returned or logged.
 
-One official PyMongo `AsyncMongoClient` is created per FastAPI application lifespan (per worker), with TLS certificate and hostname verification enabled. It selects the configured database and attempts a bounded ping on startup. Requests reuse this client, which is awaited closed in lifespan cleanup. Health checks have a five-second deadline; connection, socket and server-selection timeouts are also configured. No collections, documents, or indexes are created. Selecting a database and pinging it do not persist a database in Atlas.
+One official PyMongo `AsyncMongoClient` is created per FastAPI application lifespan (per worker), with TLS certificate and hostname verification enabled. It selects the configured database and attempts a bounded ping on startup. Requests reuse this client, which is awaited closed in lifespan cleanup. Health checks have a five-second deadline; connection, socket and server-selection timeouts are also configured. Startup also initializes the application indexes described above. A ping alone does not verify collection permissions.
 
 `GET /api/health` remains a liveness check and preserves its original 200 response, independently of MongoDB readiness. Configuration errors are logged as safe messages, while the application stays available. A database health request returns:
 
@@ -68,7 +177,7 @@ One official PyMongo `AsyncMongoClient` is created per FastAPI application lifes
 - **503, missing URI:** `{"detail":"MONGODB_URI is required. Set it in the environment or backend/.env."}`
 - **503, connection failure:** `{"detail":"MongoDB is unavailable. Check configuration and Atlas connectivity."}`
 
-The separate endpoint is `GET /api/health/database`. Each call pings the selected database; a failed startup connection can recover through the same client without restarting. Invalid configuration requires fixing the settings and restarting. Ping verifies reachability, not collection read/write permissions. Future backend routes can obtain the shared database through `Depends(get_database)` from `database.py`.
+The separate endpoint is `GET /api/health/database`. Concurrent diagnostic callers share a bounded in-flight probe; a failed startup connection can recover through the same client without restarting. Invalid configuration requires fixing the settings and restarting. Ping verifies reachability, not collection read/write permissions. Future backend routes can obtain the shared database through `Depends(get_database)` from `database.py`.
 
 After starting the backend using the existing command above, verify locally:
 
@@ -80,11 +189,11 @@ Invoke-RestMethod http://127.0.0.1:8000/api/health/database
 
 The unittest suite uses mocked clients and does not connect to Atlas. It covers missing settings, secret-safe errors, unchanged liveness, shared-client reuse, shutdown, and connection recovery.
 
-During Phase 2A implementation, Codex could not execute the existing Python due to sandbox access restrictions. Dependency installation, imports, HTTP/runtime tests, and live MongoDB connectivity were **not verified**. No `backend/.env` or process `MONGODB_URI` was available. The tests must be run outside that restricted environment before runtime verification can be considered complete.
+The final isolated MongoDB and backend integration results are recorded in the verification section above.
 
 ## Registration API (Phase 2B)
 
-Install the updated requirements into the existing virtual environment from a terminal where project Python is accessible. Start the backend with the existing Uvicorn command. No frontend registration UI or login/token behavior is included.
+Install the updated requirements into the existing virtual environment from a terminal where project Python is accessible. Start the backend with the existing Uvicorn command. The frontend includes registration, login, protected routes and logout.
 
 `POST /api/auth/register` accepts a JSON object with required `name`, `email`, and `password` fields:
 
@@ -105,7 +214,7 @@ Registration responses:
 - **503:** Database unavailable or unique-index initialization incomplete.
 - **500:** Password hashing could not complete, with a generic message.
 
-The existing local frontend CORS origins now permit POST as well as GET. Frontend source is unchanged.
+CORS permits the methods used by the completed frontend and exposes Retry-After for admission handling.
 
 Offline verification from the repository root:
 
@@ -115,7 +224,7 @@ Offline verification from the repository root:
 
 The suite patches configuration and MongoDB clients, never loads the real `backend/.env`, and never modifies Atlas. Registration tests cover input validation, normalization, safe responses, duplicate-key handling (including simulated concurrency), unavailable database/index, lifecycle index setup, and real local Argon2id hashing. Mocked concurrency is not a substitute for manual Atlas index verification.
 
-Phase 2A Atlas connectivity was manually verified outside Codex. For Phase 2B, Python execution in Codex still returns access denied; dependency installation, imports, tests, and actual registration/index creation remain pending external runtime verification. No Atlas connection or write was attempted during implementation.
+Earlier implementation-time execution restrictions were superseded by offline regression and isolated integration verification.
 
 ## Login and current user (Phase 2C)
 
@@ -124,7 +233,7 @@ Set `JWT_SECRET_KEY` privately in the runtime environment or local `backend/.env
 - `POST /api/auth/login`: JSON `email` and `password`, with the same normalization/validation as registration. Returns `access_token` and `token_type: "bearer"`. Unknown accounts, wrong passwords, and corrupt stored hashes share a generic 401; invalid request structure/format returns 422.
 - `GET /api/auth/me`: requires `Authorization: Bearer <access_token>`. Returns only `id`, `name`, `email`, and `created_at`. Invalid, expired, or deleted-user tokens return 401 with `WWW-Authenticate: Bearer`; database failures return safe 503 responses.
 
-Tokens contain only `sub` (MongoDB user ID), `iat`, and `exp`. They are signed, not encrypted. No refresh tokens, frontend authentication, or logout flow is included. Install the new dependency and run offline tests locally:
+Tokens contain only `sub` (MongoDB user ID), `iat`, and `exp`. They are signed, not encrypted. Frontend authentication and logout are implemented; refresh tokens are outside the current scope. Install the new dependency and run offline tests locally:
 
 ```powershell
 .\backend\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
@@ -147,7 +256,7 @@ Create accepts `name` (trimmed, 1–100 characters) and optional `description` (
 
 Malformed IDs/input return 422; missing and other users' resources share the same 404. Database failures return sanitized 503 responses. Ownership comes exclusively from the existing authentication dependency, and every individual read/update/delete filters by both resource ID and owner ID.
 
-Startup creates the `knowledge_bases_owner_updated` index on owner_id ascending, updated_at descending, and _id descending. Failure is logged without driver details and retried on restart; this performance index is not required for ownership enforcement. No documents, uploads, vectors, or cascade cleanup are implemented.
+Startup creates the `knowledge_bases_owner_updated` index on owner_id ascending, updated_at descending, and _id descending. Failure is logged without driver details and retried on restart; this performance index is not required for ownership enforcement. Document workflows implement scoped cleanup; delete a knowledge base only after its documents are removed.
 
 Run the complete offline backend suite with `.ackend.venvScriptspython.exe -m pytest backend/tests -v`. Tests use isolated in-memory/mocked database operations, never production Atlas.
 
@@ -174,15 +283,15 @@ If metadata insertion fails, upload cleanup removes the newly written file. Dele
 
 MongoDB and the local filesystem are not one transaction. A process crash, uncertain database acknowledgement, or cleanup failure can require manual reconciliation of files, metadata, and internal Knowledge Base reservations (_document_ids, _document_revision). Stale reservations block Knowledge Base deletion rather than silently orphaning uploads. Do not clear reservations while uploads are active. There is no automatic cascade or destructive repair.
 
-Offline tests use temporary directories under ignored .verification/ (created by the suite when absent) and mocked MongoDB; they do not connect to Atlas. No PDF extraction, page processing, chunking, embeddings, search, RAG, or document frontend is implemented.
+Offline tests use temporary directories under ignored .verification/ (created by the suite when absent) and mocked MongoDB; they do not connect to Atlas. Extraction, chunking, indexing, retrieval, RAG and their frontend workflows are implemented.
 
 ## Document library UI (Phase 3D)
 
-The protected Documents page now lists the selected Knowledge Base's PDFs and supports single-file upload and confirmed deletion. It automatically selects the first available Knowledge Base and links to Knowledge Bases when none exist. The UI checks file extension, available MIME type, non-empty content, and the 10 MiB limit; backend validation remains authoritative. Status "Uploaded" confirms storage only. PDF processing, extraction, chunking, embeddings, Qdrant, and RAG are not implemented.
+The protected Documents page now lists the selected Knowledge Base's PDFs and supports single-file upload and confirmed deletion. It automatically selects the first available Knowledge Base and links to Knowledge Bases when none exist. The UI checks file extension, available MIME type, non-empty content, and the 10 MiB limit; backend validation remains authoritative. Status "Uploaded" confirms storage only. Processing and indexing are explicit follow-up actions before retrieval and RAG.
 
 ## PDF processing pipeline (Phase 4)
 
-Processing is available through Swagger/API only:
+Processing is available through the Documents UI and the API:
 
 - POST /api/documents/{document_id}/process processes an owned stored PDF and returns document metadata including page_count, chunk_count, processed_at, and a safe processing_error.
 - GET /api/documents/{document_id}/chunks returns the owned document's active chunk set in chunk_index order.
@@ -197,11 +306,11 @@ The document_chunks collection stores ObjectId document/Knowledge Base/owner ref
 
 Lifecycle: uploaded → processing → processed, or failed. Reprocessing preserves the last successful generation and its counts/timestamp until all replacement chunks have been inserted and a single metadata update activates the replacement. Failed extraction/insertion marks the attempt failed and preserves the old active chunks; failed-stage chunks are cleaned up where possible. Inspection returns only the active generation, including the last successful one after a failed reprocessing attempt. Deleting a document removes all its owned chunk generations and its PDF. Knowledge Base deletion still requires deleting documents first.
 
-No cross-collection transaction or background queue is used. An uncertain activation acknowledgement preserves generations and the operation lock for manual reconciliation; metadata may remain processing until reviewed. Cleanup failures can leave inactive generations, which inspection never returns. Process termination can leave a stale operation lock. Reconcile only when no operation is running; do not blindly delete the active generation. A failed deletion can leave retryable metadata with a missing PDF or chunks and a safe failure message.
+No cross-collection transaction or background queue is used. An uncertain activation acknowledgement preserves generations and the operation lock for manual reconciliation; metadata may remain processing until reviewed. Cleanup failures can leave inactive generations, which inspection never returns. Process termination can leave a stale operation lock. Reconcile only when no operation is running; do not blindly delete the active generation. An interrupted deletion can leave retained claims and partial cleanup requiring manual review.
 
-This intentionally synchronous local pipeline runs native PyMuPDF extraction on the event-loop thread, not concurrently in worker threads; other requests on that worker may wait during extraction. Configurable limits are PDF_MAX_PAGES=1000, PDF_MAX_TEXT_CHARACTERS=5000000, and PDF_MAX_CHUNKS=20000. They bound accepted output but are not a hard memory/time sandbox for native PDF decompression.
+Native PyMuPDF extraction runs in a supervised spawned process with bounded CPU/PDF admission and completion ownership. Configurable limits are PDF_MAX_PAGES=1000, PDF_MAX_TEXT_CHARACTERS=5000000, and PDF_MAX_CHUNKS=20000. They bound accepted output but are not a hard memory/time sandbox for native PDF decompression.
 
-The frontend only displays uploaded/processing/processed/failed statuses; processing actions and chunk inspection remain API-only. No embeddings, embedding models, Qdrant, vector/search pipeline, Gemini, retrieval, RAG, or citation UI is implemented.
+The frontend supports processing, indexing, inspection, Ask, citation rendering and history.
 
 
 ## Embeddings foundation (Phase 5)
@@ -212,15 +321,15 @@ The dependency is sentence-transformers==6.1.0. A pip binary-only dry run resolv
 
 The default model is sentence-transformers/all-MiniLM-L6-v2 (384 dimensions). EMBEDDING_MODEL_NAME configures a server-controlled Hugging Face repository ID; EMBEDDING_BATCH_SIZE defaults to 32 (allowed 1–128). Dimensionality is read from the model rather than hardcoded. The model is lazily imported/loaded on the first embedding request, reused per process, CPU-only, with remote custom code disabled. Changing the configured model replaces the single cached model. Downloads go to ignored backend/.cache/embeddings; first use needs network access and sufficient memory/disk space. Normal startup does not import Sentence Transformers or load weights.
 
-Embedding chunk texts in chunk_index order preserves their existing document/page provenance for later storage. Each bounded batch produces normalized dense vectors; every vector must be nonempty, have the model's exact dimension, and contain only finite real numbers (no strings, booleans, NaN, or infinity). Batch output counts must match inputs. Validated vectors are discarded after each batch: no full vectors are stored in MongoDB, returned by the API, or stored in Qdrant. The model's tokenizer length limit still applies (the default MiniLM model truncates inputs beyond 256 word pieces); character-based Phase 4 chunks do not guarantee a token limit. Stored text and page provenance remain unchanged.
+Embedding chunk texts in chunk_index order preserves their existing document/page provenance for later storage. Each bounded batch produces normalized dense vectors; every vector must be nonempty, have the model's exact dimension, and contain only finite real numbers (no strings, booleans, NaN, or infinity). Batch output counts must match inputs. Validated batches are written to Qdrant; full vectors are not stored in MongoDB or returned by the document API. The model's tokenizer length limit still applies (the default MiniLM model truncates inputs beyond 256 word pieces); character-based Phase 4 chunks do not guarantee a token limit. Stored text and page provenance remain unchanged.
 
-A single documents.embedding object records the outcome for all chunks of its chunk_generation: status, model, dimension, chunk_count, embedded_at (UTC), and a safe error. Missing metadata means not_generated. Successful metadata means vectors were generated and validated in memory, not that durable vectors are available. States are not_generated, generating, generated, and failed. No per-chunk writes or extra MongoDB records/indexes are needed: a chunk inherits success only when its generation matches that complete document-level result. Repeated calls regenerate and replace this metadata; they never duplicate chunks. Starting Phase 4 reprocessing resets embedding metadata, including when that reprocessing later fails.
+A single documents.embedding object records the outcome for all chunks of its chunk_generation: status, model, dimension, chunk_count, embedded_at (UTC), and a safe error. Missing metadata means not_generated. The embedding subdocument records generation; vector_index metadata separately records confirmed Qdrant synchronization. States are not_generated, generating, generated, and failed. No per-chunk writes or extra MongoDB records/indexes are needed: a chunk inherits success only when its generation matches that complete document-level result. Repeated calls regenerate and replace this metadata; they never duplicate chunks. Starting Phase 4 reprocessing resets embedding metadata, including when that reprocessing later fails.
 
-Embedding generation shares the existing atomic document-operation claim with processing/deletion. All vectors must validate before one guarded document update publishes success and releases the lock. Failures record a safe failed state when the database permits; no partial batch is published. Document deletion naturally removes this metadata with the document and still removes owned chunks/PDFs. The Knowledge Base deletion policy is unchanged.
+Embedding generation shares the existing atomic document-operation claim with processing/deletion. Each batch is validated before its Qdrant write; guarded final publication follows vector count verification. Confirmed local failures may publish a safe failed state. Uncertain mutations retain claims and may leave partial vectors for review. Document deletion naturally removes this metadata with the document and still removes owned chunks/PDFs. The Knowledge Base deletion policy is unchanged.
 
-This synchronous local verification pipeline may block its worker while loading/encoding. It has no queue, cancellation worker, or automatic lock recovery. A crash or persistent database failure may leave generating plus an operation lock; reconcile only when no operation is running. If the database applied the final success update but its acknowledgement was lost, the client can receive 503 while valid generated metadata exists; retrying is safe. No vectors survive either outcome. Real model download/inference and Atlas metadata persistence still require manual live verification.
+Model loading and encoding run on a bounded dedicated thread. Sessions retain capacity across batches and native completion. Uncertain mutation acknowledgements can retain claims and require inspection; no automatic replay or unlocking is provided. Offline real inference and embedded-Qdrant indexing passed the final isolated journey.
 
-There is no embeddings UI, Qdrant integration, vector/search/retrieval pipeline, reranking, Gemini, RAG, or question answering. Qdrant integration belongs to Phase 6, which has not started.
+Qdrant integration, semantic retrieval, Gemini generation and the Ask UI are implemented. Reranking remains evaluation-only.
 
 
 ## Qdrant vector persistence (Phase 6)
@@ -231,7 +340,7 @@ Set QDRANT_URL and, for Cloud, QDRANT_API_KEY privately in backend/.env or the r
 
 The collection uses one unnamed dense vector, cosine distance, and the dimension supplied by the embedding provider (384 for all-MiniLM-L6-v2). Missing collections are created; existing dimensions/distance/named-vector mismatches return safe 503 without deleting or recreating the collection. Keyword payload indexes cover owner_id, knowledge_base_id, document_id, and chunk_generation for Cloud-compatible filtered cleanup/counting.
 
-Each point has a deterministic UUIDv5 derived from owner, Knowledge Base, document, chunk generation, and chunk ID. Payload fields are owner_id, knowledge_base_id, document_id, chunk_id, chunk_generation (all strings), chunk_index, source_filename, page_start, page_end, and text. Text is deliberately included for future retrieval without one MongoDB lookup per candidate. No paths, credentials, authentication data, or full environment configuration enters payloads. MongoDB remains authoritative for application/chunk lifecycle; Qdrant stores vectors and retrieval payloads, not application ownership policy.
+Each point has a deterministic UUIDv5 derived from owner, Knowledge Base, document, chunk generation, and chunk ID. Payload fields are owner_id, knowledge_base_id, document_id, chunk_id, chunk_generation (all strings), chunk_index, source_filename, page_start, page_end, and text. Text is included in retrieval payloads; retrieved hits are checked against authoritative MongoDB chunks. No paths, credentials, authentication data, or full environment configuration enters payloads. MongoDB remains authoritative for application/chunk lifecycle; Qdrant stores vectors and retrieval payloads, not application ownership policy.
 
 POST /api/documents/{document_id}/embeddings requires JWT/ownership and a successfully processed, nonempty active chunk set. It claims the existing operation lock, marks indexing in MongoDB, generates/validates ordered batches, checks collection compatibility, removes previous owned document points, upserts deterministic IDs with wait=True, and checks exact total/current-generation point counts before publishing success. The response preserves status=generated and adds vector_status=indexed, vector_store=qdrant, and collection_name. Full vectors never enter MongoDB or API responses.
 
@@ -245,7 +354,7 @@ GET /api/health/qdrant is a lightweight connectivity check returning status=ok o
 
 There is no distributed transaction across MongoDB, Qdrant, and files. Partial/uncertain upserts can leave points with failed/indexing MongoDB state; retry, reprocess, or deletion cleans them using the retained location. A lost final MongoDB acknowledgement can return 503 despite valid indexed state. Crashes, persistent MongoDB failures, or delayed remote operations require reconciliation while no operations are running; do not blindly clear operation locks. Exact counts and completed write acknowledgements are verification, not a distributed atomicity guarantee or a point-by-point content audit. Future retrieval must enforce ownership and MongoDB active-generation/indexed-state eligibility rather than treating every raw Qdrant point as usable. The chosen retry strategy does not preserve continuous availability of an older vector set.
 
-Tests fake the Qdrant client and embedding provider; an additional official-client in-memory test checks IDs/upsert/count/delete without a server. Real Cloud credentials/connectivity, real-model indexing into Cloud, reprocessing cleanup, and deletion still require manual live verification. No frontend changes, semantic/vector search endpoints, query embeddings, Gemini, RAG, chat, or Phase 7 are implemented.
+Tests fake the Qdrant client and embedding provider; an additional official-client in-memory test checks IDs/upsert/count/delete without a server. Real Cloud credentials/connectivity, real-model indexing into Cloud, reprocessing cleanup, and deletion still require manual live verification. The completed frontend and subsequent API sections include semantic search, query embeddings, RAG and persistent Q&A history.
 
 
 ## Semantic chunk retrieval (Phase 7)
@@ -269,7 +378,7 @@ Offline tests use fake inference/Qdrant plus an official-client in-memory filter
 
 POST /api/knowledge-bases/{knowledge_base_id}/ask requires Bearer authentication and MongoDB Knowledge Base ownership. Request JSON contains only question: a required string, trimmed, nonempty, maximum 1000 characters. Unknown fields (including owner, filters, model, prompt, key, and top_k) return 422; missing/foreign Knowledge Bases return the same 404. Swagger supports API verification; the Phase 9 Ask DeepDocs frontend is described below.
 
-This phase uses the maintained official google-genai==2.25.0 SDK, not google-generativeai. A binary-only pip dry run resolved the SDK alongside every existing requirement on Python 3.13.15. Install backend/requirements.txt locally. Set GEMINI_API_KEY privately in backend/.env or the runtime environment; GEMINI_MODEL defaults to gemini-3.1-flash-lite, a currently stable, low-latency/cost-effective model suited to short text-grounded answers. No fallback model is used. Model documentation: https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite . The SDK/client is loaded only after usable context exists, reused per process, and closed at shutdown. Restart to apply changed Gemini settings.
+This phase uses the maintained official google-genai==2.25.0 SDK, not google-generativeai. A binary-only pip dry run resolved the SDK alongside every existing requirement on Python 3.13.15. Install backend/requirements.txt locally. Set GEMINI_API_KEY privately in backend/.env or the runtime environment; GEMINI_MODEL defaults to gemini-3.1-flash-lite, the configured default model; confirm availability and pricing with your provider account. No fallback model is used. Model documentation: https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite . The SDK/client is loaded only after usable context exists, reused per process, and closed at shutdown. Restart to apply changed Gemini settings.
 
 The RAG service calls the existing Phase 7 retrieval service with server-controlled top_k=5. Owner/Knowledge Base filters, active-generation checks, authoritative chunk validation, and existing query embedding validation are unchanged. No processing or indexing occurs. Query vectors and prompts are not persisted or application-logged. Phase 10 now persists the normalized question and validated public answer snapshot after a completed ask, as described below. Only the question and selected document reference data are sent to the configured Gemini service; runtime credentials are never part of the prompt. Google's service-side data handling is separate from application persistence.
 
@@ -279,13 +388,13 @@ RAG_MAX_CONTEXT_CHARS defaults to 12000 (allowed 1000–30000) and bounds the co
 
 The fixed system_instruction requires answers only from retrieved context: no outside knowledge, invented facts, unsupported claims, claimed actions, or document-injected instructions. A JSON user message explicitly separates USER_QUESTION and RETRIEVED_DOCUMENT_CONTEXT; document strings cannot replace the system_instruction field. All document/question content is untrusted data, including fake role markers or requests to reveal keys. There are no tools, function calls, external grounding, agents, or streaming. This is defense in depth, not proof that a generative model will always obey; malicious-content tests verify structural separation, not immunity to every prompt injection.
 
-Gemini is requested to return structured supported/answer JSON. A completed, unblocked single candidate is required. Empty, malformed, tool-call, truncated, blocked, oversized, invalid-Unicode/control-character, and known-key/internal-metadata responses are rejected safely. Common absolute filesystem-path patterns and prompt-envelope echoes are also rejected; these guards are not a general-purpose sensitive-data classifier. Maximum output is 1024 tokens and the validated answer is capped at 4000 characters. Calls have a 30-second deadline, a single SDK attempt, and no fallback. Provider/network/key/quota/model/response errors map to sanitized 503, never raw SDK exceptions.
+Gemini is requested to return structured supported/claims JSON with citation references. A completed, unblocked single candidate is required. Empty, malformed, tool-call, truncated, blocked, oversized, invalid-Unicode/control-character, and known-key/internal-metadata responses are rejected safely. Common absolute filesystem-path patterns and prompt-envelope echoes are also rejected; these guards are not a general-purpose sensitive-data classifier. Maximum output is 1024 tokens and the validated answer is capped at 4000 characters. Calls have a 30-second deadline, a single SDK attempt, and no fallback. Provider/network/key/quota/model/response errors map to sanitized 503, never raw SDK exceptions.
 
-Successful public response: status=answered, answer (plain text), retrieved_chunk_count (number of complete chunks supplied to Gemini). If no usable context exists, status=insufficient_context, retrieved_chunk_count=0, and answer is always: I couldn't find enough relevant information in this Knowledge Base to answer that question. Gemini can also declare the supplied context insufficient; that returns the same fixed message with the number of chunks it considered, not a provider-written refusal. Relevance alone is never treated as proof of answer support.
+Successful public responses include status=answered, answer (plain text), retrieved_chunk_count, citation_version, claims and sources. If no usable context exists, status=insufficient_context, retrieved_chunk_count=0, and answer is always: I couldn't find enough relevant information in this Knowledge Base to answer that question. Gemini can also declare the supplied context insufficient; that returns the same fixed message with the number of chunks it considered, not a provider-written refusal. Relevance alone is never treated as proof of answer support.
 
-Current limitations: generation is instructed to be grounded but there is no independent entailment verifier; fluency, schema validity, or the model's supported flag cannot prove factual support. Evaluate live answers against PDFs, especially on relevant-but-unanswerable and malicious-content questions. Retrieval/answering is not an atomic cross-service snapshot, and a document may change after context retrieval. Existing model token truncation and synchronous embedding limits still apply. Very long complete chunks can exhaust the budget and cause abstention.
+Current limitations: generation is instructed to be grounded but there is no independent entailment verifier; fluency, schema validity, or the model's supported flag cannot prove factual support. Evaluate live answers against PDFs, especially on relevant-but-unanswerable and malicious-content questions. Retrieval/answering is not an atomic cross-service snapshot, and a document may change after context retrieval. Existing model token truncation and bounded embedding capacity still apply. Very long complete chunks can exhaust the budget and cause abstention.
 
-Automated verification uses fake Gemini, fake inference/Qdrant, synthetic PDFs, and the existing offline regressions. Live Google API/model access and answer grounding still require manual Swagger verification. Answers are generated under a context-only instruction; no final/inline citations, citation UI, chat/conversation history, persistent answer history, hybrid search, BM25, or reranking is implemented. Phase 9 adds context-source references and the Ask DeepDocs UI below; these are not sentence-level citations.
+Automated verification uses fake Gemini, fake inference/Qdrant, synthetic PDFs, and the existing offline regressions. Live Google API/model access and answer grounding still require manual Swagger verification. Answers are generated under a context-only instruction; validated claim citations, citation UI and persistent Q&A history are implemented. Hybrid search, BM25 and production reranking remain outside the current scope. The current citation contract is detailed in Validated claim citations below.
 
 
 ## Supporting sources and Ask DeepDocs (Phase 9)
@@ -386,7 +495,7 @@ The current teal/neutral layout, semantic stat labels, visible text statuses, ke
 
 Offline verification: run `python -m pytest backend/tests -v` and `python -m pytest backend/tests/test_evaluation.py -v`. With the existing frontend running on port 5176, run `node frontend/tests/dashboard.browser.cjs` (set `PLAYWRIGHT_MODULE` to an existing Playwright installation if needed). It intercepts all API calls, checks errors/owner-auth handling/navigation, and verifies 1440/768/390 widths. Screenshots are ignored under `.verification`. Run the existing Ask/history and auth/KB/Documents regression checks plus `npm --prefix frontend run build` as well. No new dependencies are required.
 
-Phase 11 baseline reports, relevance threshold **0.50**, embedding model, top-k **5**, context budget **12000**, prompts, and retrieval behavior remain unchanged. No retrieval optimization or Phase 13 functionality is included. Live manual verification should compare summary counts and recent KBs against the signed-in user's real records, verify API/database/vector health, exercise quick actions, and check a new account and mobile layout. Offline tests do not replace an Atlas/Qdrant verification.
+Phase 11 baseline reports, relevance threshold **0.50**, embedding model, top-k **5**, context budget **12000**, prompts, and retrieval behavior remain unchanged. The context policy described in Phase 13 below is implemented. Live manual verification should compare summary counts and recent KBs against the signed-in user's real records, verify API/database/vector health, exercise quick actions, and check a new account and mobile layout. Offline tests do not replace an Atlas/Qdrant verification.
 
 ## Evidence-preserving context policy (Phase 13)
 
@@ -426,7 +535,7 @@ The first command writes only the new Phase 13 comparison files by default; it n
 
 Supporting sources still represent only the final context supplied to Gemini, not sentence-level attribution. New Ask history saves the actual final source snapshot; old entries are neither rewritten nor used as context. Frontend production code is unchanged and supports additional source cards already.
 
-Remaining limitations: eight answerable primary rejections remain, including the multi-cloud case. The earlier three-topic manual question may still abstain if its strongest score is below 0.50; this policy cannot safely promise to fix it. Re-test the same direct JWT, paraphrased JWT, unsupported key-rotation, unrelated irrigation, and three-topic questions against the real application. In particular, confirm grounded abstention on key rotation despite the known benchmark overlap. Use held-out documents to evaluate distractor impact before claiming general improvement. Query decomposition is a possible next experiment, not implemented; current ranking gives no immediate reason to add reranking or hybrid/BM25. No Phase 14 work is included.
+Remaining limitations: eight answerable primary rejections remain, including the multi-cloud case. The earlier three-topic manual question may still abstain if its strongest score is below 0.50; this policy cannot safely promise to fix it. Re-test the same direct JWT, paraphrased JWT, unsupported key-rotation, unrelated irrigation, and three-topic questions against the real application. In particular, confirm grounded abstention on key rotation despite the known benchmark overlap. Use held-out documents to evaluate distractor impact before claiming general improvement. Query decomposition is a possible next experiment, not implemented; current ranking gives no immediate reason to add reranking or hybrid/BM25. Validated claim citations are implemented as described below.
 
 
 ## Validated claim citations (Phase 14)
@@ -562,7 +671,7 @@ Offline verification: run `backend/tests/test_document_bulk.py`, the existing do
 
 `POST /api/knowledge-bases/{knowledge_base_id}/documents/bulk-reindex` accepts the same strict `{"document_ids":["<document-id>"]}` body, with **1–5 documents** rather than 100. It inherits Part 1's ObjectId canonicalization, duplicate rejection, unknown-field rejection, authenticated KB ownership checks, safe errors, and request-ordered report format. The response uses `"operation":"reindex"`. HTTP 200 describes a completed report, not universal success.
 
-Re-indexing is **synchronous and sequential**: existing successfully processed active chunks → regenerated embeddings → rebuilt Qdrant vectors → successful metadata publication. It never calls PDF processing, extraction, or chunk creation. It reuses `document_embeddings.generate_embeddings()` for chunk inspection, embedding batches, vector validation, destination validation, cleanup, deterministic point IDs, upsert/count verification, and generation-guarded publication. No new embedding implementation, parallel execution, worker, queue, or automatic retry is added.
+Re-indexing is **request-scoped and sequential**, with encoding on the dedicated worker: existing successfully processed active chunks → regenerated embeddings → rebuilt Qdrant vectors → successful metadata publication. It never calls PDF processing, extraction, or chunk creation. It reuses `document_embeddings.generate_embeddings()` for chunk inspection, embedding batches, vector validation, destination validation, cleanup, deterministic point IDs, upsert/count verification, and generation-guarded publication. It reuses the existing bounded embedding worker without parallel batches, a waiting admission queue or automatic retries.
 
 Eligibility requires `status=processed`, a valid ObjectId chunk generation, and active chunks accepted by the existing indexing validation. Uploaded-only, processing-failed, or missing/invalid-generation documents return `requires_processing`; no automatic processing occurs. Clearly ineligible scoped documents are rejected by a read-only preflight, with busy claims taking precedence. Authorization and eligibility are rechecked at/after the atomic owner + KB + document claim, so the preflight is never permission to mutate a subsequently changed resource. Chunk inspection happens under that claim; an empty valid chunk set returns `requires_processing` and releases it without changing embedding/vector metadata. Inconsistent chunk counts/order are sanitized service failures, not silently repaired data.
 
@@ -577,7 +686,7 @@ Run `backend/tests/test_bulk_reindex.py` together with Part 1 tests, existing do
 
 Documents now supports individual checkboxes, an indeterminate **Select current page** checkbox, a selected count, and Clear selection. Selection includes only IDs from the currently displayed authoritative browse response—never all matching records across pages. Selected IDs are local UI state and are not added to URLs. Search input (including the debounce interval), status/sort/order/page/KB changes invalidate selection. Explicit refresh, upload refresh, and completed mutations also clear it. Retained cards from an older query cannot be selected or acted on while the next result is loading.
 
-Both bulk actions require confirmation of a frozen selection snapshot. Delete supports at most 100 documents, matching the server page maximum. Re-index supports at most 5; above that limit its button is disabled with an explanation, and requests are never silently split. Re-index regenerates embeddings/vectors from existing processed chunks and **does not process or re-extract PDFs**. The backend determines eligibility and reports unprocessed documents as `requires_processing`. Its execution remains synchronous/sequential, and replacement may temporarily make documents unavailable to retrieval.
+Both bulk actions require confirmation of a frozen selection snapshot. Delete supports at most 100 documents, matching the server page maximum. Re-index supports at most 5; above that limit its button is disabled with an explanation, and requests are never silently split. Re-index regenerates embeddings/vectors from existing processed chunks and **does not process or re-extract PDFs**. The backend determines eligibility and reports unprocessed documents as `requires_processing`. Its request-scoped execution remains sequential, and replacement may temporarily make documents unavailable to retrieval.
 
 During submission, selection, upload, single delete, browsing controls, and conflicting bulk actions are disabled. A synchronous pending guard prevents duplicate requests. Completed reports show either concise complete success or explicit succeeded/failed/not-attempted counts with safe filename-based explanations. HTTP 200 alone is not treated as indexing success. The UI validates operation, requested IDs/order, allowed outcomes/codes, stop semantics, and all counts before rendering. It refreshes authoritative server state after confirmed results, clears submitted selection, and reuses last-valid-page recovery after deletions. No failed or unattempted items are automatically retried or reselected.
 
@@ -645,7 +754,7 @@ Offline fault injection: `python -B -m pytest backend/tests/test_upload_safety.p
 
 ## Phase 18C-B, Part 1 — processing cancellation and generation safety
 
-Processing propagates cancellation unchanged. Cancellation checkpoints surround synchronous extraction and successive remote stages; PyMuPDF still runs synchronously, so it cannot be interrupted mid-call by normal event-loop cancellation. Cancellation retains the claim, including conservative retention before the first processing write. It does not publish an ordinary failure, compensate chunks, or automatically unlock.
+Processing propagates cancellation unchanged. Cancellation checkpoints surround synchronous extraction and successive remote stages; PyMuPDF runs in the supervised child process; request cancellation does not prove native completion. Cancellation retains the claim, including conservative retention before the first processing write. It does not publish an ordinary failure, compensate chunks, or automatically unlock.
 
 Processing tracks its stage before each mutation. An uncertain initial state write, chunk insertion, vector cleanup, activation, obsolete-chunk deletion, or unlock returns a sanitized service error without further compensation or release. Activation commitment determines the authoritative generation, including when its acknowledgement is lost; acknowledgement determines whether the caller can safely proceed. Activation is guarded by owner, KB, document, exact operation token, and the prior generation snapshot. A lost activation acknowledgement preserves potentially active data. No negative read is treated as evidence that a dispatched command cannot complete later.
 
@@ -663,7 +772,7 @@ Indexing tracks local validation, encoding, collection setup, prior-vector clean
 
 Transport errors, timeouts, incomplete acknowledgements, and cancellation during document-affecting mutations retain the claim and existing uncertainty. They do not publish definitive failed indexing metadata, replay commands, or independently unlock. Count errors/mismatches also retain the claim: a count is not proof that a previously uncertain command cannot finish later. The unchanged vector helper conservatively makes some pre-dispatch/configuration failures indistinguishable from uncertain mutation; those may retain a claim unnecessarily. Collection setup only creates/validates shared infrastructure and precedes document-vector mutation; its failure can still use the safe failed-state path when all preceding document writes were acknowledged.
 
-Completed local model/validation failures may preserve the existing failed-state behavior when no document mutation is outstanding. Failed-state publication and unlock remain atomic and token/generation scoped; if that write is uncertain, no second unlock is attempted. Cancellation propagates unchanged. Before mutation, exact-token release is attempted; after mutation starts, cancellation conservatively retains state. Encoding remains synchronous on the event-loop thread, with checkpoints between stages and batches rather than a new threadpool. A checkpoint cannot interrupt a native encode call mid-execution.
+Completed local model/validation failures may preserve the existing failed-state behavior when no document mutation is outstanding. Failed-state publication and unlock remain atomic and token/generation scoped; if that write is uncertain, no second unlock is attempted. Cancellation propagates unchanged. Before mutation, exact-token release is attempted; after mutation starts, cancellation conservatively retains state. Encoding runs on the dedicated embedding thread, with checkpoints between stages and batches. A checkpoint cannot interrupt a native encode call mid-execution.
 
 Final indexed publication and claim removal remain one MongoDB update. A lost acknowledgement returns sanitized service failure without retry or failed-state compensation. If publication actually committed, indexed metadata and its atomic unlock remain intact. No positive-verification/resume path is added in this part. Cancellation after committed publication still propagates without undoing it. Bulk re-index preserves ordered `service_unavailable` and `not_attempted` outcomes; cancellation never launches the next item. The batch outcome reports request execution failure, not proof that remote vector writes failed.
 
@@ -744,7 +853,7 @@ Embedding generation explicitly acquires an `indexing` claim. After validation a
 the initial generating-state publication, seven coarse intent checkpoints are
 recorded: `encoding`, `collection_setup`, `vector_cleanup`, `indexing_metadata`,
 `vector_replacement`, `count_verification`, and `final_publication`. The first
-encoding acknowledgement means the first batch completed; later synchronous
+encoding acknowledgement means the first batch completed; later worker-side
 encoding interleaves with upserts under the single vector-replacement checkpoint.
 There are no per-batch diagnostic writes. Count verification starts only after all
 batches finish, and final publication starts only after both count checks pass.
@@ -760,7 +869,7 @@ Successful Indexed publication and justified local-failure publication remove
 both claim and diagnostics in the same guarded MongoDB update. There is no separate
 cleanup write after publication uncertainty. Legacy retained claims stay protected.
 These required diagnostic writes add availability boundaries; retained claims may
-need service review. Synchronous encoding remains non-interruptible until it returns.
+need service review. Native worker encoding remains non-interruptible until it returns.
 No heartbeat, lease, automatic recovery, expiration, or crash/failover guarantee is added.
 
 ## Phase 18C-C, Part 2C - deletion and vector-inspection diagnostics
