@@ -51,6 +51,7 @@ jobs:
         timeout-minutes: 4
         run: |
           for attempt in $(seq 1 45); do
+            test "$(docker inspect --format '{{.State.Running}}' "$CONTAINER")" = true
             health=$(docker inspect --format '{{.State.Health.Status}}' "$CONTAINER")
             if [ "$health" = healthy ]; then break; fi
             if [ "$health" = unhealthy ]; then exit 1; fi
@@ -70,7 +71,7 @@ jobs:
             test -z "$(find /usr/share/nginx/html -name ".env*" -o -name "*.pem" -o -name "*.key")"
           '
           python3 - <<'PY'
-          import json, os, re, subprocess, urllib.request, urllib.error
+          import json, os, re, subprocess, time, urllib.request, urllib.error
           c = json.loads(subprocess.check_output(['docker', 'inspect', os.environ['CONTAINER']]))[0]
           h = c['HostConfig']
           assert h['ReadonlyRootfs'] is True
@@ -89,7 +90,24 @@ jobs:
               with opener.open('http://127.0.0.1:5173' + path, timeout=5) as r:
                   assert r.status == 200
                   return r.read(), r.headers
-          root, headers = fetch('/')
+          # Container-local health does not establish runner-to-published-port access.
+          # Probe that distinct path with bounded retries, without changing networking.
+          for attempt in range(1, 6):
+              state = json.loads(subprocess.check_output(
+                  ['docker', 'inspect', '--format', '{{json .State}}', os.environ['CONTAINER']],
+                  timeout=5))
+              assert state['Running'], 'Container stopped before host HTTP probe'
+              try:
+                  root, headers = fetch('/')
+                  break
+              except (urllib.error.URLError, TimeoutError) as exc:
+                  reason = getattr(exc, 'reason', exc)
+                  print(f'Host HTTP attempt {attempt}/5: {type(reason).__name__}; '
+                        f'errno={getattr(reason, "errno", None)}; '
+                        f'container health={state.get("Health", {}).get("Status")}', flush=True)
+                  if attempt == 5:
+                      raise
+                  time.sleep(2)
           assert b'<div id="root">' in root
           assert headers['X-Content-Type-Options'] == 'nosniff'
           assert headers['X-Frame-Options'] == 'SAMEORIGIN'
@@ -120,7 +138,16 @@ jobs:
         run: |
           if docker container inspect "$CONTAINER" >/dev/null 2>&1; then
             docker logs --tail 60 "$CONTAINER" || true
-            docker inspect --format '{{json .State.Health}}' "$CONTAINER" || true
+            # Deliberately select state/network fields, never dump environment values.
+            docker inspect --format '{{json .State}}' "$CONTAINER" || true
+            docker inspect --format 'RestartCount={{.RestartCount}} Ports={{json .NetworkSettings.Ports}} Networks={{json .NetworkSettings.Networks}}' "$CONTAINER" || true
+            docker port "$CONTAINER" || true
+            docker network inspect --format 'Internal={{.Internal}} Driver={{.Driver}} Options={{json .Options}}' "$NETWORK" || true
+            # Compare container loopback with the host-published endpoint at failure time.
+            timeout 8s docker exec "$CONTAINER" busybox wget -Y off -q -T 3 -O /dev/null http://127.0.0.1:8080/index.html || true
+            curl --noproxy '*' --connect-timeout 2 --max-time 5 --silent --show-error \
+              --output /dev/null --write-out 'Host HTTP status=%{http_code}\n' \
+              http://127.0.0.1:5173/ || true
             docker stop --time 30 "$CONTAINER"
             docker rm "$CONTAINER"
           fi
