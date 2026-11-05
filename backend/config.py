@@ -356,6 +356,18 @@ class GeminiSettings:
     model: str = "gemini-3.1-flash-lite"
 
 
+def load_verified_rag_enabled() -> bool:
+    """Opt-in experimental Ask orchestration; disabled unless explicitly set."""
+    try:
+        values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+        value = values.get("RAG_VERIFIED_EXPERIMENT_ENABLED", "false")
+        if not isinstance(value, str) or value.strip().lower() not in {"true", "false"}:
+            raise ValueError
+        return value.strip().lower() == "true"
+    except (OSError, UnicodeError, TypeError, ValueError):
+        raise ConfigurationError("Invalid experimental verified-RAG configuration.") from None
+
+
 def load_gemini_settings() -> GeminiSettings:
     import re
     try:

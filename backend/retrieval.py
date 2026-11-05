@@ -53,7 +53,12 @@ def validated_payload(point, owner_id, base_id, documents):
     return value
 
 
-async def search_chunks(database, owner_id, base_id, data, settings, *, workers=None, workflow=None):
+async def search_chunks(database, owner_id, base_id, data, settings, *, workers=None, workflow=None,
+                        generation_map=None):
+    # Optional internal output, populated only for final validated hits. Public
+    # Search results retain their schema; callers must supply a fresh empty map.
+    if generation_map is not None and (not isinstance(generation_map, dict) or generation_map):
+        raise VectorFailure("Invalid retrieval provenance output.")
     docs = database.get_collection("documents")
     candidates = []
     async for document in docs.find({"owner_id": owner_id, "knowledge_base_id": base_id}):
@@ -114,4 +119,7 @@ async def search_chunks(database, owner_id, base_id, data, settings, *, workers=
             current.add(identifier)
     results = [value for value in results if value["document_id"] in current]
     results.sort(key=lambda value: (-value["score"], value["document_id"], value["chunk_index"], value["chunk_id"]))
+    if generation_map is not None:
+        generation_map.update({value["chunk_id"]: str(snapshots[value["document_id"]]["chunk_generation"])
+                               for value in results})
     return [{"rank": rank, **value} for rank, value in enumerate(results, 1)]

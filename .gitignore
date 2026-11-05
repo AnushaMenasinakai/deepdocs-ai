@@ -24,3 +24,23 @@ backend/storage/documents/*
 
 # Lazy embedding-model cache (never source data).
 backend/.cache/
+
+# Local-only security material; deliberately avoid blanket *.pem/*.json rules.
+/.secrets/
+/backend/.secrets/
+/credentials.json
+/backend/credentials.json
+/private-key.pem
+/backend/private-key.pem
+/id_rsa
+/id_ed25519
+
+# Explicit local infrastructure and diagnostic locations (not test fixtures).
+/mongodb-data/
+/qdrant-data/
+/local-qdrant/
+/backend/mongodb-data/
+/backend/qdrant-data/
+/.diagnostics/
+/backend/.diagnostics/
+/deepdocs-phase*/

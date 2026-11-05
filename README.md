@@ -4,6 +4,64 @@ DeepDocs AI is a document intelligence application with a React frontend and Fas
 
 MongoDB stores users, document metadata, chunks and history. PDFs live in local storage. CPU embedding work uses a bounded dedicated worker, PDF extraction uses a supervised spawned process, and expensive workflows have non-waiting admission limits. Authentication uses Argon2id passwords and signed JWTs with owner-scoped access.
 
+## Problem and project status
+
+Finding a specific fact in a collection of PDFs often means manually searching and cross-checking multiple pages. DeepDocs AI combines semantic retrieval with grounded answer generation so users can ask questions within a private knowledge base and inspect the cited source pages.
+
+**Portfolio scope: completed standard-RAG application, with documented limitations.** Experimental verified-RAG is separate, disabled by default, and has not passed full live validation. Neither pipeline should be presented as a guarantee of factual correctness.
+
+## Implemented features
+
+- Registration, login, protected frontend routes and owner-scoped knowledge bases.
+- PDF upload, document listing, processing status, inspection, indexing/reindexing and individual/bulk document operations.
+- Page-aware text extraction and chunking, cached MiniLM embeddings and Qdrant semantic retrieval.
+- Ask DeepDocs answers with claim-level citation references, source filenames and page ranges.
+- Persistent question/answer history and document deletion with associated cleanup.
+- Loading, empty, validation, busy and uncertain-operation states in the React frontend.
+- Bounded CPU/provider admission, supervised PDF extraction, cancellation ownership and graceful draining.
+
+## Technology stack
+
+| Layer | Implementation |
+| --- | --- |
+| Frontend | React, React Router, Vite, Axios |
+| API | Python, FastAPI, Pydantic, Uvicorn |
+| Metadata and authentication | MongoDB through PyMongo, Argon2id password hashing, HS256 JWTs |
+| PDF and embeddings | PyMuPDF, Sentence Transformers, all-MiniLM-L6-v2 (384 dimensions) |
+| Retrieval and generation | Qdrant cosine vector search, Google GenAI SDK and configured Gemini model |
+| Verification tooling | pytest/unittest, Node tests, Playwright with Microsoft Edge |
+
+Exact backend versions are pinned in `backend/requirements.txt`; frontend resolution is recorded in `frontend/package-lock.json`.
+
+## Architecture and standard RAG workflow
+
+```mermaid
+flowchart TD
+    UI[React frontend] --> API[FastAPI: authentication and ownership checks]
+    API --> Mongo[(MongoDB: metadata, chunks and history)]
+    API --> Upload[PDF upload to local storage]
+    Upload --> Process[Explicit processing: spawned PDF extraction]
+    Process --> Chunks[Page-aware text chunks]
+    Chunks --> Embed[Explicit indexing: bounded MiniLM worker]
+    Embed --> Qdrant[(Qdrant vectors and payloads)]
+    API --> Question[Ask question]
+    Question --> Query[MiniLM query embedding and owner-scoped retrieval]
+    Qdrant --> Query
+    Mongo --> Query
+    Query --> Gate[Validated candidates and relevance gates]
+    Gate -->|Insufficient context| Refuse[Explicit abstention]
+    Gate -->|Accepted context| Gemini[Gemini grounded answer generation]
+    Gemini --> Cite[Validate claim citations and source provenance]
+    Cite --> History[Persist finalized answer and citations]
+    Refuse --> History
+    History --> Mongo
+    History --> UI
+```
+
+The standard sequence is **PDF upload → extraction → chunking → embeddings → Qdrant indexing → retrieval → Gemini answer generation → citations and history**. Upload, processing and indexing are separate user actions; upload alone does not make a document searchable. Retrieval rechecks active document generations and authoritative metadata before context selection. Insufficient context avoids a generation call; provider failures return sanitized errors rather than fabricated answers.
+
+The optional `RAG_VERIFIED_EXPERIMENT_ENABLED=false` setting keeps the standard path active. The experimental branch uses bounded candidates, draft generation, a separate verification call and exact-quote resolution with server-derived offsets. It retains strict citation and coverage checks, but live end-to-end reliability remains unproven. Leave it disabled for the portfolio demo.
+
 ## Prerequisites and setup
 
 Run commands from your checkout root unless a command explicitly changes directory. The verified Python version is 64-bit Python 3.13.15. Node.js 24.11.1 was used for acceptance; installed Vite 8.3.0 requires Node 20.19+ in the 20.x line or Node 22.12+. Use npm with the committed frontend lockfile.
@@ -55,6 +113,14 @@ Edit the untracked backend/.env locally. Process environment variables take prec
 | EMBEDDING_MODEL_NAME | Default sentence-transformers/all-MiniLM-L6-v2, 384 dimensions |
 | CORS_FRONTEND_ORIGINS | Optional comma-separated explicit additional frontend origins |
 
+### External service configuration
+
+**MongoDB Atlas:** create a dedicated demonstration database and database user with the read/write and index-creation permissions required by the application. Configure Atlas network access for the machine running the backend. Put the Atlas connection URI in `MONGODB_URI` and the database name in `MONGODB_DB_NAME`; encode reserved characters in URI credentials. Do not disable certificate or hostname verification. A healthy `/api/health/database` response does not replace `/api/ready`: startup index initialization must also succeed.
+
+**Qdrant:** use a separate server or Cloud instance/collection for the demo. Set `QDRANT_URL` to its server origin, `QDRANT_API_KEY` privately where required, and `QDRANT_COLLECTION_NAME` to the intended collection. Remote URLs require HTTPS. MiniLM produces 384-dimensional vectors; an incompatible existing collection must not be reused. The application checks collection compatibility during indexing. Do not delete an existing collection merely to resolve a mismatch.
+
+**Gemini:** set `GEMINI_API_KEY` privately and keep `GEMINI_MODEL` consistent with a model your account can access. The example selects `gemini-3.1-flash-lite`; access, quota, charges and availability depend on the provider. Standard RAG makes at most one generation call per Ask request and does not automatically retry. Keep `RAG_VERIFIED_EXPERIMENT_ENABLED=false`.
+
 The examples document upload, PDF, JSON-body, authentication and expensive-operation limits. Their defaults are validated. Admission is process-local and active on the integrated routes. Use the existing single-worker deployment configuration.
 
 MiniLM loads lazily from backend/.cache/embeddings. First use can download weights if the cache is absent. Prepare the cache before an offline demo, then set HF_HUB_OFFLINE=1 and TRANSFORMERS_OFFLINE=1 in the backend process environment. A cache miss will fail instead of downloading. The Dockerfile packages a pinned model snapshot and enables offline loading.
@@ -77,8 +143,8 @@ On macOS/Linux, use backend/.venv/bin/python with the same arguments. The direct
 
 Frontend in a second terminal:
 
-```sh
-npm --prefix frontend run dev
+```powershell
+npm.cmd --prefix frontend run dev -- --host 127.0.0.1 --port 5173 --strictPort
 ```
 
 PowerShell can use npm.cmd. Open http://127.0.0.1:5173. The API reference is at http://127.0.0.1:8000/docs and its schema at /openapi.json. GET /api/health is basic liveness; /api/health/database and /api/health/qdrant report dependency connectivity. /api/ready provides the application's readiness checks. Liveness alone does not establish readiness for ingestion or generation.
@@ -107,6 +173,16 @@ Install requirements-dev.txt and run from the checkout root with the virtual-env
 .\backend\.venv\Scripts\python.exe -B -m pytest backend/tests -q -p no:cacheprovider
 node --test frontend/tests/reliability.test.mjs frontend/tests/api-configuration.test.mjs
 ```
+
+The root `pytest.ini` supplies `backend` and `backend/tests` import paths for full and focused pytest runs; no manual `PYTHONPATH` is needed. From the checkout root in Windows PowerShell:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -B -m pytest backend/tests/test_quote_resolution.py backend/tests/test_verification_compatibility.py backend/tests/test_verified_rag.py backend/tests/test_verified_orchestration.py -q -p no:cacheprovider
+```
+
+The schema compatibility test uses the public Google GenAI `GenerateContentConfig` JSON serialization interface. It checks local schema preservation, not live provider acceptance or the SDK's internal HTTP conversion. Recheck provider compatibility separately when upgrading the pinned SDK.
+
+Local credentials and private keys belong outside the repository or in the ignored `.secrets/` directories. Local database data and diagnostics belong in the explicitly ignored directories listed in `.gitignore`; arbitrary names are not automatically protected. Never use broad staging commands for unreviewed local artifacts. Ignoring a path does not remove already tracked files.
 
 Use backend/.venv/bin/python on macOS/Linux. Automated backend tests use mocked service dependencies and synthetic fixtures; tests include spawned workers and loopback HTTP checks. They are distinct from live-service acceptance. Evaluation procedures are documented in backend/evaluation/README.md.
 
@@ -151,11 +227,55 @@ Output is frontend/dist. The API URL is embedded at build time. A deployed front
 - Phase 5D-C6 passed real registration/login, KB creation, PDF upload/extraction/chunking, offline 384-dimensional MiniLM inference, embedded Qdrant storage/retrieval, citations, history and deletion cleanup. It used actual FastAPI routes through an in-process ASGI client, isolated TLS MongoDB 8.2.6 and deterministic mocked Gemini generation.
 - Phase 5D-C5 independently verified offline MiniLM inference and embedded Qdrant insertion/search/deletion. These reports were generated in isolated temporary workspaces and are not bundled as a reusable production integration runner.
 
+### Current evidence and its boundaries
+
+| Evidence | What it establishes | What it does not establish |
+| --- | --- | --- |
+| Phase 7A: 846 backend tests and 1,599 subtests passed; 35 frontend Node tests passed | Offline contracts, failure handling and regressions | Current external service availability |
+| Phase 7B2: 123 tests and 225 subtests passed | Focused verification/default-path regressions and repository test setup | Live experimental verification reliability |
+| Phase 5D-C7: 19 browser suites / 524 scenarios passed | Frontend journeys with mocked APIs | A browser-to-live-provider integration run |
+| Phase 5D-C6: isolated MongoDB, real PDF/MiniLM, embedded Qdrant, mocked Gemini | Real ingestion, retrieval and cleanup with isolated dependencies | Qdrant server HTTP/authentication or live generation quality |
+| Subsequent standard live demo, reported in the project review | Real PDF processing/indexing, Gemini answers and citations were demonstrated | Repeatability, broad answer-quality coverage or uptime guarantees |
+
+Historical live-demo observations are separate from the reproducible offline suite. Recent Gemini diagnostics included successful requests and 503/504 failures. The latest server-derived-offset verification attempt failed at the provider before evidence validation. No full live experimental verified-RAG pass is claimed.
+
 ### Known limitations
 
 Live Gemini generation was not verified in the final integration journey. Embedded Qdrant does not verify server HTTP, authentication or payload-index behavior. Frontend mocked-API acceptance and backend real-dependency integration ran separately; a browser connected to those real dependencies was not part of final acceptance.
 
 Memory requirements depend on document size, model, workload and concurrent services. The small backend journey observed about 579 MiB peak backend working set and 155 MiB MongoDB working set; these are observations, not minimum system specifications or load-test guarantees. Concurrency limits apply per process. Interrupted cross-service operations may retain claims or partial state and require manual review; no automatic retry, claim unlocking or crash recovery is provided. Shutdown can wait for native work that has not finished.
+
+
+### Security considerations
+
+- Owner identity comes from validated JWTs; knowledge-base, document, retrieval and history operations remain owner-scoped.
+- Passwords are hashed with Argon2id. Authentication limits and expensive-operation limits apply per process.
+- Browser JWTs are stored in `localStorage`. This supports the existing client flow but exposes tokens to successful same-origin script injection; logout cannot confirm credential deletion if browser storage fails.
+- Keep backend secrets out of Git, screenshots and frontend `VITE_` variables. Use dedicated demonstration credentials and synthetic PDFs.
+- Uploads enforce filename, MIME type, PDF signature and size checks. These checks are not malware scanning. OCR for image-only PDFs is outside scope.
+- Use explicit CORS origins, TLS for remote dependencies and the documented single-worker startup. Public error messages are sanitized; never treat a successful liveness check as proof of provider readiness.
+
+### Standard-pipeline limitations
+
+Standard retrieval may refuse answerable questions: the Cedar Lantern evaluation accepted only 1 of 12 supported questions through the production relevance gate on that fixture. This is a fixture-specific result, not a universal accuracy estimate. Gemini availability can be intermittent. Citations confirm source references, not semantic entailment or factual correctness. Exact quotation in the experimental path likewise does not prove support for a claim.
+
+### Future improvements (not implemented promises)
+
+- Evaluate retrieval changes on genuinely unseen documents before adopting them.
+- Complete bounded live experimental verification checks while preserving strict evidence validation.
+- Review browser token-storage alternatives and cross-service recovery tooling before broader deployment.
+
+### Screenshots — planned for Phase 7D
+
+No screenshots are embedded yet. Capture only synthetic demonstration data and exclude credentials, tokens and private service dashboards.
+
+| Planned image | Capture goal | Status |
+| --- | --- | --- |
+| Dashboard and knowledge bases | Signed-in navigation and a synthetic knowledge base | Pending capture |
+| Documents | Uploaded, processed and indexed document states | Pending capture |
+| Ask and citations | Standard-RAG answer with visible source references | Pending capture |
+| Question history | Persisted question/answer snapshot | Pending capture |
+
 
 ## Architecture and implementation reference
 
