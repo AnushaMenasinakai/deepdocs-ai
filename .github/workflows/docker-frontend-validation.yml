@@ -35,8 +35,10 @@ jobs:
       - name: Start isolated frontend
         timeout-minutes: 2
         run: |
-          # An internal network denies external runtime egress. No backend is started.
-          docker network create --internal "$NETWORK"
+          # Dedicated bridge permits host port publishing; no other services join it.
+          # Normal bridge networking permits egress, but tests use only loopback HTTP
+          # and supply no application credentials. No backend is started.
+          docker network create --driver bridge "$NETWORK"
           docker run --detach --name "$CONTAINER" --network "$NETWORK" \
             --publish 127.0.0.1:5173:8080 \
             --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m,mode=1777 \
@@ -80,6 +82,14 @@ jobs:
           assert h['CapDrop'] == ['ALL']
           assert 'no-new-privileges:true' in h['SecurityOpt']
           assert h['PortBindings'] == {'8080/tcp': [{'HostIp': '127.0.0.1', 'HostPort': '5173'}]}
+          print('Effective published ports:', c['NetworkSettings']['Ports'], flush=True)
+          assert c['NetworkSettings']['Ports'] == h['PortBindings']
+          assert set(c['NetworkSettings']['Networks']) == {os.environ['NETWORK']}
+          network = json.loads(subprocess.check_output(
+              ['docker', 'network', 'inspect', os.environ['NETWORK']], timeout=5))[0]
+          print(f'Validation network: driver={network["Driver"]}, internal={network["Internal"]}', flush=True)
+          assert network['Driver'] == 'bridge' and network['Internal'] is False
+          assert set(network['Containers']) == {c['Id']}
           assert '/tmp' in h['Tmpfs']
           assert all(m['Type'] == 'tmpfs' and m['Destination'] == '/tmp' for m in c['Mounts'])
           # No application secret environment variables are supplied or inherited.
@@ -144,7 +154,11 @@ jobs:
             docker port "$CONTAINER" || true
             docker network inspect --format 'Internal={{.Internal}} Driver={{.Driver}} Options={{json .Options}}' "$NETWORK" || true
             # Compare container loopback with the host-published endpoint at failure time.
-            timeout 8s docker exec "$CONTAINER" busybox wget -Y off -q -T 3 -O /dev/null http://127.0.0.1:8080/index.html || true
+            if timeout 8s docker exec "$CONTAINER" busybox wget -Y off -q -T 3 -O /dev/null http://127.0.0.1:8080/index.html; then
+              echo 'Container-local HTTP: PASS'
+            else
+              echo 'Container-local HTTP: FAIL'
+            fi
             curl --noproxy '*' --connect-timeout 2 --max-time 5 --silent --show-error \
               --output /dev/null --write-out 'Host HTTP status=%{http_code}\n' \
               http://127.0.0.1:5173/ || true
