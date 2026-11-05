@@ -34,8 +34,11 @@ USER 10001:10001
 RUN --network=none python -c "import main, pymupdf, argon2, torch; from config import EmbeddingSettings; from embeddings import load_model, model_dimension; assert torch.version.cuda is None; model = load_model(EmbeddingSettings.model_name); assert model_dimension(model) == 384; assert model.encode(['Offline packaging verification'], normalize_embeddings=True).shape == (1, 384)"
 
 EXPOSE 8000
-# No health probe here: existing liveness is not complete service readiness.
-# Persistent PDF storage must be attached in Docker-B before real uploads.
+# Liveness only; dependency readiness is reported separately by /api/ready.
+# Bypass environment proxies so the probe always targets this container.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD ["python", "-c", "import sys, urllib.request; opener = urllib.request.build_opener(urllib.request.ProxyHandler({})); response = opener.open('http://127.0.0.1:8000/api/health', timeout=3); status = response.status; response.close(); sys.exit(0 if status == 200 else 1)"]
+# Compose attaches persistent PDF storage for uploads.
 # Direct access: do not let forwarded headers rewrite authentication limiter identity.
 # A future reverse proxy requires an explicit, verified trusted-proxy policy.
 CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-proxy-headers"]

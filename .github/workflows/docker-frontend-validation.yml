@@ -1,0 +1,130 @@
+name: Frontend Docker validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-docker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      IMAGE: deepdocs-frontend:validation-${{ github.run_id }}-${{ github.run_attempt }}
+      CONTAINER: deepdocs-frontend-validation-${{ github.run_id }}-${{ github.run_attempt }}
+      NETWORK: deepdocs-frontend-validation-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build frontend only
+        timeout-minutes: 12
+        # Registry/npm access is needed for the build, but no application credentials.
+        run: |
+          docker build --platform linux/amd64 --progress plain \
+            --build-arg VITE_API_URL=http://127.0.0.1:8000 \
+            --tag "$IMAGE" ./frontend
+          test "$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$IMAGE")" = linux/amd64
+          test "$(docker image inspect --format '{{.Config.User}}' "$IMAGE")" = 101:101
+
+      - name: Start isolated frontend
+        timeout-minutes: 2
+        run: |
+          # An internal network denies external runtime egress. No backend is started.
+          docker network create --internal "$NETWORK"
+          docker run --detach --name "$CONTAINER" --network "$NETWORK" \
+            --publish 127.0.0.1:5173:8080 \
+            --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m,mode=1777 \
+            --memory 128m --cpus 0.50 --pids-limit 64 \
+            --cap-drop ALL --security-opt no-new-privileges:true \
+            --restart on-failure:3 --stop-timeout 30 \
+            --health-cmd 'busybox wget -Y off -q -T 3 -O /dev/null http://127.0.0.1:8080/index.html' \
+            --health-interval 30s --health-timeout 5s --health-start-period 10s \
+            --health-retries 3 "$IMAGE"
+
+      - name: Validate runtime and HTTP contracts
+        timeout-minutes: 4
+        run: |
+          for attempt in $(seq 1 45); do
+            health=$(docker inspect --format '{{.State.Health.Status}}' "$CONTAINER")
+            if [ "$health" = healthy ]; then break; fi
+            if [ "$health" = unhealthy ]; then exit 1; fi
+            sleep 2
+          done
+          test "$health" = healthy
+          docker exec "$CONTAINER" nginx -t
+          test "$(docker exec "$CONTAINER" id -u)" = 101
+          test "$(docker exec "$CONTAINER" id -g)" = 101
+          docker exec "$CONTAINER" sh -ec '
+            touch /tmp/validation-write
+            rm /tmp/validation-write
+            test -f /tmp/nginx.pid
+            test -d /tmp/client_temp
+            test ! -d /app/node_modules
+            ! command -v node
+            test -z "$(find /usr/share/nginx/html -name ".env*" -o -name "*.pem" -o -name "*.key")"
+          '
+          python3 - <<'PY'
+          import json, os, re, subprocess, urllib.request, urllib.error
+          c = json.loads(subprocess.check_output(['docker', 'inspect', os.environ['CONTAINER']]))[0]
+          h = c['HostConfig']
+          assert h['ReadonlyRootfs'] is True
+          assert h['Memory'] == 128 * 1024 * 1024
+          assert h['NanoCpus'] == 500000000 and h['PidsLimit'] == 64
+          assert h['CapDrop'] == ['ALL']
+          assert 'no-new-privileges:true' in h['SecurityOpt']
+          assert h['PortBindings'] == {'8080/tcp': [{'HostIp': '127.0.0.1', 'HostPort': '5173'}]}
+          assert '/tmp' in h['Tmpfs']
+          assert all(m['Type'] == 'tmpfs' and m['Destination'] == '/tmp' for m in c['Mounts'])
+          # No application secret environment variables are supplied or inherited.
+          forbidden = ('MONGODB_', 'QDRANT_', 'GEMINI_', 'JWT_', 'AWS_', 'GITHUB_TOKEN=')
+          assert not any(v.startswith(forbidden) for v in c['Config']['Env'])
+          opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+          def fetch(path):
+              with opener.open('http://127.0.0.1:5173' + path, timeout=5) as r:
+                  assert r.status == 200
+                  return r.read(), r.headers
+          root, headers = fetch('/')
+          assert b'<div id="root">' in root
+          assert headers['X-Content-Type-Options'] == 'nosniff'
+          assert headers['X-Frame-Options'] == 'SAMEORIGIN'
+          for path in ['/login', '/knowledge-bases', '/documents', '/ask']:
+              assert fetch(path)[0] == root, path
+          assets = re.findall(r'(?:src|href)="(/assets/[^"\s]+)"', root.decode())
+          assert assets
+          javascript = b''
+          for path in assets:
+              body, asset_headers = fetch(path)
+              assert body and 'text/html' not in asset_headers['Content-Type']
+              if path.endswith('.js'):
+                  javascript += body
+          assert b'http://127.0.0.1:8000' in javascript
+          assert b'http://backend:8000' not in javascript
+          try:
+              fetch('/assets/validation-missing.js')
+          except urllib.error.HTTPError as exc:
+              assert exc.code == 404
+          else:
+              raise AssertionError('Missing asset did not return 404')
+          print('PASS: image/runtime security, healthy NGINX, root, four deep links, assets, 404 and compiled API URL; backend absent.')
+          PY
+
+      - name: Diagnostics and cleanup
+        if: always()
+        timeout-minutes: 2
+        run: |
+          if docker container inspect "$CONTAINER" >/dev/null 2>&1; then
+            docker logs --tail 60 "$CONTAINER" || true
+            docker inspect --format '{{json .State.Health}}' "$CONTAINER" || true
+            docker stop --time 30 "$CONTAINER"
+            docker rm "$CONTAINER"
+          fi
+          if docker network inspect "$NETWORK" >/dev/null 2>&1; then
+            docker network rm "$NETWORK"
+          fi
+          # No image publishing, volume deletion or Docker prune.

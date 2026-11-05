@@ -1,0 +1,32 @@
+# Allow only explicit build inputs; excludes .env, dependencies, output, tests,
+# screenshots, logs, temporary files and local credentials by default.
+**
+!Dockerfile
+!.dockerignore
+!nginx.conf
+!package.json
+!package-lock.json
+!index.html
+!vite.config.js
+!config/
+!config/**
+!src/
+!src/**
+!public/
+!public/**
+# Also exclude secrets/temporary output accidentally placed in allowed trees.
+**/.env*
+**/node_modules
+**/dist
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/credentials*.json
+**/*.log
+**/*.tmp
+**/*.bak
+**/*~
+**/test-results
+**/playwright-report
+**/screenshots
