@@ -1,0 +1,200 @@
+name: Backend Docker validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-docker-validation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  backend-docker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      IMAGE: deepdocs-backend:validation-${{ github.run_id }}-${{ github.run_attempt }}
+      CONTAINER: deepdocs-backend-validation-${{ github.run_id }}-${{ github.run_attempt }}
+      VOLUME: deepdocs-backend-validation-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resource preflight
+        timeout-minutes: 1
+        run: |
+          test "$(uname -s)/$(uname -m)" = Linux/x86_64
+          docker info --format 'Docker OS={{.OSType}} architecture={{.Architecture}} memory={{.MemTotal}} CPUs={{.NCPU}}'
+          test "$(docker info --format '{{.OSType}}')" = linux
+          export DOCKER_ROOT=$(docker info --format '{{.DockerRootDir}}')
+          python3 - <<'PY'
+          import os, shutil
+          memory = dict(line.split(':', 1) for line in open('/proc/meminfo'))
+          available = int(memory['MemAvailable'].split()[0]) * 1024
+          paths = [os.getcwd(), os.environ['DOCKER_ROOT']]
+          free = min(shutil.disk_usage(p).free for p in paths)
+          print(f'Available RAM: {available / 2**30:.2f} GiB; minimum free disk: {free / 2**30:.2f} GiB')
+          if available < 5 * 2**30 or free < 10 * 2**30:
+              raise SystemExit('Insufficient resources: require 5 GiB available RAM and 10 GiB free disk. Nothing will be pruned.')
+          PY
+
+      - name: Build backend only
+        timeout-minutes: 18
+        run: |
+          # Only public package/model downloads; no secret arguments or environment files.
+          timeout --signal=TERM --kill-after=30s 17m docker build \
+            --platform linux/amd64 --progress plain --tag "$IMAGE" ./backend
+          docker image inspect --format 'OS={{.Os}} architecture={{.Architecture}} size_bytes={{.Size}} user={{.Config.User}}' "$IMAGE"
+          test "$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$IMAGE")" = linux/amd64
+          test "$(docker image inspect --format '{{.Config.User}}' "$IMAGE")" = 10001:10001
+
+      - name: Start isolated production command
+        timeout-minutes: 1
+        run: |
+          docker volume create "$VOLUME"
+          # No environment-file mount, credentials, published ports or command override.
+          docker run --detach --name "$CONTAINER" --network none \
+            --read-only --tmpfs /tmp:rw,noexec,nosuid,size=128m,mode=1777 \
+            --cap-drop ALL --security-opt no-new-privileges:true \
+            --memory 3g --memory-swap 3g --cpus 2 --pids-limit 128 \
+            --stop-timeout 60 \
+            --mount "type=volume,source=$VOLUME,target=/app/backend/storage/documents" \
+            "$IMAGE"
+
+      - name: Validate isolation, health and filesystem
+        timeout-minutes: 3
+        run: |
+          for attempt in $(seq 1 45); do
+            test "$(docker inspect --format '{{.State.Running}}' "$CONTAINER")" = true
+            health=$(docker inspect --format '{{.State.Health.Status}}' "$CONTAINER")
+            if [ "$health" = healthy ]; then break; fi
+            if [ "$health" = unhealthy ]; then exit 1; fi
+            sleep 2
+          done
+          test "$health" = healthy
+          python3 - <<'PY'
+          import json, os, subprocess
+          c = json.loads(subprocess.check_output(['docker', 'inspect', os.environ['CONTAINER']], timeout=5))[0]
+          image = json.loads(subprocess.check_output(['docker', 'image', 'inspect', os.environ['IMAGE']], timeout=5))[0]
+          h = c['HostConfig']
+          assert h['NetworkMode'] == 'none' and not h['PortBindings']
+          assert h['ReadonlyRootfs'] and h['CapDrop'] == ['ALL']
+          assert 'no-new-privileges:true' in h['SecurityOpt']
+          assert h['Memory'] == h['MemorySwap'] == 3 * 2**30
+          assert h['NanoCpus'] == 2000000000 and h['PidsLimit'] == 128
+          assert c['Config']['User'] == '10001:10001'
+          for key in ['Cmd', 'Entrypoint', 'Healthcheck', 'Env']:
+              assert c['Config'][key] == image['Config'][key], key
+          forbidden = ('MONGODB_', 'QDRANT_', 'GEMINI_', 'JWT_', 'AWS_', 'GITHUB_TOKEN=')
+          assert not any(v.startswith(forbidden) for v in c['Config']['Env'])
+          volumes = [m for m in c['Mounts'] if m['Type'] == 'volume']
+          assert len(volumes) == 1
+          assert volumes[0]['Name'] == os.environ['VOLUME']
+          assert volumes[0]['Destination'] == '/app/backend/storage/documents' and volumes[0]['RW']
+          assert all(m['Type'] == 'volume' or (m['Type'] == 'tmpfs' and m['Destination'] == '/tmp') for m in c['Mounts'])
+          print('PASS: unchanged image command/environment, no credentials, network none and security limits.')
+          PY
+          timeout --signal=TERM --kill-after=5s 30s docker exec -i "$CONTAINER" python -B - <<'PY'
+          import errno, json, os, pathlib, tempfile, urllib.request, urllib.error
+          assert os.getuid() == os.getgid() == 10001
+          assert not pathlib.Path('/app/backend/.env').exists()
+          for directory in ['/tmp', '/app/backend/storage/documents']:
+              with tempfile.TemporaryFile(dir=directory) as stream:
+                  stream.write(b'synthetic validation')
+                  stream.flush()
+          storage = pathlib.Path('/app/backend/storage/documents').stat()
+          assert storage.st_uid == storage.st_gid == 10001
+          cache = pathlib.Path('/app/backend/.cache/embeddings')
+          weights = list(cache.rglob('model.safetensors'))
+          assert weights
+          with weights[0].open('rb') as stream:
+              assert stream.read(1)
+          try:
+              with open('/app/backend/.validation-write', 'xb'):
+                  pass
+          except OSError as exc:
+              assert exc.errno == errno.EROFS
+          else:
+              raise AssertionError('Root filesystem unexpectedly writable')
+          opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+          with opener.open('http://127.0.0.1:8000/api/health', timeout=3) as response:
+              assert response.status == 200 and json.load(response)['status'] == 'ok'
+          try:
+              opener.open('http://127.0.0.1:8000/api/ready', timeout=3)
+          except urllib.error.HTTPError as exc:
+              assert exc.code == 503 and json.load(exc)['status'] == 'not_ready'
+          else:
+              raise AssertionError('Dependency readiness unexpectedly succeeded')
+          print('PASS: UID/GID, writable temporary/PDF storage, readable model, read-only root, liveness 200 and readiness 503.')
+          PY
+
+      - name: One sequential offline inference
+        timeout-minutes: 3
+        run: |
+          timeout --signal=TERM --kill-after=10s 120s docker exec -i \
+            --env OMP_NUM_THREADS=1 --env TOKENIZERS_PARALLELISM=false \
+            "$CONTAINER" python -B - <<'PY'
+          import os, time
+          assert os.environ['HF_HUB_OFFLINE'] == os.environ['TRANSFORMERS_OFFLINE'] == '1'
+          import numpy as np
+          import torch
+          from config import EmbeddingSettings
+          from embeddings import load_model, model_dimension
+          assert torch.version.cuda is None
+          started = time.monotonic()
+          model = load_model(EmbeddingSettings.model_name)
+          assert model_dimension(model) == 384
+          vector = model.encode(['A synthetic offline container validation sentence.'], normalize_embeddings=True)
+          assert vector.shape == (1, 384) and np.isfinite(vector).all()
+          assert np.allclose(np.linalg.norm(vector, axis=1), 1, atol=1e-5)
+          print(f'PASS: offline CPU MiniLM inference, dimensions=384, seconds={time.monotonic()-started:.2f}')
+          PY
+
+      - name: Graceful idle shutdown
+        timeout-minutes: 2
+        run: |
+          timeout 75s docker stop --time 60 "$CONTAINER"
+          test "$(docker inspect --format '{{.State.Running}}' "$CONTAINER")" = false
+          test "$(docker inspect --format '{{.State.ExitCode}}' "$CONTAINER")" = 0
+          test "$(docker inspect --format '{{.State.OOMKilled}}' "$CONTAINER")" = false
+          docker logs "$CONTAINER" 2>&1 | grep -Fq 'Application shutdown complete.'
+          echo 'PASS: graceful idle shutdown; active-request draining is not tested.'
+
+      - name: Safe diagnostics and targeted cleanup
+        if: always()
+        timeout-minutes: 2
+        run: |
+          if docker container inspect "$CONTAINER" >/dev/null 2>&1; then
+            python3 - <<'PY' || true
+          import json, os, subprocess
+          name = os.environ['CONTAINER']
+          c = json.loads(subprocess.check_output(['docker', 'inspect', name], timeout=5))[0]
+          state = c['State']
+          print({k: state.get(k) for k in ['Status', 'Running', 'ExitCode', 'OOMKilled']})
+          health = state.get('Health', {})
+          print('Health:', health.get('Status'), 'failing streak:', health.get('FailingStreak'))
+          print('Health exit codes:', [x['ExitCode'] for x in health.get('Log', [])])
+          # Output only fixed known messages, never raw logs, health output or env values.
+          result = subprocess.run(['docker', 'logs', '--tail', '100', name], capture_output=True, text=True, timeout=10)
+          logs = result.stdout + result.stderr
+          for marker in ['Application startup complete.', 'Application shutdown complete.',
+                         'MONGODB_URI is required.', 'Traceback (most recent call last):']:
+              print(f'Log marker {marker!r}: {marker in logs}')
+          PY
+            timeout 10s docker stats --no-stream --format 'Memory={{.MemUsage}} CPU={{.CPUPerc}} PIDs={{.PIDs}}' "$CONTAINER" || true
+            # Force removal is scoped to this unique disposable container if stop failed.
+            docker rm --force "$CONTAINER"
+          fi
+          if docker volume inspect "$VOLUME" >/dev/null 2>&1; then
+            docker volume rm "$VOLUME"
+          fi
+          if docker image inspect "$IMAGE" >/dev/null 2>&1; then
+            docker image rm "$IMAGE"
+          fi
+          # Never prune or remove unrelated images, caches, containers or volumes.
