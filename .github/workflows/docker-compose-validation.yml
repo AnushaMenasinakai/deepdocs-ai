@@ -59,6 +59,11 @@ jobs:
           docker compose -p "$COMPOSE_PROJECT_NAME" config --format json > "$TEST_DIR/resolved.json"
           python3 - <<'PY'
           import json, os, pathlib, re
+          def validate_byte_limit(service, field, value, expected):
+              # Compose JSON byte values may be decimal strings; Docker inspect uses integers.
+              valid = type(value) is int or (isinstance(value, str) and re.fullmatch(r'[0-9]+', value))
+              if not valid or int(value) != expected:
+                  raise AssertionError(f'{service} {field}: resolved={value!r}; expected={expected} bytes')
           def validate_tmpfs(name, mounts):
               try:
                   assert isinstance(mounts, list) and len(mounts) == 1
@@ -102,10 +107,11 @@ jobs:
               assert s['security_opt']==['no-new-privileges:true'] and s['dns']==['127.0.0.1']
               assert s['pids_limit']==(128 if name=='backend' else 64)
               assert float(s['cpus'])==(2 if name=='backend' else .5)
-              assert int(s['mem_limit'])==(3*2**30 if name=='backend' else 128*2**20)
+              validate_byte_limit(name, 'mem_limit', s.get('mem_limit'), 3*2**30 if name=='backend' else 128*2**20)
               validate_tmpfs(name, s.get('tmpfs'))
           b=c['services']['backend']; f=c['services']['frontend']
-          assert b['memswap_limit']==3*2**30 and b['stop_grace_period']=='5m0s'
+          validate_byte_limit('backend', 'memswap_limit', b.get('memswap_limit'), 3*2**30)
+          assert b['stop_grace_period']=='5m0s', f"backend stop_grace_period: resolved={b['stop_grace_period']!r}; expected='5m0s'"
           assert f['build']['args']=={'VITE_API_URL':'http://127.0.0.1:8000'}
           assert not b['build'].get('args') and not f.get('volumes')
           assert len(b['volumes'])==2
