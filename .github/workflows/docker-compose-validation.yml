@@ -58,7 +58,32 @@ jobs:
         run: |
           docker compose -p "$COMPOSE_PROJECT_NAME" config --format json > "$TEST_DIR/resolved.json"
           python3 - <<'PY'
-          import json, os, pathlib
+          import json, os, pathlib, re
+          def validate_tmpfs(name, mounts):
+              try:
+                  assert isinstance(mounts, list) and len(mounts) == 1
+                  path, separator, raw = mounts[0].partition(':')
+                  assert path == '/tmp' and separator
+                  options = {}
+                  for item in raw.split(','):
+                      key, equals, value = item.partition('=')
+                      assert key not in options, 'Duplicate tmpfs option'
+                      options[key] = value if equals else None
+                  # rw is the default if omitted; explicit ro/exec/suid are rejected.
+                  assert set(options) <= {'rw', 'noexec', 'nosuid', 'size', 'mode'}
+                  assert options.get('noexec', False) is None
+                  assert options.get('nosuid', False) is None
+                  assert 'rw' not in options or options['rw'] is None
+                  size = re.fullmatch(r'([0-9]+)([kmg]?)', options.get('size') or '', re.I)
+                  assert size
+                  size_bytes = int(size[1]) * {'': 1, 'k': 1024, 'm': 1024**2, 'g': 1024**3}[size[2].lower()]
+                  assert size_bytes == (128 if name == 'backend' else 64) * 1024**2
+                  mode = options.get('mode') or ''
+                  assert re.fullmatch(r'0?[0-7]{4}', mode) and int(mode, 8) == 0o1777
+              except (AssertionError, AttributeError, TypeError, ValueError):
+                  # Only the mount field is printed, never the full service config.
+                  print(f'{name} resolved tmpfs: {json.dumps(mounts)}', flush=True)
+                  raise AssertionError('Unexpected tmpfs path or security options') from None
           c = json.load(open(os.environ['TEST_DIR']+'/resolved.json'))
           assert c['name'] == os.environ['COMPOSE_PROJECT_NAME']
           assert set(c['services']) == {'frontend', 'backend'}
@@ -78,7 +103,7 @@ jobs:
               assert s['pids_limit']==(128 if name=='backend' else 64)
               assert float(s['cpus'])==(2 if name=='backend' else .5)
               assert int(s['mem_limit'])==(3*2**30 if name=='backend' else 128*2**20)
-              assert len(s['tmpfs'])==1 and s['tmpfs'][0].startswith('/tmp:rw,noexec,nosuid,')
+              validate_tmpfs(name, s.get('tmpfs'))
           b=c['services']['backend']; f=c['services']['frontend']
           assert b['memswap_limit']==3*2**30 and b['stop_grace_period']=='5m0s'
           assert f['build']['args']=={'VITE_API_URL':'http://127.0.0.1:8000'}
