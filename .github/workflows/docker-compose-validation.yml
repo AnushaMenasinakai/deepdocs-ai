@@ -59,6 +59,29 @@ jobs:
           docker compose -p "$COMPOSE_PROJECT_NAME" config --format json > "$TEST_DIR/resolved.json"
           python3 - <<'PY'
           import json, os, pathlib, re
+          def validate_pdf_volume(pdf, volumes, project):
+              expected = project + '_pdf_storage'
+              source = pdf.get('source')
+              try:
+                  assert pdf.get('type') == 'volume'
+                  assert pdf.get('target') == '/app/backend/storage/documents'
+                  assert not pdf.get('read_only')
+                  # Resolve the logical reference when present; some resolved forms
+                  # already contain the engine volume name. Neither may name other data.
+                  assert source in ('pdf_storage', expected)
+                  assert isinstance(volumes, dict) and len(volumes) == 1
+                  key, declaration = next(iter(volumes.items()))
+                  assert key in ('pdf_storage', expected)
+                  assert declaration.get('name') == expected
+                  assert not declaration.get('external')
+                  assert declaration.get('driver', 'local') == 'local'
+                  assert not declaration.get('driver_opts')
+                  resolved = declaration['name'] if source == key else source
+                  assert resolved == expected
+              except (AssertionError, AttributeError, TypeError):
+                  print(json.dumps({'type': pdf.get('type'), 'source': source,
+                                    'expected_source': expected, 'target': pdf.get('target')}), flush=True)
+                  raise AssertionError('Unexpected PDF volume identity or isolation') from None
           def validate_byte_limit(service, field, value, expected):
               # Compose JSON byte values may be decimal strings; Docker inspect uses integers.
               valid = type(value) is int or (isinstance(value, str) and re.fullmatch(r'[0-9]+', value))
@@ -119,9 +142,7 @@ jobs:
           env=mounts['/app/backend/.env']
           assert env['source']==os.environ['BACKEND_ENV_FILE'] and env['read_only'] and env['type']=='bind'
           pdf=mounts['/app/backend/storage/documents']
-          assert pdf['type']=='volume' and pdf['source']=='pdf_storage'
-          assert c['volumes']['pdf_storage']['name']==os.environ['COMPOSE_PROJECT_NAME']+'_pdf_storage'
-          assert not c['volumes']['pdf_storage'].get('external')
+          validate_pdf_volume(pdf, c.get('volumes'), os.environ['COMPOSE_PROJECT_NAME'])
           assert c['networks']['default']=={'name':os.environ['VALIDATION_NETWORK'],'external':True}
           print('PASS: merged configuration, empty config mount, images, ports, storage and security.')
           PY
@@ -218,6 +239,10 @@ jobs:
               assert 'no-new-privileges:true' in h['SecurityOpt']
               assert h['Memory']==mem and h['NanoCpus']==cpu and h['PidsLimit']==pids
               assert h['Dns']==['127.0.0.1']
+              if service == 'backend':
+                  pdfs=[m for m in c['Mounts'] if m['Destination']=='/app/backend/storage/documents']
+                  assert len(pdfs)==1 and pdfs[0]['Type']=='volume' and pdfs[0]['RW']
+                  assert pdfs[0]['Name']==os.environ['COMPOSE_PROJECT_NAME']+'_pdf_storage'
               assert set(c['NetworkSettings']['Networks'])=={os.environ['VALIDATION_NETWORK']}
               assert all(x['HostIp']=='127.0.0.1' for bindings in c['NetworkSettings']['Ports'].values() for x in (bindings or []))
           print('PASS: running/healthy services, unchanged commands, nonroot security and service DNS/HTTP.')
