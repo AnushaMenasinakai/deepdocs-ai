@@ -57,10 +57,12 @@ jobs:
         timeout-minutes: 1
         run: |
           docker compose -p "$COMPOSE_PROJECT_NAME" config --format json > "$TEST_DIR/resolved.json"
+          docker compose version --short
           python3 - <<'PY'
           import json, os, pathlib, re
           def validate_env_mount(mount, expected, temporary_root, workspace):
               equal = False
+              check = 'temporary_path_isolation'
               try:
                   approved = pathlib.Path(expected).resolve(strict=True)
                   root = pathlib.Path(temporary_root).resolve(strict=True)
@@ -72,18 +74,29 @@ jobs:
                   assert source.is_absolute(), 'Resolved configuration check failed: source.is_absolute()'
                   actual = source.resolve(strict=True)
                   equal = actual == approved
+                  check = 'source_identity'
                   assert equal and not actual.is_relative_to(repo), 'Resolved configuration check failed: equal and not actual.is_relative_to(repo)'
+                  check = 'mount_properties'
                   assert mount.get('type') == 'bind', "Resolved configuration check failed: mount.get('type') == 'bind'"
                   assert mount.get('target') == '/app/backend/.env', "Resolved configuration check failed: mount.get('target') == '/app/backend/.env'"
                   assert mount.get('read_only') is True, "Resolved configuration check failed: mount.get('read_only') is True"
-                  assert mount.get('bind', {}).get('create_host_path') is False, "Resolved configuration check failed: mount.get('bind', {}).get('create_host_path') is False"
+                  check = 'create_host_path'
+                  bind = mount.get('bind', {})
+                  assert isinstance(bind, dict) and bind.get('create_host_path') is False, 'Host-path creation must be explicitly disabled in resolved configuration'
                   # Read only the approved temporary file, never a rejected source.
+                  check = 'temporary_file_empty'
                   assert approved.read_bytes() == b'', "Resolved configuration check failed: approved.read_bytes() == b''"
               except (AssertionError, OSError, ValueError, TypeError):
+                  bind = mount.get('bind', {})
+                  creation = (('omitted' if 'create_host_path' not in bind else
+                               'false' if bind['create_host_path'] is False else
+                               'true' if bind['create_host_path'] is True else 'invalid')
+                              if isinstance(bind, dict) else 'invalid_bind')
                   print(json.dumps({'type': mount.get('type'), 'target': mount.get('target'),
                                     'source_matches_expected': equal,
-                                    'read_only': mount.get('read_only')}), flush=True)
-                  raise AssertionError('Backend configuration mount failed isolation validation') from None
+                                    'read_only': mount.get('read_only'), 'failed_check': check,
+                                    'create_host_path': creation}), flush=True)
+                  raise AssertionError('Backend configuration mount failed isolation validation: ' + check) from None
           def duration_seconds(value):
               parts = re.findall(r'([0-9]+)(h|m|s)', value)
               assert parts and ''.join(n+u for n,u in parts) == value, "Resolved configuration check failed: parts and ''.join(n+u for n,u in parts) == value"
