@@ -59,25 +59,54 @@ jobs:
           docker compose -p "$COMPOSE_PROJECT_NAME" config --format json > "$TEST_DIR/resolved.json"
           python3 - <<'PY'
           import json, os, pathlib, re
+          def validate_env_mount(mount, expected, temporary_root, workspace):
+              equal = False
+              try:
+                  approved = pathlib.Path(expected).resolve(strict=True)
+                  root = pathlib.Path(temporary_root).resolve(strict=True)
+                  repo = pathlib.Path(workspace).resolve(strict=True)
+                  assert approved.is_relative_to(root) and not approved.is_relative_to(repo), 'Resolved configuration check failed: approved.is_relative_to(root) and not approved.is_relative_to(repo)'
+                  assert approved.name == 'empty.env' and approved.is_file(), "Resolved configuration check failed: approved.name == 'empty.env' and approved.is_file()"
+                  assert approved.stat().st_nlink == 1, 'Resolved configuration check failed: approved.stat().st_nlink == 1'
+                  source = pathlib.Path(mount.get('source', ''))
+                  assert source.is_absolute(), 'Resolved configuration check failed: source.is_absolute()'
+                  actual = source.resolve(strict=True)
+                  equal = actual == approved
+                  assert equal and not actual.is_relative_to(repo), 'Resolved configuration check failed: equal and not actual.is_relative_to(repo)'
+                  assert mount.get('type') == 'bind', "Resolved configuration check failed: mount.get('type') == 'bind'"
+                  assert mount.get('target') == '/app/backend/.env', "Resolved configuration check failed: mount.get('target') == '/app/backend/.env'"
+                  assert mount.get('read_only') is True, "Resolved configuration check failed: mount.get('read_only') is True"
+                  assert mount.get('bind', {}).get('create_host_path') is False, "Resolved configuration check failed: mount.get('bind', {}).get('create_host_path') is False"
+                  # Read only the approved temporary file, never a rejected source.
+                  assert approved.read_bytes() == b'', "Resolved configuration check failed: approved.read_bytes() == b''"
+              except (AssertionError, OSError, ValueError, TypeError):
+                  print(json.dumps({'type': mount.get('type'), 'target': mount.get('target'),
+                                    'source_matches_expected': equal,
+                                    'read_only': mount.get('read_only')}), flush=True)
+                  raise AssertionError('Backend configuration mount failed isolation validation') from None
+          def duration_seconds(value):
+              parts = re.findall(r'([0-9]+)(h|m|s)', value)
+              assert parts and ''.join(n+u for n,u in parts) == value, "Resolved configuration check failed: parts and ''.join(n+u for n,u in parts) == value"
+              return sum(int(n)*{'h':3600,'m':60,'s':1}[u] for n,u in parts)
           def validate_pdf_volume(pdf, volumes, project):
               expected = project + '_pdf_storage'
               source = pdf.get('source')
               try:
-                  assert pdf.get('type') == 'volume'
-                  assert pdf.get('target') == '/app/backend/storage/documents'
-                  assert not pdf.get('read_only')
+                  assert pdf.get('type') == 'volume', "Resolved configuration check failed: pdf.get('type') == 'volume'"
+                  assert pdf.get('target') == '/app/backend/storage/documents', "Resolved configuration check failed: pdf.get('target') == '/app/backend/storage/documents'"
+                  assert not pdf.get('read_only'), "Resolved configuration check failed: not pdf.get('read_only')"
                   # Resolve the logical reference when present; some resolved forms
                   # already contain the engine volume name. Neither may name other data.
-                  assert source in ('pdf_storage', expected)
-                  assert isinstance(volumes, dict) and len(volumes) == 1
+                  assert source in ('pdf_storage', expected), "Resolved configuration check failed: source in ('pdf_storage', expected)"
+                  assert isinstance(volumes, dict) and len(volumes) == 1, 'Resolved configuration check failed: isinstance(volumes, dict) and len(volumes) == 1'
                   key, declaration = next(iter(volumes.items()))
-                  assert key in ('pdf_storage', expected)
-                  assert declaration.get('name') == expected
-                  assert not declaration.get('external')
-                  assert declaration.get('driver', 'local') == 'local'
-                  assert not declaration.get('driver_opts')
+                  assert key in ('pdf_storage', expected), "Resolved configuration check failed: key in ('pdf_storage', expected)"
+                  assert declaration.get('name') == expected, "Resolved configuration check failed: declaration.get('name') == expected"
+                  assert not declaration.get('external'), "Resolved configuration check failed: not declaration.get('external')"
+                  assert declaration.get('driver', 'local') == 'local', "Resolved configuration check failed: declaration.get('driver', 'local') == 'local'"
+                  assert not declaration.get('driver_opts'), "Resolved configuration check failed: not declaration.get('driver_opts')"
                   resolved = declaration['name'] if source == key else source
-                  assert resolved == expected
+                  assert resolved == expected, 'Resolved configuration check failed: resolved == expected'
               except (AssertionError, AttributeError, TypeError):
                   print(json.dumps({'type': pdf.get('type'), 'source': source,
                                     'expected_source': expected, 'target': pdf.get('target')}), flush=True)
@@ -89,61 +118,71 @@ jobs:
                   raise AssertionError(f'{service} {field}: resolved={value!r}; expected={expected} bytes')
           def validate_tmpfs(name, mounts):
               try:
-                  assert isinstance(mounts, list) and len(mounts) == 1
+                  assert isinstance(mounts, list) and len(mounts) == 1, 'Resolved configuration check failed: isinstance(mounts, list) and len(mounts) == 1'
                   path, separator, raw = mounts[0].partition(':')
-                  assert path == '/tmp' and separator
+                  assert path == '/tmp' and separator, "Resolved configuration check failed: path == '/tmp' and separator"
                   options = {}
                   for item in raw.split(','):
                       key, equals, value = item.partition('=')
                       assert key not in options, 'Duplicate tmpfs option'
                       options[key] = value if equals else None
                   # rw is the default if omitted; explicit ro/exec/suid are rejected.
-                  assert set(options) <= {'rw', 'noexec', 'nosuid', 'size', 'mode'}
-                  assert options.get('noexec', False) is None
-                  assert options.get('nosuid', False) is None
-                  assert 'rw' not in options or options['rw'] is None
+                  assert set(options) <= {'rw', 'noexec', 'nosuid', 'size', 'mode'}, "Resolved configuration check failed: set(options) <= {'rw', 'noexec', 'nosuid', 'size', 'mode'}"
+                  assert options.get('noexec', False) is None, "Resolved configuration check failed: options.get('noexec', False) is None"
+                  assert options.get('nosuid', False) is None, "Resolved configuration check failed: options.get('nosuid', False) is None"
+                  assert 'rw' not in options or options['rw'] is None, "Resolved configuration check failed: 'rw' not in options or options['rw'] is None"
                   size = re.fullmatch(r'([0-9]+)([kmg]?)', options.get('size') or '', re.I)
-                  assert size
+                  assert size, 'Resolved configuration check failed: size'
                   size_bytes = int(size[1]) * {'': 1, 'k': 1024, 'm': 1024**2, 'g': 1024**3}[size[2].lower()]
-                  assert size_bytes == (128 if name == 'backend' else 64) * 1024**2
+                  assert size_bytes == (128 if name == 'backend' else 64) * 1024**2, "Resolved configuration check failed: size_bytes == (128 if name == 'backend' else 64) * 1024**2"
                   mode = options.get('mode') or ''
-                  assert re.fullmatch(r'0?[0-7]{4}', mode) and int(mode, 8) == 0o1777
+                  assert re.fullmatch(r'0?[0-7]{4}', mode) and int(mode, 8) == 0o1777, "Resolved configuration check failed: re.fullmatch(r'0?[0-7]{4}', mode) and int(mode, 8) == 0o1777"
               except (AssertionError, AttributeError, TypeError, ValueError):
                   # Only the mount field is printed, never the full service config.
                   print(f'{name} resolved tmpfs: {json.dumps(mounts)}', flush=True)
                   raise AssertionError('Unexpected tmpfs path or security options') from None
           c = json.load(open(os.environ['TEST_DIR']+'/resolved.json'))
-          assert c['name'] == os.environ['COMPOSE_PROJECT_NAME']
-          assert set(c['services']) == {'frontend', 'backend'}
-          assert pathlib.Path(os.environ['BACKEND_ENV_FILE']).read_bytes() == b''
+          assert c['name'] == os.environ['COMPOSE_PROJECT_NAME'], "Resolved configuration check failed: c['name'] == os.environ['COMPOSE_PROJECT_NAME']"
+          assert set(c['services']) == {'frontend', 'backend'}, "Resolved configuration check failed: set(c['services']) == {'frontend', 'backend'}"
           for name, host, target in [('backend',8000,8000),('frontend',5173,8080)]:
               s = c['services'][name]
-              assert s['image'] == os.environ['VALIDATION_'+name.upper()+'_IMAGE']
-              assert pathlib.Path(s['build']['context']).resolve() == pathlib.Path(name).resolve()
-              assert s['build'].get('dockerfile', 'Dockerfile') == 'Dockerfile'
-              assert not s.get('command') and not s.get('entrypoint') and not s.get('user')
-              assert not s.get('environment') and not s.get('env_file')
-              assert len(s['ports']) == 1
+              assert s['image'] == os.environ['VALIDATION_'+name.upper()+'_IMAGE'], "Resolved configuration check failed: s['image'] == os.environ['VALIDATION_'+name.upper()+'_IMAGE']"
+              assert pathlib.Path(s['build']['context']).resolve() == pathlib.Path(name).resolve(), "Resolved configuration check failed: pathlib.Path(s['build']['context']).resolve() == pathlib.Path(name).resolve()"
+              assert (pathlib.Path(s['build']['context']) / s['build'].get('dockerfile', 'Dockerfile')).resolve() == pathlib.Path(name, 'Dockerfile').resolve(), "Resolved configuration check failed: (pathlib.Path(s['build']['context']) / s['build'].get('dockerfile', 'Dockerfile')).resolve() == pathlib.Path(name, 'Dockerfile').resolve()"
+              assert s.get('command') is None and s.get('entrypoint') is None and not s.get('user'), "Resolved configuration check failed: s.get('command') is None and s.get('entrypoint') is None and not s.get('user')"
+              assert not s.get('environment') and not s.get('env_file'), "Resolved configuration check failed: not s.get('environment') and not s.get('env_file')"
+              assert not s.get('privileged') and not s.get('cap_add') and not s.get('devices'), "Resolved configuration check failed: not s.get('privileged') and not s.get('cap_add') and not s.get('devices')"
+              assert not s.get('secrets') and not s.get('configs') and not s.get('volumes_from'), "Resolved configuration check failed: not s.get('secrets') and not s.get('configs') and not s.get('volumes_from')"
+              assert not s.get('network_mode') and not s.get('pid') and not s.get('ipc'), "Resolved configuration check failed: not s.get('network_mode') and not s.get('pid') and not s.get('ipc')"
+              assert set(s.get('networks') or {'default': None}) == {'default'}, 'Unexpected service network attachment'
+              assert not s['build'].get('secrets') and not s['build'].get('ssh'), "Resolved configuration check failed: not s['build'].get('secrets') and not s['build'].get('ssh')"
+              assert len(s['ports']) == 1, "Resolved configuration check failed: len(s['ports']) == 1"
               p=s['ports'][0]
-              assert p['host_ip']=='127.0.0.1' and int(p['published'])==host and p['target']==target
-              assert s['read_only'] and s['cap_drop']==['ALL']
-              assert s['security_opt']==['no-new-privileges:true'] and s['dns']==['127.0.0.1']
-              assert s['pids_limit']==(128 if name=='backend' else 64)
-              assert float(s['cpus'])==(2 if name=='backend' else .5)
+              assert p['host_ip']=='127.0.0.1' and int(p['published'])==host and int(p['target'])==target, "Resolved configuration check failed: p['host_ip']=='127.0.0.1' and int(p['published'])==host and int(p['target'])==target"
+              assert p.get('protocol', 'tcp') == 'tcp', "Resolved configuration check failed: p.get('protocol', 'tcp') == 'tcp'"
+              assert s['read_only'] and s['cap_drop']==['ALL'], "Resolved configuration check failed: s['read_only'] and s['cap_drop']==['ALL']"
+              assert s['security_opt']==['no-new-privileges:true'] and s['dns']==['127.0.0.1'], "Resolved configuration check failed: s['security_opt']==['no-new-privileges:true'] and s['dns']==['127.0.0.1']"
+              validate_byte_limit(name, 'pids_limit', s.get('pids_limit'), 128 if name=='backend' else 64)
+              assert float(s['cpus'])==(2 if name=='backend' else .5), "Resolved configuration check failed: float(s['cpus'])==(2 if name=='backend' else .5)"
               validate_byte_limit(name, 'mem_limit', s.get('mem_limit'), 3*2**30 if name=='backend' else 128*2**20)
               validate_tmpfs(name, s.get('tmpfs'))
           b=c['services']['backend']; f=c['services']['frontend']
           validate_byte_limit('backend', 'memswap_limit', b.get('memswap_limit'), 3*2**30)
-          assert b['stop_grace_period']=='5m0s', f"backend stop_grace_period: resolved={b['stop_grace_period']!r}; expected='5m0s'"
-          assert f['build']['args']=={'VITE_API_URL':'http://127.0.0.1:8000'}
-          assert not b['build'].get('args') and not f.get('volumes')
-          assert len(b['volumes'])==2
+          assert duration_seconds(b['stop_grace_period']) == 300, 'backend shutdown grace must be 300 seconds'
+          assert duration_seconds(f['stop_grace_period']) == 30, 'frontend shutdown grace must be 30 seconds'
+          assert f['build']['args']=={'VITE_API_URL':'http://127.0.0.1:8000'}, "Resolved configuration check failed: f['build']['args']=={'VITE_API_URL':'http://127.0.0.1:8000'}"
+          assert not b['build'].get('args') and not f.get('volumes'), "Resolved configuration check failed: not b['build'].get('args') and not f.get('volumes')"
+          assert len(b['volumes'])==2, "Resolved configuration check failed: len(b['volumes'])==2"
           mounts={v['target']:v for v in b['volumes']}
+          assert set(mounts) == {'/app/backend/.env', '/app/backend/storage/documents'}, "Resolved configuration check failed: set(mounts) == {'/app/backend/.env', '/app/backend/storage/documents'}"
           env=mounts['/app/backend/.env']
-          assert env['source']==os.environ['BACKEND_ENV_FILE'] and env['read_only'] and env['type']=='bind'
+          validate_env_mount(env, os.environ['BACKEND_ENV_FILE'], os.environ['RUNNER_TEMP'], os.getcwd())
           pdf=mounts['/app/backend/storage/documents']
           validate_pdf_volume(pdf, c.get('volumes'), os.environ['COMPOSE_PROJECT_NAME'])
-          assert c['networks']['default']=={'name':os.environ['VALIDATION_NETWORK'],'external':True}
+          assert set(c['networks']) == {'default'}, "Resolved configuration check failed: set(c['networks']) == {'default'}"
+          network = c['networks']['default']
+          assert network['name'] == os.environ['VALIDATION_NETWORK'] and network['external'] is True, "Resolved configuration check failed: network['name'] == os.environ['VALIDATION_NETWORK'] and network['external'] is True"
+          assert not network.get('internal') and not network.get('driver_opts') and not network.get('ipam'), "Resolved configuration check failed: not network.get('internal') and not network.get('driver_opts') and not network.get('ipam')"
           print('PASS: merged configuration, empty config mount, images, ports, storage and security.')
           PY
 

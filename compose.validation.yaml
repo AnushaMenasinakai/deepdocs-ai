@@ -2,6 +2,14 @@
 services:
   backend:
     image: ${VALIDATION_BACKEND_IMAGE:?validation image required}
+    # Merge by target, explicitly replacing the production configuration bind.
+    volumes:
+      - type: bind
+        source: ${BACKEND_ENV_FILE:?empty validation configuration required}
+        target: /app/backend/.env
+        read_only: true
+        bind:
+          create_host_path: false
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=128m,mode=1777
