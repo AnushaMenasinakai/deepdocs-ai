@@ -1,0 +1,22 @@
+# Test-only overlay; always combine with compose.yaml and an explicit -p name.
+services:
+  backend:
+    image: ${VALIDATION_BACKEND_IMAGE:?validation image required}
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 3g
+    memswap_limit: 3g
+    cpus: 2
+    pids_limit: 128
+    # Keep Docker service discovery, but send non-service DNS to container loopback.
+    dns: [127.0.0.1]
+  frontend:
+    image: ${VALIDATION_FRONTEND_IMAGE:?validation image required}
+    dns: [127.0.0.1]
+networks:
+  default:
+    external: true
+    name: ${VALIDATION_NETWORK:?validation network required}

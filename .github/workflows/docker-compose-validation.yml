@@ -1,0 +1,338 @@
+name: Docker Compose integration validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compose-validation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    env:
+      COMPOSE_PROJECT_NAME: dd-validation-${{ github.run_id }}-${{ github.run_attempt }}
+      VALIDATION_NETWORK: dd-validation-${{ github.run_id }}-${{ github.run_attempt }}
+      VALIDATION_BACKEND_IMAGE: deepdocs-backend:compose-${{ github.run_id }}-${{ github.run_attempt }}
+      VALIDATION_FRONTEND_IMAGE: deepdocs-frontend:compose-${{ github.run_id }}-${{ github.run_attempt }}
+      COMPOSE_FILE: compose.yaml:compose.validation.yaml
+      COMPOSE_PARALLEL_LIMIT: '1'
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resource and configuration preflight
+        timeout-minutes: 2
+        run: |
+          test "$(uname -s)/$(uname -m)" = Linux/x86_64
+          test "$(docker info --format '{{.OSType}}')" = linux
+          export DOCKER_ROOT=$(docker info --format '{{.DockerRootDir}}')
+          echo "DOCKER_ROOT=$DOCKER_ROOT" >> "$GITHUB_ENV"
+          python3 - <<'PY'
+          import os, shutil
+          ram = int(dict(x.split(':', 1) for x in open('/proc/meminfo'))['MemAvailable'].split()[0]) * 1024
+          disk = min(shutil.disk_usage(p).free for p in [os.getcwd(), os.environ['DOCKER_ROOT']])
+          print(f'Available RAM={ram/2**30:.2f} GiB; free disk={disk/2**30:.2f} GiB')
+          if ram < 5*2**30 or disk < 12*2**30:
+              raise SystemExit('Require 5 GiB available RAM and 12 GiB disk; no automatic pruning.')
+          PY
+          test_dir=$(mktemp -d "$RUNNER_TEMP/compose-validation.XXXXXX")
+          touch "$test_dir/empty.env"
+          chmod 0644 "$test_dir/empty.env"
+          echo "TEST_DIR=$test_dir" >> "$GITHUB_ENV"
+          echo "BACKEND_ENV_FILE=$test_dir/empty.env" >> "$GITHUB_ENV"
+          # Force Compose interpolation to use our empty file, never an implicit .env.
+          echo "COMPOSE_ENV_FILES=$test_dir/empty.env" >> "$GITHUB_ENV"
+          echo "COMPOSE_DISABLE_ENV_FILE=1" >> "$GITHUB_ENV"
+
+      - name: Validate resolved Compose configuration
+        timeout-minutes: 1
+        run: |
+          docker compose -p "$COMPOSE_PROJECT_NAME" config --format json > "$TEST_DIR/resolved.json"
+          python3 - <<'PY'
+          import json, os, pathlib
+          c = json.load(open(os.environ['TEST_DIR']+'/resolved.json'))
+          assert c['name'] == os.environ['COMPOSE_PROJECT_NAME']
+          assert set(c['services']) == {'frontend', 'backend'}
+          assert pathlib.Path(os.environ['BACKEND_ENV_FILE']).read_bytes() == b''
+          for name, host, target in [('backend',8000,8000),('frontend',5173,8080)]:
+              s = c['services'][name]
+              assert s['image'] == os.environ['VALIDATION_'+name.upper()+'_IMAGE']
+              assert pathlib.Path(s['build']['context']).resolve() == pathlib.Path(name).resolve()
+              assert s['build'].get('dockerfile', 'Dockerfile') == 'Dockerfile'
+              assert not s.get('command') and not s.get('entrypoint') and not s.get('user')
+              assert not s.get('environment') and not s.get('env_file')
+              assert len(s['ports']) == 1
+              p=s['ports'][0]
+              assert p['host_ip']=='127.0.0.1' and int(p['published'])==host and p['target']==target
+              assert s['read_only'] and s['cap_drop']==['ALL']
+              assert s['security_opt']==['no-new-privileges:true'] and s['dns']==['127.0.0.1']
+              assert s['pids_limit']==(128 if name=='backend' else 64)
+              assert float(s['cpus'])==(2 if name=='backend' else .5)
+              assert int(s['mem_limit'])==(3*2**30 if name=='backend' else 128*2**20)
+              assert len(s['tmpfs'])==1 and s['tmpfs'][0].startswith('/tmp:rw,noexec,nosuid,')
+          b=c['services']['backend']; f=c['services']['frontend']
+          assert b['memswap_limit']==3*2**30 and b['stop_grace_period']=='5m0s'
+          assert f['build']['args']=={'VITE_API_URL':'http://127.0.0.1:8000'}
+          assert not b['build'].get('args') and not f.get('volumes')
+          assert len(b['volumes'])==2
+          mounts={v['target']:v for v in b['volumes']}
+          env=mounts['/app/backend/.env']
+          assert env['source']==os.environ['BACKEND_ENV_FILE'] and env['read_only'] and env['type']=='bind'
+          pdf=mounts['/app/backend/storage/documents']
+          assert pdf['type']=='volume' and pdf['source']=='pdf_storage'
+          assert c['volumes']['pdf_storage']['name']==os.environ['COMPOSE_PROJECT_NAME']+'_pdf_storage'
+          assert not c['volumes']['pdf_storage'].get('external')
+          assert c['networks']['default']=={'name':os.environ['VALIDATION_NETWORK'],'external':True}
+          print('PASS: merged configuration, empty config mount, images, ports, storage and security.')
+          PY
+
+      - name: Build frontend then backend
+        timeout-minutes: 28
+        run: |
+          timeout --signal=TERM --kill-after=30s 10m docker compose -p "$COMPOSE_PROJECT_NAME" build frontend
+          # Recheck headroom before the larger build.
+          python3 - <<'PY'
+          import os, shutil
+          ram=int(dict(x.split(':',1) for x in open('/proc/meminfo'))['MemAvailable'].split()[0])*1024
+          disk=shutil.disk_usage(os.environ['DOCKER_ROOT']).free
+          print(f'Before backend build: RAM={ram/2**30:.2f} GiB, disk={disk/2**30:.2f} GiB')
+          assert ram>=5*2**30 and disk>=10*2**30, 'Insufficient remaining build resources'
+          PY
+          timeout --signal=TERM --kill-after=30s 17m docker compose -p "$COMPOSE_PROJECT_NAME" build backend
+
+      - name: Establish fail-closed network isolation
+        timeout-minutes: 2
+        run: |
+          # Support Docker's iptables backend only (including iptables-nft).
+          # Never silently assume the native Docker nftables backend is equivalent.
+          docker info --format '{{json .}}' > "$TEST_DIR/docker-info.json"
+          sudo nft list tables > "$TEST_DIR/nft-tables.txt"
+          if sudo test -f /etc/docker/daemon.json; then
+            sudo cat /etc/docker/daemon.json > "$TEST_DIR/daemon.json"
+          else
+            echo '{}' > "$TEST_DIR/daemon.json"
+          fi
+          python3 - <<'PY'
+          import json, os, subprocess
+          base=os.environ['TEST_DIR']
+          info=json.load(open(base+'/docker-info.json')); config=json.load(open(base+'/daemon.json'))
+          backend=info.get('FirewallBackend',config.get('firewall-backend','iptables'))
+          assert backend=='iptables', 'Unsupported firewall backend; refusing startup'
+          assert 'docker-bridges' not in open(base+'/nft-tables.txt').read(), 'Native Docker nftables detected'
+          args=subprocess.check_output(['ps','-C','dockerd','-o','args='],text=True)
+          assert args.strip() and 'nftables' not in args and '--iptables=false' not in args
+          assert config.get('iptables',True) is True
+          print('Docker firewall backend: iptables; native Docker nftables not detected.')
+          PY
+          sudo iptables --version
+          sudo iptables -w 5 -C FORWARD -j DOCKER-USER
+          sudo iptables -w 5 -t nat -S DOCKER >/dev/null
+          bridge="dv$(printf '%s' "$COMPOSE_PROJECT_NAME" | sha256sum | cut -c1-10)"
+          echo "$bridge" > "$TEST_DIR/bridge"
+          docker network create --driver bridge \
+            --label "deepdocs.validation=$COMPOSE_PROJECT_NAME" \
+            --opt "com.docker.network.bridge.name=$bridge" "$VALIDATION_NETWORK"
+          test "$(docker network inspect --format '{{.Internal}}/{{.EnableIPv6}}' "$VALIDATION_NETWORK")" = false/false
+          # Reject new off-bridge traffic, but allow same-bridge communication.
+          # Host-published request replies go to INPUT and must be allowed separately.
+          sudo iptables -w 5 -I DOCKER-USER 1 -i "$bridge" ! -o "$bridge" \
+            -m comment --comment "$COMPOSE_PROJECT_NAME" -j REJECT
+          sudo iptables -w 5 -I INPUT 1 -i "$bridge" -m conntrack ! --ctstate ESTABLISHED,RELATED \
+            -m comment --comment "$COMPOSE_PROJECT_NAME" -j REJECT
+          sudo iptables -w 5 -C DOCKER-USER -i "$bridge" ! -o "$bridge" -m comment --comment "$COMPOSE_PROJECT_NAME" -j REJECT
+          sudo iptables -w 5 -C INPUT -i "$bridge" -m conntrack ! --ctstate ESTABLISHED,RELATED -m comment --comment "$COMPOSE_PROJECT_NAME" -j REJECT
+          # DNS upstream is container loopback in the overlay, preventing the Docker
+          # embedded resolver from forwarding external lookups through the host.
+
+      - name: Start and verify services
+        timeout-minutes: 4
+        run: |
+          docker compose -p "$COMPOSE_PROJECT_NAME" up -d --no-build --pull never
+          for service in backend frontend; do
+            id=$(docker compose -p "$COMPOSE_PROJECT_NAME" ps -q "$service")
+            for attempt in $(seq 1 60); do
+              test "$(docker inspect --format '{{.State.Running}}' "$id")" = true
+              health=$(docker inspect --format '{{.State.Health.Status}}' "$id")
+              if [ "$health" = healthy ]; then break; fi
+              if [ "$health" = unhealthy ]; then exit 1; fi
+              sleep 2
+            done
+            test "$health" = healthy
+          done
+          docker compose -p "$COMPOSE_PROJECT_NAME" exec -T frontend busybox wget -Y off -q -T 3 -O /dev/null http://backend:8000/api/health
+          python3 - <<'PY'
+          import json, os, subprocess
+          for service,uid,mem,cpu,pids in [('backend','10001',3*2**30,2000000000,128),('frontend','101',128*2**20,500000000,64)]:
+              cmd=['docker','compose','-p',os.environ['COMPOSE_PROJECT_NAME']]
+              cid=subprocess.check_output(cmd+['ps','-q',service],text=True).strip()
+              c=json.loads(subprocess.check_output(['docker','inspect',cid]))[0]
+              image=json.loads(subprocess.check_output(['docker','image','inspect',c['Image']]))[0]
+              for key in ['Cmd','Entrypoint','Env']:
+                  assert c['Config'][key]==image['Config'][key]
+              forbidden=('MONGODB_','QDRANT_','GEMINI_','JWT_','AWS_','GITHUB_TOKEN=')
+              assert not any(v.startswith(forbidden) for v in c['Config']['Env'])
+              assert c['Config']['User']==uid+':'+uid
+              assert subprocess.check_output(cmd+['exec','-T',service,'id','-u'],text=True).strip()==uid
+              h=c['HostConfig']
+              assert h['ReadonlyRootfs'] and h['CapDrop']==['ALL']
+              assert 'no-new-privileges:true' in h['SecurityOpt']
+              assert h['Memory']==mem and h['NanoCpus']==cpu and h['PidsLimit']==pids
+              assert h['Dns']==['127.0.0.1']
+              assert set(c['NetworkSettings']['Networks'])=={os.environ['VALIDATION_NETWORK']}
+              assert all(x['HostIp']=='127.0.0.1' for bindings in c['NetworkSettings']['Ports'].values() for x in (bindings or []))
+          print('PASS: running/healthy services, unchanged commands, nonroot security and service DNS/HTTP.')
+          PY
+          # Reserved documentation address: the reject counter must increase, proving
+          # the attempt was stopped locally rather than relying on remote unavailability.
+          sudo iptables-save -c > "$TEST_DIR/firewall-before"
+          timeout 15s docker compose -p "$COMPOSE_PROJECT_NAME" exec -T backend python -B - <<'PY'
+          import socket
+          try:
+              with socket.create_connection(('198.51.100.1',443),timeout=3):
+                  raise AssertionError('External egress unexpectedly succeeded')
+          except OSError:
+              pass
+          PY
+          sudo iptables-save -c > "$TEST_DIR/firewall-after"
+          python3 - <<'PY'
+          import os,re
+          def packets(file):
+              lines=open(os.environ['TEST_DIR']+'/'+file).read().splitlines()
+              lines=[x for x in lines if '-A DOCKER-USER ' in x and os.environ['COMPOSE_PROJECT_NAME'] in x]
+              assert len(lines)==1
+              return int(re.match(r'\[(\d+):',lines[0])[1])
+          assert packets('firewall-after')>packets('firewall-before'), 'Egress rejection not proven'
+          print('PASS: external egress rejected by scoped firewall rule.')
+          PY
+
+      - name: HTTP and CORS contracts
+        timeout-minutes: 2
+        run: |
+          python3 - <<'PY'
+          import re, json, urllib.request, urllib.error
+          opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
+          def request(port,path,headers=None,method='GET'):
+              req=urllib.request.Request(f'http://127.0.0.1:{port}{path}',headers=headers or {},method=method)
+              try: r=opener.open(req,timeout=5)
+              except urllib.error.HTTPError as e: r=e
+              with r: return r.code,r.read(),r.headers
+          code,root,_=request(5173,'/'); assert code==200 and b'<div id="root">' in root
+          for path in ['/login','/knowledge-bases','/documents','/ask']:
+              code,body,_=request(5173,path); assert code==200 and body==root
+          assets=re.findall(r'(?:src|href)="(/assets/[^"\s]+)"',root.decode()); assert assets
+          js=b''
+          for path in assets:
+              code,body,h=request(5173,path); assert code==200 and body and 'text/html' not in h['Content-Type']
+              if path.endswith('.js'): js+=body
+          assert b'http://127.0.0.1:8000' in js and b'http://backend:8000' not in js
+          assert request(5173,'/assets/missing-validation.js')[0]==404
+          origin='http://127.0.0.1:5173'
+          code,body,h=request(8000,'/api/health',{'Origin':origin})
+          assert code==200 and json.loads(body)['status']=='ok'
+          assert h['Access-Control-Allow-Origin']==origin and 'Retry-After' in h['Access-Control-Expose-Headers']
+          code,body,_=request(8000,'/api/ready'); assert code==503 and json.loads(body)['status']=='not_ready'
+          code,_,h=request(8000,'/api/health',{'Origin':origin,'Access-Control-Request-Method':'GET','Access-Control-Request-Headers':'authorization,content-type'},'OPTIONS')
+          assert code==200 and h['Access-Control-Allow-Origin']==origin
+          assert 'GET' in h['Access-Control-Allow-Methods']
+          assert all(x in h['Access-Control-Allow-Headers'].lower() for x in ['authorization','content-type'])
+          for method in ['GET','OPTIONS']:
+              _,_,h=request(8000,'/api/health',{'Origin':'https://unapproved.example','Access-Control-Request-Method':'GET'},method)
+              assert h.get('Access-Control-Allow-Origin') is None
+          print('PASS: host HTTP, SPA/assets, compiled API origin, readiness and CORS.')
+          PY
+
+      - name: PDF volume persistence across backend recreation
+        timeout-minutes: 4
+        run: |
+          old=$(docker compose -p "$COMPOSE_PROJECT_NAME" ps -q backend)
+          docker inspect --format '{{range .Mounts}}{{if eq .Destination "/app/backend/storage/documents"}}{{.Name}}{{end}}{{end}}' "$old" > "$TEST_DIR/pdf-volume"
+          docker compose -p "$COMPOSE_PROJECT_NAME" exec -T backend python -B - "$COMPOSE_PROJECT_NAME" <<'PY'
+          import hashlib,os,pathlib,sys
+          assert os.getuid()==os.getgid()==10001
+          assert pathlib.Path('/app/backend/.env').read_bytes()==b''
+          p=pathlib.Path('/app/backend/storage/documents')/(sys.argv[1]+'.pdf')
+          data=b'%PDF-1.4\n% Synthetic storage-only fixture; not an ingestion test.\n'
+          with p.open('xb') as f: f.write(data)
+          assert p.stat().st_uid==p.stat().st_gid==10001
+          print('Fixture checksum:',hashlib.sha256(data).hexdigest())
+          PY
+          docker compose -p "$COMPOSE_PROJECT_NAME" up -d --no-deps --force-recreate --no-build --pull never backend
+          new=$(docker compose -p "$COMPOSE_PROJECT_NAME" ps -q backend)
+          test "$old" != "$new"
+          test "$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/app/backend/storage/documents"}}{{.Name}}{{end}}{{end}}' "$new")" = "$(cat "$TEST_DIR/pdf-volume")"
+          for attempt in $(seq 1 60); do
+            health=$(docker inspect --format '{{.State.Health.Status}}' "$new")
+            if [ "$health" = healthy ]; then break; fi
+            test "$(docker inspect --format '{{.State.Running}}' "$new")" = true
+            sleep 2
+          done
+          test "$health" = healthy
+          docker compose -p "$COMPOSE_PROJECT_NAME" exec -T backend python -B - "$COMPOSE_PROJECT_NAME" <<'PY'
+          import hashlib,pathlib,sys
+          p=pathlib.Path('/app/backend/storage/documents')/(sys.argv[1]+'.pdf')
+          expected=b'%PDF-1.4\n% Synthetic storage-only fixture; not an ingestion test.\n'
+          assert hashlib.sha256(p.read_bytes()).digest()==hashlib.sha256(expected).digest()
+          assert p.stat().st_uid==p.stat().st_gid==10001
+          print('PASS: fixture checksum, ownership and volume identity survived recreation.')
+          PY
+          bridge=$(cat "$TEST_DIR/bridge")
+          sudo iptables -w 5 -C DOCKER-USER -i "$bridge" ! -o "$bridge" -m comment --comment "$COMPOSE_PROJECT_NAME" -j REJECT
+          sudo iptables -w 5 -C INPUT -i "$bridge" -m conntrack ! --ctstate ESTABLISHED,RELATED -m comment --comment "$COMPOSE_PROJECT_NAME" -j REJECT
+
+      - name: Graceful idle shutdown
+        timeout-minutes: 6
+        run: |
+          timeout 320s docker compose -p "$COMPOSE_PROJECT_NAME" stop
+          for service in backend frontend; do
+            id=$(docker compose -p "$COMPOSE_PROJECT_NAME" ps -aq "$service")
+            test "$(docker inspect --format '{{.State.Running}}/{{.State.ExitCode}}/{{.State.OOMKilled}}' "$id")" = false/0/false
+          done
+          echo 'PASS: bounded idle shutdown only; active-request draining is not tested.'
+
+      - name: Diagnostics and project-scoped cleanup
+        if: always()
+        timeout-minutes: 3
+        run: |
+          # Labels scope removal even when setup or Compose startup failed partway.
+          # Continue cleanup after individual errors, but report incomplete cleanup.
+          set +e
+          cleanup_failed=0
+          for id in $(docker ps -aq --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME"); do
+            docker inspect --format 'State={{.State.Status}} Exit={{.State.ExitCode}} OOM={{.State.OOMKilled}} Health={{if .State.Health}}{{.State.Health.Status}}{{end}}' "$id" || true
+            timeout 8s docker stats --no-stream --format 'Memory={{.MemUsage}} CPU={{.CPUPerc}} PIDs={{.PIDs}}' "$id" || true
+            docker rm -f "$id" || cleanup_failed=1
+          done
+          for volume in $(docker volume ls -q --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME"); do
+            docker volume rm "$volume" || cleanup_failed=1
+          done
+          if docker network inspect "$VALIDATION_NETWORK" >/dev/null 2>&1; then
+            if [ "$(docker network inspect --format '{{index .Labels "deepdocs.validation"}}' "$VALIDATION_NETWORK")" = "$COMPOSE_PROJECT_NAME" ]; then
+              docker network rm "$VALIDATION_NETWORK" || cleanup_failed=1
+            else
+              cleanup_failed=1
+            fi
+          fi
+          # Keep isolation in place if a disposable container could not be removed.
+          if [ -z "$(docker ps -aq --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME")" ] && [ -n "${TEST_DIR:-}" ] && [ -f "$TEST_DIR/bridge" ]; then
+            bridge=$(cat "$TEST_DIR/bridge")
+            if sudo iptables -w 5 -C DOCKER-USER -i "$bridge" ! -o "$bridge" -m comment --comment "$COMPOSE_PROJECT_NAME" -j REJECT 2>/dev/null; then
+              sudo iptables -w 5 -D DOCKER-USER -i "$bridge" ! -o "$bridge" -m comment --comment "$COMPOSE_PROJECT_NAME" -j REJECT || cleanup_failed=1
+            fi
+            if sudo iptables -w 5 -C INPUT -i "$bridge" -m conntrack ! --ctstate ESTABLISHED,RELATED -m comment --comment "$COMPOSE_PROJECT_NAME" -j REJECT 2>/dev/null; then
+              sudo iptables -w 5 -D INPUT -i "$bridge" -m conntrack ! --ctstate ESTABLISHED,RELATED -m comment --comment "$COMPOSE_PROJECT_NAME" -j REJECT || cleanup_failed=1
+            fi
+          fi
+          for image in "$VALIDATION_FRONTEND_IMAGE" "$VALIDATION_BACKEND_IMAGE"; do
+            if docker image inspect "$image" >/dev/null 2>&1; then docker image rm "$image" || cleanup_failed=1; fi
+          done
+          # No global prune, production resources, raw logs or environment dumps.
+          exit "$cleanup_failed"
