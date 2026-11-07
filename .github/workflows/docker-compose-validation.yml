@@ -58,8 +58,54 @@ jobs:
         run: |
           docker compose -p "$COMPOSE_PROJECT_NAME" config --format json > "$TEST_DIR/resolved.json"
           docker compose version --short
+          export VALIDATION_COMPOSE_VERSION="$(docker compose version --short)"
           python3 - <<'PY'
-          import json, os, pathlib, re
+          import hashlib, json, os, pathlib, re
+          def validate_creation_policy(bind, version, source, compose_files):
+              assert isinstance(bind, dict), 'Invalid bind options'
+              if 'create_host_path' in bind:
+                  assert bind['create_host_path'] is False, 'Host-path creation is not disabled'
+                  return
+              # Compose 2.38.2 / compose-go 2.7.1 serialize this bool with omitempty.
+              # Omission alone is NOT evidence of false. Require the reviewed version
+              # and exact reviewed overlay (explicit false, no include/extends/anchors).
+              # read_text normalizes checkout line endings. Re-review this proof when
+              # changing the overlay or Compose version; do not just refresh the hash.
+              assert version in ('2.38.2', 'v2.38.2'), 'Unreviewed Compose omission semantics'
+              assert compose_files == 'compose.yaml:compose.validation.yaml', 'Unexpected Compose inputs'
+              assert hashlib.sha256(source.encode('utf-8')).hexdigest() == 'd45982421d355174cd3f04144e796fff228dd14f5bcbe5ee6ba6dc02fcf21e1a', 'Unreviewed source host-path creation policy'
+          def test_creation_policy(source):
+              cases = [
+                  ({'create_host_path': False}, '2.38.2', source, True),
+                  ({}, '2.38.2', source, True),
+                  ({'create_host_path': True}, '2.38.2', source, False),
+                  ({'create_host_path': 'false'}, '2.38.2', source, False),
+                  ({'create_host_path': None}, '2.38.2', source, False),
+                  ({'create_host_path': 0}, '2.38.2', source, False),
+                  (None, '2.38.2', source, False),
+                  ([], '2.38.2', source, False),
+                  ({}, '2.38.3', source, False),
+                  ({}, '2.38.2', source.replace('create_host_path: false', 'create_host_path: true'), False),
+                  ({}, '2.38.2', source.replace('          create_host_path: false\n', ''), False),
+                  ({}, '2.38.2', source.replace('read_only: true', 'read_only: false'), False),
+                  ({}, '2.38.2', source.replace('${BACKEND_ENV_FILE:?empty validation configuration required}', './backend/.env'), False),
+              ]
+              for number, (bind, version, text, accepted) in enumerate(cases, 1):
+                  try:
+                      validate_creation_policy(bind, version, text, 'compose.yaml:compose.validation.yaml')
+                      actual = True
+                  except AssertionError:
+                      actual = False
+                  assert actual == accepted, f'Creation policy regression {number}'
+              try:
+                  validate_creation_policy({}, '2.38.2', source, 'compose.yaml')
+              except AssertionError:
+                  pass
+              else:
+                  raise AssertionError('Unapproved Compose inputs accepted')
+              print('PASS: 14 host-path creation policy regressions')
+          override_source = pathlib.Path('compose.validation.yaml').read_text(encoding='utf-8')
+          test_creation_policy(override_source)
           def validate_env_mount(mount, expected, temporary_root, workspace):
               equal = False
               check = 'temporary_path_isolation'
@@ -82,7 +128,8 @@ jobs:
                   assert mount.get('read_only') is True, "Resolved configuration check failed: mount.get('read_only') is True"
                   check = 'create_host_path'
                   bind = mount.get('bind', {})
-                  assert isinstance(bind, dict) and bind.get('create_host_path') is False, 'Host-path creation must be explicitly disabled in resolved configuration'
+                  validate_creation_policy(bind, os.environ['VALIDATION_COMPOSE_VERSION'],
+                                           override_source, os.environ['COMPOSE_FILE'])
                   # Read only the approved temporary file, never a rejected source.
                   check = 'temporary_file_empty'
                   assert approved.read_bytes() == b'', "Resolved configuration check failed: approved.read_bytes() == b''"
