@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Build from the repository root: docker build -t deepdocs-backend:docker-a backend
-# Linux amd64 CPU image; other architectures require separate verification.
+# Linux amd64/arm64 CPU image; other architectures fail closed.
 FROM python:3.13.15-slim-bookworm@sha256:2325bb286ec344af3e5898cc224b5844e2707ac6e26b1632516fd3edc84a5e26
 
 ENV PYTHONUNBUFFERED=1 \
@@ -12,7 +12,8 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app/backend
 COPY requirements.txt docker/requirements-cpu.txt ./
-RUN test "$(dpkg --print-architecture)" = amd64 \
+RUN case "$(dpkg --print-architecture)" in amd64|arm64) ;; *) echo 'Unsupported target architecture' >&2; exit 1 ;; esac \
+    && python -c "import pathlib, re; pins = [line for line in pathlib.Path('requirements-cpu.txt').read_text().splitlines() if line and not line.startswith('#')]; assert len(pins) == 2 and all(re.search(r'#sha256=[0-9a-f]{64}(?= ;)', line) for line in pins), 'CPU wheel pins require SHA256 hashes'" \
     && python -m pip install --index-url https://pypi.org/simple --only-binary=:all: -r requirements-cpu.txt -r requirements.txt \
     && python -m pip check
 
