@@ -57,6 +57,19 @@ jobs:
       - name: Start isolated production command
         timeout-minutes: 1
         run: |
+          python3 - <<'PY'
+          import os, pathlib, re, subprocess
+          workspace = pathlib.Path(os.environ['GITHUB_WORKSPACE']).resolve(strict=True)
+          tests = workspace / 'backend' / 'tests'
+          assert tests.is_dir() and tests.resolve(strict=True) == tests
+          tracked = set(subprocess.check_output(
+              ['git', 'ls-files', 'backend/tests'], text=True).splitlines())
+          files = list(tests.iterdir())
+          assert files and all(p.is_file() and not p.is_symlink() and p.suffix == '.py'
+                               and p.relative_to(workspace).as_posix() in tracked for p in files), 'Only tracked Python test sources may be mounted'
+          workflow = (workspace / '.github/workflows/docker-backend-arm64-validation.yml').read_text()
+          assert not re.search(r'^\s*docker\s+cp\b', workflow, re.M), 'Use the read-only test mount, not post-start copying'
+          PY
           docker volume create "$VOLUME"
           # No environment-file mount, credentials, published ports or command override.
           docker run --detach --name "$CONTAINER" --network none \
@@ -65,6 +78,7 @@ jobs:
             --memory 3g --memory-swap 3g --cpus 2 --pids-limit 128 \
             --stop-timeout 60 \
             --mount "type=volume,source=$VOLUME,target=/app/backend/storage/documents" \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/backend/tests,target=/tmp/tests,readonly" \
             "$IMAGE"
 
       - name: Validate isolation, health and filesystem
@@ -79,7 +93,7 @@ jobs:
           done
           test "$health" = healthy
           python3 - <<'PY'
-          import json, os, subprocess
+          import json, os, pathlib, subprocess
           c = json.loads(subprocess.check_output(['docker', 'inspect', os.environ['CONTAINER']], timeout=5))[0]
           image = json.loads(subprocess.check_output(['docker', 'image', 'inspect', os.environ['IMAGE']], timeout=5))[0]
           h = c['HostConfig']
@@ -102,7 +116,11 @@ jobs:
           assert len(volumes) == 1
           assert volumes[0]['Name'] == os.environ['VOLUME']
           assert volumes[0]['Destination'] == '/app/backend/storage/documents' and volumes[0]['RW']
-          assert all(m['Type'] == 'volume' or (m['Type'] == 'tmpfs' and m['Destination'] == '/tmp') for m in c['Mounts'])
+          binds = [m for m in c['Mounts'] if m['Type'] == 'bind']
+          assert len(binds) == 1
+          assert binds[0]['Source'] == str(pathlib.Path(os.environ['GITHUB_WORKSPACE']).resolve() / 'backend' / 'tests')
+          assert binds[0]['Destination'] == '/tmp/tests' and binds[0]['RW'] is False
+          assert all(m['Type'] in ('volume', 'bind') or (m['Type'] == 'tmpfs' and m['Destination'] == '/tmp') for m in c['Mounts'])
           print('PASS: unchanged image command/environment, no credentials, network none and security limits.')
           PY
           timeout --signal=TERM --kill-after=5s 30s docker exec -i "$CONTAINER" python -B - <<'PY'
@@ -202,9 +220,8 @@ jobs:
       - name: Selected existing offline regressions
         timeout-minutes: 6
         run: |
-          # Only test sources are copied; never mount the repository or its .env.
+          # Only tracked Python test sources are mounted read-only at startup.
           # These suites use unittest, so no extra test packages are installed.
-          docker cp backend/tests "$CONTAINER:/tmp/tests"
           timeout --signal=TERM --kill-after=10s 300s docker exec \
             --env PYTHONPATH=/app/backend:/tmp/tests \
             "$CONTAINER" python -B -m unittest -v \
