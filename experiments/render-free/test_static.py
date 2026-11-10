@@ -2,6 +2,8 @@
 import ast
 from pathlib import Path
 import unittest
+from types import SimpleNamespace
+from pooling_contract import require_mean_pooling
 
 HERE = Path(__file__).resolve().parent
 SOURCE = (HERE / 'run.py').read_text()
@@ -14,6 +16,43 @@ def result(values):
     return {'events':[{'event':'vectors', 'corpus_count':2, 'values':values}]}
 
 class Contracts(unittest.TestCase):
+    def pooler(self, **changes):
+        config = dict(embedding_dimension=384, pooling_mode='mean', include_prompt=True)
+        config.update(changes)
+        return SimpleNamespace(**config, get_config_dict=lambda: config)
+
+    def test_missing_legacy_key_regression(self):
+        pooler = self.pooler()
+        self.assertNotIn('pooling_mode_mean_tokens', pooler.get_config_dict())
+        self.assertEqual(require_mean_pooling(pooler), 'mean')
+
+    def test_single_mean_sequence_formats(self):
+        for mode in (['mean'], ('mean',)):
+            self.assertEqual(require_mean_pooling(self.pooler(pooling_mode=mode)), 'mean')
+
+    def test_unsupported_pooling_fails_explicitly(self):
+        for mode in (None, True, [], 'max', 'cls', ['mean', 'max'], ['mean', 'mean']):
+            with self.subTest(mode=mode), self.assertRaisesRegex(ValueError, 'explicit mean-only'):
+                require_mean_pooling(self.pooler(pooling_mode=mode))
+
+    def test_effective_mode_disagreement_rejected(self):
+        pooler = self.pooler()
+        pooler.pooling_mode = 'max'
+        with self.assertRaisesRegex(ValueError, 'explicit mean-only'):
+            require_mean_pooling(pooler)
+
+    def test_unsupported_dimensions_and_prompt_exclusion(self):
+        for change in ({'embedding_dimension':768}, {'include_prompt':False},
+                       {'pooling_mode_mean_tokens':True}):
+            with self.subTest(change=change), self.assertRaisesRegex(ValueError, 'Unsupported pooling'):
+                require_mean_pooling(self.pooler(**change))
+
+    def test_no_default_for_missing_mode(self):
+        pooler = self.pooler()
+        del pooler.get_config_dict()['pooling_mode']
+        with self.assertRaisesRegex(ValueError, 'explicit mean-only'):
+            require_mean_pooling(pooler)
+
     def test_identical_vectors(self):
         a, b = [1.] + [0.]*383, [0.,1.] + [0.]*382
         out = compare(result([a,b,a]), result([a,b,a]))

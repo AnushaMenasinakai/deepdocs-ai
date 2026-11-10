@@ -27,9 +27,11 @@ class ONNXModel:
         import onnxruntime as ort
         from tokenizers import Tokenizer
         settings = json.loads(Path('/experiment/model/settings.json').read_text())
+        if settings.get('pooling') != 'mean' or settings.get('dimension') != 384:
+            raise ValueError('Unsupported exported pooling contract')
         self.tokenizer = Tokenizer.from_file('/experiment/model/tokenizer.json')
         self.tokenizer.enable_truncation(max_length=settings['max_length'])
-        self.tokenizer.enable_padding(pad_id=0, pad_token='[PAD]')
+        self.tokenizer.enable_padding(pad_id=settings['pad_id'], pad_token=settings['pad_token'])
         options = ort.SessionOptions()
         options.intra_op_num_threads = 1
         options.inter_op_num_threads = 1
