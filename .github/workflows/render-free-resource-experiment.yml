@@ -1,0 +1,71 @@
+name: Render Free resource experiment
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: render-resource-experiment
+  cancel-in-progress: false
+jobs:
+  experiment:
+    # Avoid consuming potentially billable private-repository runner minutes.
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      REFERENCE_IMAGE: deepdocs-reference:experiment-${{ github.run_id }}-${{ github.run_attempt }}
+      EXPERIMENT_IMAGE: deepdocs-onnx:experiment-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Resource preflight
+        run: |
+          set -euo pipefail
+          test "$(uname -s)/$(uname -m)" = Linux/x86_64
+          python3 - <<'PY'
+          import shutil
+          available = int(next(l for l in open('/proc/meminfo') if l.startswith('MemAvailable:')).split()[1])*1024
+          free = shutil.disk_usage('.').free
+          print({'available_bytes':available, 'free_disk_bytes':free})
+          assert available >= 5*2**30 and free >= 14*2**30
+          PY
+      - name: Check experiment contracts
+        run: python3 experiments/render-free/test_static.py
+      - name: Build unchanged reference
+        timeout-minutes: 18
+        run: timeout 17m docker build --platform linux/amd64 -t "$REFERENCE_IMAGE" backend
+      - name: Build isolated ONNX experiment and export offline
+        timeout-minutes: 7
+        run: |
+          timeout 6m docker build --platform linux/amd64 --build-arg REFERENCE_IMAGE="$REFERENCE_IMAGE" -t "$EXPERIMENT_IMAGE" experiments/render-free
+          docker image inspect "$EXPERIMENT_IMAGE" --format 'architecture={{.Architecture}} size={{.Size}}'
+      - name: Sequential reference and constrained experiments
+        timeout-minutes: 28
+        run: python3 experiments/render-free/run.py
+      - name: Print comparison evidence
+        if: always()
+        run: |
+          if test -f "$RUNNER_TEMP/render-experiment/compatibility.json"; then
+            cat "$RUNNER_TEMP/render-experiment/compatibility.json" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Preserve synthetic experiment evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: render-resource-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/render-experiment/
+          retention-days: 3
+          if-no-files-found: warn
+      - name: Cleanup only owned resources
+        if: always()
+        run: |
+          for runtime in torch onnx; do
+            for mode in calibration limited; do
+              docker rm -f "deepdocs-render-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${runtime}-${mode}" 2>/dev/null || true
+            done
+          done
+          docker image rm "$EXPERIMENT_IMAGE" "$REFERENCE_IMAGE" 2>/dev/null || true
