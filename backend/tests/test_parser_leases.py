@@ -6,6 +6,10 @@ import threading
 import unittest
 from unittest.mock import Mock
 from parser_leases import ParserLeases
+from cpu_workers import CPUWorkers, SubmissionRejected
+from admission_lifecycle import AdmissionService
+from config import ExpensiveAdmissionSettings
+from expensive_admission import CapacityExceeded, Resource
 from storage_contract import MaterializedPDF, StorageUncertain
 from storage_workers import StorageWorkers, StorageRejected
 from pdf_subprocess import PDFSubmissionRejected, PDFInfrastructureFailure
@@ -33,8 +37,19 @@ class LeaseTests(unittest.IsolatedAsyncioTestCase):
         self.lease = MaterializedPDF(self.path, lambda:self.path.unlink())
         self.workers = StorageWorkers(Mock())
         self.supervisor = Supervisor()
-        self.owner = ParserLeases(self.workers, _supervisor_factory=lambda:self.supervisor)
+        self.admission = AdmissionService(ExpensiveAdmissionSettings())
+        self.cpu = CPUWorkers(self.admission)
+        self.cpu._pdf_supervisor = self.supervisor
+        self.owner = ParserLeases(self.workers, self.cpu)
     async def asyncTearDown(self):
+        # Test-only disposal of deliberately unresolved doubles. Production never
+        # forces these signals or releases ambiguous leases.
+        for job in tuple(self.owner.jobs.values()):
+            job.session._inflight = False
+            job.session._release_parser_lease()
+            job.context.__exit__(None, None, None)
+        await self.admission.aclose()
+        await self.cpu.aclose()
         await self.workers.aclose()
         self.temp.cleanup()
     async def dispatched(self):
@@ -53,7 +68,7 @@ class LeaseTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.path.exists())
         self.assertEqual(self.owner.unresolved(),())
         await self.owner.aclose()
-        self.assertTrue(self.supervisor.closed)
+        self.assertFalse(self.supervisor.closed) # CPU owner closes supervisor later
 
     async def test_immediate_completion(self):
         self.supervisor.future.set_result('parsed')
@@ -62,7 +77,7 @@ class LeaseTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_rejection_before_dispatch(self):
         self.supervisor.failure=PDFSubmissionRejected()
-        with self.assertRaises(PDFSubmissionRejected): await self.start()
+        with self.assertRaises(SubmissionRejected): await self.start()
         self.assertFalse(self.path.exists())
         self.assertEqual(self.owner.unresolved(),())
 
@@ -97,7 +112,7 @@ class LeaseTests(unittest.IsolatedAsyncioTestCase):
         self.supervisor.future.set_result(None)
         with self.assertRaises(asyncio.CancelledError): await closing
         self.assertFalse(self.path.exists())
-        self.assertTrue(self.supervisor.closed)
+        self.assertFalse(self.supervisor.closed) # CPU owner closes supervisor later
 
     async def test_reaped_crash(self):
         task=self.start(); await self.dispatched()
@@ -131,3 +146,43 @@ class LeaseTests(unittest.IsolatedAsyncioTestCase):
         # Test teardown supplies genuine simulated reaping, not a timeout.
         self.supervisor.future.set_result(None)
         await self.owner.aclose()
+
+    async def test_shared_lane_rejects_second_parser_and_local_session(self):
+        task = self.start()
+        await self.dispatched()
+        other = ParserLeases(self.workers, self.cpu)
+        with self.assertRaises(CapacityExceeded):
+            await other.parse(lambda:self.lease, {})
+        with self.assertRaises(CapacityExceeded):
+            with self.cpu.pdf_processing_session(): pass
+        self.assertEqual(self.supervisor.calls, 1)
+        self.supervisor.future.set_result(None)
+        await task
+
+    async def test_cleanup_holds_cpu_and_shutdown(self):
+        entered, release = threading.Event(), threading.Event()
+        def cleanup():
+            entered.set()
+            if not release.wait(5): raise RuntimeError('test timeout')
+            self.path.unlink()
+        self.lease = MaterializedPDF(self.path, cleanup)
+        task = self.start()
+        await self.dispatched()
+        self.supervisor.future.set_result(None)
+        while not entered.is_set(): await asyncio.sleep(.001)
+        self.assertEqual(self.admission._admission.outstanding[Resource.CPU], 1)
+        closing = asyncio.create_task(self.admission.aclose())
+        await asyncio.sleep(.01)
+        self.assertFalse(closing.done())
+        release.set()
+        await task
+        await closing
+        self.assertFalse(self.path.exists())
+
+    async def test_local_path_uses_same_supervisor_without_materialization(self):
+        self.supervisor.future.set_result('local')
+        with self.cpu.pdf_processing_session() as session:
+            self.assertEqual(await session.run_pdf(str(self.path), {}), 'local')
+        self.assertTrue(self.path.exists())
+        self.assertEqual(self.supervisor.calls, 1)
+        self.assertEqual(self.owner.unresolved(), ())

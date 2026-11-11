@@ -1,6 +1,6 @@
-"""Disconnected application-owned materialization/parser boundary.
+"""Application-owned materialization boundary on the existing CPU PDF lane.
 
-Only this boundary obtains native completion from its private PDFSupervisor.
+Only the application CPU lane supplies supervisor completion.
 Requests cannot supply futures or authorize cleanup after dispatch.
 """
 import asyncio
@@ -8,7 +8,7 @@ from concurrent.futures import Future
 from dataclasses import dataclass
 from storage_contract import MaterializedPDF, StorageUncertain
 from storage_workers import StorageRejected
-from pdf_subprocess import PDFSupervisor, PDFSubmissionRejected
+from cpu_workers import SubmissionRejected
 
 
 @dataclass
@@ -17,14 +17,15 @@ class _Job:
     abandoned: bool = False
     task: object = None
     stage: str = 'materializing'
+    session: object = None
+    context: object = None
 
 
 class ParserLeases:
-    def __init__(self, storage_workers, *, _supervisor_factory=PDFSupervisor):
+    def __init__(self, storage_workers, cpu_workers):
         self.workers = storage_workers
         self.loop = asyncio.get_running_loop()
-        self.factory = _supervisor_factory
-        self.supervisor = None
+        self.cpu_workers = cpu_workers
         self.jobs = {}
         self.sealed = False
         self.idle = asyncio.Event()
@@ -42,7 +43,10 @@ class ParserLeases:
         if self.sealed or self.jobs:
             raise StorageRejected('Parser lease capacity unavailable.')
         key, job = object(), _Job()
-        self.jobs[key] = job  # application ownership precedes any materialization
+        job.context = self.cpu_workers.pdf_processing_session()
+        job.session = job.context.__enter__()
+        job.session._retain_parser_lease(job)
+        self.jobs[key] = job  # CPU and application ownership precede materialization
         self.idle.clear()
         job.task = asyncio.create_task(self._execute(key, job, materialize, settings))
         job.task.add_done_callback(lambda task: None if task.cancelled() else task.exception())
@@ -70,13 +74,11 @@ class ParserLeases:
                 raise
             if job.abandoned:
                 return None
-            if self.supervisor is None:
-                self.supervisor = self.factory()
             job.stage = 'parser_dispatched'
             safe = False
             try:
-                native = self.supervisor.submit(str(job.lease.path), settings)
-            except PDFSubmissionRejected:
+                native = job.session._submit_leased_pdf(str(job.lease.path), settings)
+            except SubmissionRejected:
                 safe = True  # trusted positive evidence of no dispatch
                 raise
             except BaseException:
@@ -112,6 +114,8 @@ class ParserLeases:
                     except BaseException:
                         job.stage = 'cleanup_failed'
                         raise StorageUncertain('Temporary PDF cleanup requires review.') from None
+                job.session._release_parser_lease()
+                job.context.__exit__(None, None, None)
                 self.jobs.pop(key, None)
                 if not self.jobs:
                     self.idle.set()
@@ -121,8 +125,6 @@ class ParserLeases:
 
     async def _drain(self):
         await self.idle.wait()
-        if self.supervisor is not None:
-            await asyncio.to_thread(self.supervisor.close)
 
     async def aclose(self):
         self.begin_shutdown()

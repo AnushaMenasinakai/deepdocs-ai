@@ -9,7 +9,8 @@ The PDF lane uses an application-owned lazy spawn supervisor. Its submitter must
 return a concurrent Future representing genuine completion (including process
 exit/reaping on failure). It may raise SubmissionRejected ONLY before dispatch.
 Other submission failures retain ownership: completion cannot be invented.
-No business operation uses the PDF supervisor yet. No crash recovery is supplied.
+Local processing and optional materialized leases share this supervisor.
+No crash recovery is supplied.
 """
 import asyncio
 from concurrent.futures import Future
@@ -246,6 +247,23 @@ class ExecutionSession:
         self._closed = False
         self._inflight = False
         self._native = None
+        self._parser_lease = False
+
+    def _retain_parser_lease(self, ownership):
+        with self._owner._lock:
+            if self._lane is not Lane.PDF or self._closed or self._inflight or self._parser_lease:
+                raise CapacityExceeded()
+            self._parser_lease = ownership
+
+    def _submit_leased_pdf(self, path, settings):
+        if not self._parser_lease:
+            raise CapacityExceeded()
+        return self.submit_pdf(self._owner._submit_pdf, path, settings)
+
+    def _release_parser_lease(self):
+        with self._owner._lock:
+            self._parser_lease = False
+            self._finish()
 
     def __enter__(self):
         return self
@@ -254,7 +272,7 @@ class ExecutionSession:
         self.close()
 
     def _finish(self):
-        if self._closed and not self._inflight and not self._terminal.done():
+        if self._closed and not self._inflight and not self._parser_lease and not self._terminal.done():
             self._owner._lanes[self._lane] = None
             self._terminal.set_result(None)
             self._owner._check_idle()
