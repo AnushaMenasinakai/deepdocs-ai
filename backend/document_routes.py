@@ -208,13 +208,14 @@ def processing_settings():
 
 @router.post("/api/documents/{document_id}/process", response_model=DocumentResponse)
 async def process(
-    document_id: str, current_user=Depends(get_current_user), database=Depends(get_database),
+    document_id: str, request: Request, current_user=Depends(get_current_user), database=Depends(get_database),
     storage=Depends(get_document_storage), settings=Depends(processing_settings),
     workers=Depends(get_cpu_workers),
 ):
     with safe_errors():
         document = found(await document_processing.process_document(
             database, storage, ObjectId(current_user.id), parse_id(document_id), settings, workers=workers,
+            gridfs=getattr(request.app.state, 'gridfs_processing', None),
         ))
         return documents.public_document(document)
 

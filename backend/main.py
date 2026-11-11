@@ -38,7 +38,7 @@ async def application_lifespan(app):
         workers = CPUWorkers(service)
         await dependencies.enter_async_context(database_lifespan(app))
         await dependencies.enter_async_context(auth_protection_lifespan(app))
-        await dependencies.enter_async_context(gridfs_upload_lifespan(app))
+        await dependencies.enter_async_context(gridfs_upload_lifespan(app, cpu_workers=workers))
         app.state.expensive_admission = service
         app.state.cpu_workers = workers
         yield

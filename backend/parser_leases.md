@@ -9,6 +9,10 @@ local path; no GridFS route, client or storage configuration is activated.
 Before materialization, parse registers a DOCUMENT/CPU PDF processing session and
 an owned job. The session retains that job and its lease until cleanup succeeds.
 The existing admission limits apply even across multiple ParserLeases instances.
+Production GridFS processing passes its already-admitted PDF session explicitly.
+The boundary verifies the application owner and retains that session through
+cleanup, without closing the borrowed session or acquiring another CPU slot.
+The request's processing context remains responsible for publication and closure.
 A shielded task owns materialization, dispatch, completion and cleanup independently
 of the request. Cancellation before admission does nothing; cancellation during
 materialization waits for the worker and cleans the resulting lease without parser

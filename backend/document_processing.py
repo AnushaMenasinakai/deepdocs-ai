@@ -13,6 +13,7 @@ from pdf_subprocess import PDFExecutionNotStarted
 from pdf_worker_protocol import ParsingFailure
 from pdf_worker_child import recognized_failure_details
 from vector_store import cleanup_document_vectors
+from document_storage import StorageError
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ async def processing_checkpoint():
     if task is not None and task.cancelling():
         raise asyncio.CancelledError()
 
-async def process_document(database, storage, owner_id, document_id, settings, *, workers=None):
+async def process_document(database, storage, owner_id, document_id, settings, *, workers=None, gridfs=None):
     # Read-only precedence check. The unchanged exact-token claim below remains
     # authoritative if another operation races this read.
     existing = await database.get_collection('documents').find_one(
@@ -43,12 +44,12 @@ async def process_document(database, storage, owner_id, document_id, settings, *
         raise capacity_unavailable()
     try:
         with workers.pdf_processing_session() as session:
-            return await _process_document(database, storage, owner_id, document_id, settings, session)
+            return await _process_document(database, storage, owner_id, document_id, settings, session, gridfs)
     except CapacityExceeded:
         raise capacity_unavailable() from None
 
 
-async def _process_document(database, storage, owner_id, document_id, settings, session):
+async def _process_document(database, storage, owner_id, document_id, settings, session, gridfs=None):
     docs = database.get_collection("documents")
     chunks = database.get_collection("document_chunks")
     generation = ObjectId()
@@ -92,11 +93,18 @@ async def _process_document(database, storage, owner_id, document_id, settings, 
             raise ProcessingFailure("Processing requires service review.", 503)
         await record("extraction", "claimed")
         phase = "local_extraction"
-        path = storage.processing_path(document)
+        backend = document.get('storage_backend', 'local')
+        if backend == 'local':
+            path = storage.processing_path(document)
+        elif backend != 'gridfs' or gridfs is None:
+            raise StorageError('Document storage backend is unavailable.')
         primitive_settings = asdict(settings)
         phase = 'worker_extraction'
         try:
-            extracted = await session.run_pdf(str(path), primitive_settings)
+            if backend == 'local':
+                extracted = await session.run_pdf(str(path), primitive_settings)
+            else:
+                extracted = await gridfs.parse(document, owner_id, document_id, primitive_settings, session)
         except (SubmissionRejected, PDFExecutionNotStarted):
             phase = 'local_extraction'  # positive evidence execution never began
             raise ProcessingFailure('PDF processing failed. Please retry.', 503) from None

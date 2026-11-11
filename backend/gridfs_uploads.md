@@ -58,10 +58,11 @@ orphan deletion, stale-worker expiry or client retry endpoint in this phase.
 
 ## Remaining activation blockers
 
-- Processing/reprocessing and deletion are not routed to GridFS yet. Local storage
-  rejects explicit non-local references; existing local documents stay local even
-  if the upload flag is enabled. The flag alone does not enable a complete GridFS
-  document lifecycle.
+- Processing/reprocessing now resolve persisted GridFS identities through the
+  trusted parser lease service (see gridfs_processing.md). Deletion remains
+  unintegrated. Local storage rejects explicit non-local references; existing
+  local documents stay local even if the upload flag is enabled. The flag alone
+  does not enable a complete GridFS document lifecycle.
 - Validate transaction support, collection/index setup, majority durability and
   quota policy on an isolated real replica set before any production activation.
   Offline transaction doubles do not establish Atlas compatibility.

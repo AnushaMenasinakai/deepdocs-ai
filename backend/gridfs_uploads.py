@@ -156,8 +156,9 @@ class GridFSUploads:
 
 
 @asynccontextmanager
-async def gridfs_upload_lifespan(app):
+async def gridfs_upload_lifespan(app, *, cpu_workers=None):
     app.state.gridfs_uploads = None
+    app.state.gridfs_processing = None
     if not load_gridfs_upload_enabled():
         yield
         return
@@ -166,7 +167,13 @@ async def gridfs_upload_lifespan(app):
         database = workers.client.get_database(settings.mongodb_db_name,
                                                write_concern=WriteConcern('majority'))
         app.state.gridfs_uploads = GridFSUploads(workers, database)
+        if cpu_workers is not None:
+            from gridfs_processing import GridFSProcessing
+            app.state.gridfs_processing = GridFSProcessing(workers, database, cpu_workers)
         try:
             yield
         finally:
+            if app.state.gridfs_processing is not None:
+                await app.state.gridfs_processing.leases.aclose()
+            app.state.gridfs_processing = None
             app.state.gridfs_uploads = None

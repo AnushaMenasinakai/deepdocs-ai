@@ -35,7 +35,7 @@ class ParserLeases:
     def unresolved(self):
         return tuple(job.stage for job in self.jobs.values())
 
-    async def parse(self, materialize, settings):
+    async def parse(self, materialize, settings, *, session=None):
         if asyncio.get_running_loop() is not self.loop:
             raise StorageRejected('Parser belongs to another application loop.')
         if asyncio.current_task().cancelling():
@@ -43,8 +43,12 @@ class ParserLeases:
         if self.sealed or self.jobs:
             raise StorageRejected('Parser lease capacity unavailable.')
         key, job = object(), _Job()
-        job.context = self.cpu_workers.pdf_processing_session()
-        job.session = job.context.__enter__()
+        if session is None:
+            job.context = self.cpu_workers.pdf_processing_session()
+            session = job.context.__enter__()
+        elif session._owner is not self.cpu_workers:
+            raise StorageRejected('Parser session belongs to another application.')
+        job.session = session
         job.session._retain_parser_lease(job)
         self.jobs[key] = job  # CPU and application ownership precede materialization
         self.idle.clear()
@@ -115,7 +119,8 @@ class ParserLeases:
                         job.stage = 'cleanup_failed'
                         raise StorageUncertain('Temporary PDF cleanup requires review.') from None
                 job.session._release_parser_lease()
-                job.context.__exit__(None, None, None)
+                if job.context is not None:
+                    job.context.__exit__(None, None, None)
                 self.jobs.pop(key, None)
                 if not self.jobs:
                     self.idle.set()
