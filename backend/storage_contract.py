@@ -63,6 +63,11 @@ class MaterializedPDF:
         self._closing = False
         self._closed = False
 
+    @property
+    def cleanup_complete(self):
+        with self._lock:
+            return self._closed
+
     def retain_until(self, completion):
         if not isinstance(completion, Future):
             raise TypeError('A native supervisor completion future is required.')
