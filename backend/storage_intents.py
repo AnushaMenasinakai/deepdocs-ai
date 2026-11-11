@@ -23,6 +23,28 @@ class QuotaExceeded(ValueError):
     pass
 
 
+class StorageTransactionError(StorageUncertain):
+    """Sanitized diagnostic only; never authorizes replay or quota release."""
+    def __init__(self, category, phase):
+        self.category, self.phase = category, phase
+        super().__init__('Storage metadata outcome requires reconciliation.')
+
+
+def transaction_error_category(error, phase):
+    labeled = getattr(error, 'has_error_label', lambda label: False)
+    if labeled('UnknownTransactionCommitResult'):
+        return 'unknown_commit_result'
+    if phase == 'commit' and labeled('RetryableWriteError'):
+        return 'retryable_commit_acknowledgement'
+    if phase == 'body' and getattr(error, 'code', None) == 112:
+        return 'transaction_write_conflict'
+    if phase == 'body' and getattr(error, 'code', None) == 11000:
+        return 'duplicate_identity_conflict'
+    if phase == 'before_body':
+        return 'pre_dispatch_failure'
+    return 'unknown_commit_result' if phase == 'commit' else 'transaction_outcome_uncertain'
+
+
 @dataclass(frozen=True)
 class QuotaPolicy:
     global_bytes: int = 50 * 1024**2
@@ -86,26 +108,24 @@ class StorageIntents:
         self.ledger = database.get_collection('storage_quota_ledger')
 
     def ensure_indexes(self):
-        """Explicit future setup only; constructor never creates collections/indexes."""
-        try:
-            with timeout(5):
-                self.intents.create_index([('owner_id',1), ('document_id',1), ('created_at',1)],
-                                          name='storage_intent_owner_document')
-                self.intents.create_index([('reconciliation_status',1), ('updated_at',1)],
-                                          name='storage_intent_reconciliation')
-        except (PyMongoError, OSError, TimeoutError):
-            raise StorageUncertain('Storage index setup requires verification.') from None
+        """Explicit optional setup only; never called by local startup."""
+        from storage_schema import setup_storage_schema
+        setup_storage_schema(self.db)
 
     @contextmanager
     def transaction(self):
+        phase = 'before_body'
         try:
             with timeout(5), self.db.client.start_session() as session:
                 with session.start_transaction(read_concern=ReadConcern('snapshot'),
                                                write_concern=WriteConcern('majority'),
                                                max_commit_time_ms=5000):
+                    phase = 'body'
                     yield session
-        except (PyMongoError, OSError, TimeoutError):
-            raise StorageUncertain('Storage metadata outcome requires reconciliation.') from None
+                    phase = 'commit'
+                phase = 'after_commit'
+        except (PyMongoError, OSError, TimeoutError) as error:
+            raise StorageTransactionError(transaction_error_category(error, phase), phase) from None
 
     def _record(self, identity, session):
         record = self.intents.find_one({'_id': identity.operation_id}, session=session)

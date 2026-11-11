@@ -3,7 +3,11 @@
 No imports from production routes, startup hooks or GridFS adapter activate this
 module. Local storage and its 10 MiB limit are unchanged. Constructor takes a
 caller-owned synchronous database; run methods in owned worker threads. It does
-not create a client or indexes. `ensure_indexes` is explicit future setup only.
+not create a client or indexes. `ensure_indexes` is explicit optional setup only;
+it delegates to the complete manifest in `storage_schema.py`. See
+[storage_schema.md](storage_schema.md) for setup, read-only verification and
+sanitized transaction error categories. Neither setup nor verification runs in
+local-mode startup or activates GridFS.
 
 Each `storage_operation_intents` record holds an immutable server-created identity,
 schema version, expected exact bytes and SHA256, reservation reference, worker ID,
