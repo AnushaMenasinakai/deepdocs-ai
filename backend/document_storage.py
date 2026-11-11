@@ -77,6 +77,8 @@ class DocumentStorage:
             raise
 
     def reference(self, document):
+        if document.get('storage_backend', 'local') != 'local':
+            raise StorageError('Document requires its configured storage backend.')
         expected = str(document["_id"]) + ".pdf"
         # Do not trust even persisted paths, or allow deleting a different PDF.
         if document.get("stored_filename") != expected or document.get("storage_path") != expected:

@@ -127,6 +127,11 @@ async def upload(
                 form = await parser.result()
                 try:
                     check_cancellation()
+                    gridfs = getattr(request.app.state, 'gridfs_uploads', None)
+                    if gridfs is not None:
+                        return found(await gridfs.upload(
+                            owner_id, base_id, form['file'], settings.max_upload_bytes,
+                        ), 'Knowledge Base')
                     return found(await documents.upload_document(
                         database, storage, owner_id, base_id, form["file"], settings.max_upload_bytes,
                     ), "Knowledge Base")

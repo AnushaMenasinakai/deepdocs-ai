@@ -13,6 +13,17 @@ class ConfigurationError(ValueError):
     """A safe, public configuration message that never includes input values."""
 
 
+def load_gridfs_upload_enabled() -> bool:
+    try:
+        values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+        raw = values.get('GRIDFS_UPLOAD_ENABLED', 'false')
+        if not isinstance(raw, str) or raw.strip().lower() not in ('true', 'false'):
+            raise ValueError
+        return raw.strip().lower() == 'true'
+    except (OSError, UnicodeError, ValueError, TypeError):
+        raise ConfigurationError('Invalid GridFS upload configuration.') from None
+
+
 EXPENSIVE_ADMISSION_BOUNDS = {
     "upload_max_inflight": (1, 4),
     "document_operation_max_inflight": (1, 2),

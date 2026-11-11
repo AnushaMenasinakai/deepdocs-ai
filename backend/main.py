@@ -20,6 +20,7 @@ import asyncio
 import sys
 from contextlib import AsyncExitStack, asynccontextmanager
 from auth_protection import auth_protection_lifespan
+from gridfs_uploads import gridfs_upload_lifespan
 from json_body_boundary import RegisteredJSONBodyBoundary
 
 
@@ -37,6 +38,7 @@ async def application_lifespan(app):
         workers = CPUWorkers(service)
         await dependencies.enter_async_context(database_lifespan(app))
         await dependencies.enter_async_context(auth_protection_lifespan(app))
+        await dependencies.enter_async_context(gridfs_upload_lifespan(app))
         app.state.expensive_admission = service
         app.state.cpu_workers = workers
         yield
