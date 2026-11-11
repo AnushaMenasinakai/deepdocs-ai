@@ -59,14 +59,15 @@ orphan deletion, stale-worker expiry or client retry endpoint in this phase.
 ## Remaining activation blockers
 
 - Processing/reprocessing now resolve persisted GridFS identities through the
-  trusted parser lease service (see gridfs_processing.md). Deletion remains
-  unintegrated. Local storage rejects explicit non-local references; existing
+  trusted parser lease service (see gridfs_processing.md). Deletion and atomic
+  quota release use the separate service in gridfs_deletion.md. Local storage
+  rejects explicit non-local references; existing
   local documents stay local even if the upload flag is enabled. The flag alone
-  does not enable a complete GridFS document lifecycle.
+  does not establish production readiness for the GridFS document lifecycle.
 - Validate transaction support, collection/index setup, majority durability and
   quota policy on an isolated real replica set before any production activation.
   Offline transaction doubles do not establish Atlas compatibility.
-- Add scoped reconciliation, deletion/quota release, restart recovery, backup and
+- Add scoped reconciliation, restart recovery, backup and
   operational capacity monitoring. Existing local PDFs are not migrated or counted
   by this new PDF quota ledger; shared-cluster metadata headroom remains separate.
 - Temporary-file cleanup failures need operational review. No ambiguous remote

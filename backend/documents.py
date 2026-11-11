@@ -191,12 +191,18 @@ class _DeletionWork:
 
 
 async def delete_document(database, storage, owner_id, document_id, expected_knowledge_base_id=None,
-                          *, workflow=None):
+                          *, workflow=None, gridfs=None):
     document, token = await claim_document(
         database, owner_id, document_id, expected_knowledge_base_id, operation_type="deletion",
     )
     if document is None:
         return False
+    backend = document.get('storage_backend', 'local')
+    if backend != 'local':
+        if backend == 'gridfs' and gridfs is not None:
+            return await gridfs.delete(document, owner_id, document_id, token, workflow)
+        await release_document(database, owner_id, document_id, token)
+        raise StorageCleanupError('Document storage backend is unavailable.')
     # Once any mutation is dispatched, errors cannot justify unlocking. Even an
     # acknowledged destructive step can leave an incomplete deletion lifecycle.
     dispatched = False

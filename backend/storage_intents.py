@@ -71,7 +71,9 @@ EDGES = {
                'published': set(), 'failed_before_dispatch': set(),
                'delete_confirmed': set()},
     'delete': {'prepared': {'delete_dispatched', 'failed_before_dispatch'},
-               'delete_dispatched': {'delete_confirmed'}, 'delete_confirmed': set(),
+               'delete_dispatched': {'delete_confirmed', 'vectors_deleted'},
+               'vectors_deleted': {'file_deleted'}, 'file_deleted': {'delete_confirmed'},
+               'delete_confirmed': set(),
                'failed_before_dispatch': set()},
 }
 ERRORS = {'database_unavailable', 'storage_unavailable', 'cancelled', 'unknown'}
@@ -203,39 +205,42 @@ class StorageIntents:
         if action not in ('commit', 'release'):
             raise ValueError('Invalid quota transition.')
         with self.transaction() as session:
-            record = self._record(identity, session)
-            if record['reconciliation_status'] != 'none':
-                raise IntentConflict('Uncertain quota must be retained.')
-            if action == 'commit':
-                allowed, target = {'published'}, 'committed'
-            else:
-                allowed = {'failed_before_dispatch'} if identity.operation_type == 'upload' else {'delete_confirmed'}
-                target = 'released'
-            if record['stage'] not in allowed:
-                raise IntentConflict('Confirmed lifecycle evidence required.')
-            source = self.intents.find_one({'_id':record['reservation_id']}, session=session)
-            if source is None or any(source[k] != record[k] for k in
-                    ('document_id','owner_id','knowledge_base_id','file_id','backend','expected_size','checksum')):
-                raise IntentConflict('Reservation identity conflict.')
-            if source['reconciliation_status'] != 'none':
-                raise IntentConflict('Uncertain reservation must be retained.')
-            if source['quota_state'] == target:
-                return target
-            if source['quota_state'] not in ('reserved','committed'):
-                raise IntentConflict('Invalid reservation state.')
-            row = self._ledger(session)
-            matches = [e for e in row['entries'] if e['operation_id'] == source['_id']]
-            if len(matches) != 1:
-                raise IntentConflict('Missing quota entry.')
-            if action == 'release':
-                row['entries'].remove(matches[0])
-            else:
-                matches[0]['state'] = target
-            self._write_ledger(row, session)
-            source['quota_state'] = target
-            source['updated_at'] = datetime.now(timezone.utc)
-            self.intents.replace_one({'_id':source['_id']}, source, session=session)
+            return self._quota_transition(identity, action, session)
+
+    def _quota_transition(self, identity, action, session):
+        record = self._record(identity, session)
+        if record['reconciliation_status'] != 'none':
+            raise IntentConflict('Uncertain quota must be retained.')
+        if action == 'commit':
+            allowed, target = {'published'}, 'committed'
+        else:
+            allowed = {'failed_before_dispatch'} if identity.operation_type == 'upload' else {'delete_confirmed'}
+            target = 'released'
+        if record['stage'] not in allowed:
+            raise IntentConflict('Confirmed lifecycle evidence required.')
+        source = self.intents.find_one({'_id':record['reservation_id']}, session=session)
+        if source is None or any(source[k] != record[k] for k in
+                ('document_id','owner_id','knowledge_base_id','file_id','backend','expected_size','checksum')):
+            raise IntentConflict('Reservation identity conflict.')
+        if source['reconciliation_status'] != 'none':
+            raise IntentConflict('Uncertain reservation must be retained.')
+        if source['quota_state'] == target:
             return target
+        if source['quota_state'] not in ('reserved','committed'):
+            raise IntentConflict('Invalid reservation state.')
+        row = self._ledger(session)
+        matches = [e for e in row['entries'] if e['operation_id'] == source['_id']]
+        if len(matches) != 1:
+            raise IntentConflict('Missing quota entry.')
+        if action == 'release':
+            row['entries'].remove(matches[0])
+        else:
+            matches[0]['state'] = target
+        self._write_ledger(row, session)
+        source['quota_state'] = target
+        source['updated_at'] = datetime.now(timezone.utc)
+        self.intents.replace_one({'_id':source['_id']}, source, session=session)
+        return target
 
     def mark_uncertain(self, identity, expected, category='unknown'):
         if category not in ERRORS:
@@ -247,6 +252,42 @@ class StorageIntents:
             record.update(reconciliation_status='required', error_category=category,
                           updated_at=datetime.now(timezone.utc))
             self.intents.replace_one({'_id':identity.operation_id, 'stage':expected}, record, session=session)
+
+    def finalize_deletion(self, identity, worker_id):
+        """Atomic metadata cleanup + quota release, only after file/vector ACKs.
+
+        The deletion operation ID is the document's exclusive claim token.
+        Never retry automatically after an uncertain transaction commit.
+        """
+        if identity.operation_type != 'delete':
+            raise IntentConflict('Deletion intent required.')
+        with self.transaction() as session:
+            record = self._record(identity, session)
+            if (record['stage'] != 'file_deleted' or record['worker_id'] != worker_id
+                    or record['reconciliation_status'] != 'none'):
+                raise IntentConflict('Confirmed deletion stages required.')
+            scope = {'_id': identity.document_id, 'owner_id': identity.owner_id,
+                     'knowledge_base_id': identity.knowledge_base_id,
+                     '_operation': identity.operation_id, 'storage_backend': 'gridfs',
+                     'storage_file_id': identity.document_id,
+                     'storage_operation_id': record['reservation_id'],
+                     'storage_checksum': record['checksum'], 'file_size': record['expected_size']}
+            docs = self.db.get_collection('documents')
+            if docs.find_one(scope, session=session) is None:
+                raise IntentConflict('Deletion claim or original identity conflict.')
+            self.db.get_collection('document_chunks').delete_many({
+                'document_id': identity.document_id, 'owner_id': identity.owner_id,
+                'knowledge_base_id': identity.knowledge_base_id}, session=session)
+            result = self.db.get_collection('knowledge_bases').update_one({
+                '_id': identity.knowledge_base_id, 'owner_id': identity.owner_id},
+                {'$pull': {'_document_ids': identity.document_id}, '$inc': {'_document_revision': 1}},
+                session=session)
+            if result.matched_count != 1 or docs.delete_one(scope, session=session).deleted_count != 1:
+                raise IntentConflict('Deletion metadata cleanup is unconfirmed.')
+            record.update(stage='delete_confirmed', previous_stage='file_deleted',
+                          last_acknowledged_stage='delete_confirmed', updated_at=datetime.now(timezone.utc))
+            self.intents.replace_one({'_id': identity.operation_id, 'stage': 'file_deleted'}, record, session=session)
+            self._quota_transition(identity, 'release', session)
 
     def heartbeat(self, identity, worker_id):
         with self.transaction() as session:

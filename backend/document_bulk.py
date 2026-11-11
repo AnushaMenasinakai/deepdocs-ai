@@ -11,7 +11,7 @@ from vector_store import VectorFailure
 from expensive_admission import Resource
 
 
-async def delete_documents(database, storage, owner_id, base_id, document_ids, *, workflow=None):
+async def delete_documents(database, storage, owner_id, base_id, document_ids, *, workflow=None, gridfs=None):
     """Caller validates the entire request and KB ownership before entering here.
 
     No rollback or automatic retry. A service failure may follow partial cleanup.
@@ -27,6 +27,7 @@ async def delete_documents(database, storage, owner_id, base_id, document_ids, *
                     database, storage, owner_id, ObjectId(identifier),
                     expected_knowledge_base_id=base_id,
                     workflow=workflow,
+                    gridfs=gridfs,
                 )
                 outcome = "succeeded" if deleted else "failed"
                 code = None if deleted else "not_found"

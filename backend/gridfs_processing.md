@@ -40,7 +40,8 @@ lease holds. CPU workers then close their supervisor. The optional storage lifes
 drains its lease registry before closing the synchronous storage workers/client.
 No extra native supervisor is created by the processing service.
 
-Remaining blockers: GridFS deletion/quota release, reconciliation of retained
-claims and intents, restart recovery of ambiguous temporary files, and isolated
+GridFS deletion/quota release is now integrated separately (gridfs_deletion.md).
+Remaining blockers: reconciliation of retained claims and intents,
+restart recovery of ambiguous temporary files, and isolated
 real MongoDB/GridFS validation. Offline tests use synthetic PDF bytes and database
 doubles; they do not establish Atlas readiness or approve deployment.

@@ -171,7 +171,7 @@ async def get_one(document_id: str, current_user=Depends(get_current_user), data
 
 @router.delete("/api/documents/{document_id}", status_code=204)
 async def delete(
-    document_id: str, current_user=Depends(get_current_user), database=Depends(get_database),
+    document_id: str, request: Request, current_user=Depends(get_current_user), database=Depends(get_database),
     storage=Depends(get_document_storage), workers=Depends(get_cpu_workers),
 ):
     owner, identifier = ObjectId(current_user.id), parse_id(document_id)
@@ -180,14 +180,15 @@ async def delete(
         if '_operation' in document:
             raise DocumentBusy()
         with workers.workflow(Resource.DOCUMENT) as workflow:
-            found(await documents.delete_document(database, storage, owner, identifier, workflow=workflow))
+            found(await documents.delete_document(database, storage, owner, identifier, workflow=workflow,
+                gridfs=getattr(request.app.state, 'gridfs_deletion', None)))
     return Response(status_code=204)
 
 
 @router.post("/api/knowledge-bases/{knowledge_base_id}/documents/bulk-delete",
              response_model=BulkDeleteResponse, response_model_exclude_none=True)
 async def bulk_delete(
-    knowledge_base_id: str, data: BulkDeleteRequest,
+    knowledge_base_id: str, data: BulkDeleteRequest, request: Request,
     current_user=Depends(get_current_user), database=Depends(get_database),
     storage=Depends(get_document_storage), workers=Depends(get_cpu_workers),
 ):
@@ -196,7 +197,7 @@ async def bulk_delete(
         found(await knowledge_bases.get_knowledge_base(database, owner, base), "Knowledge Base")
         with workers.workflow(Resource.DOCUMENT) as workflow:
             return await document_bulk.delete_documents(database, storage, owner, base, data.document_ids,
-                                                        workflow=workflow)
+                workflow=workflow, gridfs=getattr(request.app.state, 'gridfs_deletion', None))
 
 
 def processing_settings():
