@@ -9,7 +9,7 @@ from bson import ObjectId
 from gridfs import NoFile
 from document_storage import StorageError, UploadRejected
 from gridfs_storage import GridFSPDFStorage
-from storage_contract import LocalPDFStorage, StorageUncertain
+from storage_contract import LocalPDFStorage, StorageUncertain, DeletionOutcome
 
 PDF = b'%PDF-1.7\nsynthetic only'
 
@@ -99,8 +99,8 @@ class GridFSStorageTests(unittest.TestCase):
         self.assertFalse(lease.path.exists())
     def test_missing_and_repeated_deletion(self):
         doc = self.save()
-        self.assertTrue(self.storage.delete(doc))
-        self.assertFalse(self.storage.delete(doc))
+        self.assertIs(self.storage.delete(doc), DeletionOutcome.DELETED)
+        with self.assertRaises(StorageUncertain): self.storage.delete(doc)
         self.assertEqual(self.bucket.deletes, 1)
         self.assertFalse(self.storage.exists(doc))
         with self.assertRaises(StorageError): self.storage.materialize(doc)
@@ -124,8 +124,9 @@ class GridFSStorageTests(unittest.TestCase):
         self.bucket.files[self.identifier] = (PDF, {})
         with self.assertRaises(StorageError): self.storage.materialize(doc)
     def test_local_facade_keeps_original(self):
-        local = LocalPDFStorage(self.temp.name)
-        doc = {'_id':self.identifier, **local.save(self.upload(), self.identifier, 100)}
+        local = LocalPDFStorage(self.temp.name, owner_id=self.owner, knowledge_base_id=self.base)
+        doc = {'_id':self.identifier, 'owner_id':self.owner, 'knowledge_base_id':self.base,
+               **local.save(self.upload(), self.identifier, 100)}
         lease = local.materialize(doc)
         lease.close()
         self.assertTrue(local.exists(doc))

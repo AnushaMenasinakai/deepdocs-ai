@@ -2,7 +2,7 @@
 
 `storage_contract.PDFStorage` is a synchronous internal worker interface. The
 existing `get_document_storage()` still returns the unchanged `DocumentStorage`.
-`LocalPDFStorage` is an opt-in facade; closing its materialization never deletes
+`LocalPDFStorage` is an opt-in owner/knowledge-base-scoped facade; closing its materialization never deletes
 the original. No routes, configuration defaults or upload limits have changed.
 
 `GridFSPDFStorage` requires a caller-supplied synchronous PyMongo database, trusted
@@ -18,12 +18,32 @@ dispatch. Remote exceptions are uncertain, including finalization timeouts. No
 automatic abort, orphan deletion, retry or quota release is performed. A thread
 deadline is not proof that a remote operation stopped or failed to commit.
 
-References require matching owner, knowledge base, backend and file ID; download
+`reference()` is part of the protocol: it validates an internal reference without
+performing remote IO; its return value is backend-specific, not necessarily a path.
+References require typed ObjectIds matching owner, knowledge base, backend and file ID; download
 metadata must agree. `exists` confirms valid file metadata, not full chunk integrity.
-Materialization verifies bounded length and PDF signature. `delete` returns True
-only after acknowledged deletion; False means file metadata is absent, NOT that
-orphan chunks have been proven absent. Higher-level cleanup must not treat False
-as permission to release ambiguous reservations.
+Materialization verifies bounded length and PDF signature. The common deletion
+contract is `delete_confirmed()`: returns DeletionOutcome.DELETED on acknowledged
+deletion, or ABSENT only where absence can be established (local unlink missing).
+GridFS metadata absence raises DeletionUncertain with outcome UNCONFIRMED; it never
+authorizes orphan deletion or quota release. Remote deletion failures likewise raise.
+Outcomes reject boolean conversion to prevent truthiness-based success handling.
+GridFS `delete()` delegates the same semantics; the local inherited `delete()` retains
+its original None return and idempotent missing-file behavior for compatibility.
+
+`compensation_document()` builds full scope from trusted authorized IDs plus a
+confirmed save receipt, rejecting conflicting IDs. Both facades expose `compensate()`
+with the same explicit deletion contract. This helper does not authorize cleanup:
+the caller must first establish that compensation is safe. It must never compensate
+an uncertain upload or metadata publication merely because the request failed.
+
+StorageUncertain derives from the existing StorageCleanupError retention category.
+The current upload lifecycle therefore retains the KB reservation if this exception
+reaches it, even when the worker finished. No production lifecycle code was changed.
+Existing deletion code still ignores return values and must be updated before wiring
+the new protocol. Exceptions must propagate; catching StorageError and continuing
+cleanup/reservation release is forbidden. Runtime typing cannot prove an ObjectId
+was server-generated: authenticated caller ownership checks remain mandatory.
 
 MaterializedPDF is an explicit lease, intentionally not a request-scoped context
 manager. Attach the supervisor's concurrent.futures completion Future using

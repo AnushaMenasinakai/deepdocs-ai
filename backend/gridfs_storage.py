@@ -5,7 +5,8 @@ from bson import ObjectId
 from gridfs import GridFSBucket, NoFile
 from pymongo import timeout
 from document_storage import DocumentStorage, StorageError, CHUNK_SIZE
-from storage_contract import MaterializedPDF, StorageUncertain
+from storage_contract import (MaterializedPDF, StorageUncertain, DeletionUncertain,
+                              DeletionOutcome, validate_scope)
 
 
 class GridFSPDFStorage:
@@ -29,7 +30,7 @@ class GridFSPDFStorage:
         return {'document_id': identifier, 'owner_id': self.owner, 'knowledge_base_id': self.base}
 
     def reference(self, document):
-        identifier = document.get('_id')
+        identifier = validate_scope(document, self.owner, self.base)
         if (not isinstance(identifier, ObjectId) or document.get('owner_id') != self.owner
                 or document.get('knowledge_base_id') != self.base
                 or document.get('storage_backend') != 'gridfs'
@@ -117,13 +118,21 @@ class GridFSPDFStorage:
                 except NoFile:
                     # Do not call GridFS.delete on absent metadata: it may remove
                     # ambiguous orphan chunks. Repeated confirmed deletion is a no-op.
-                    return False  # Absence is not proof orphan chunks were removed.
+                    raise DeletionUncertain('PDF absence requires reconciliation.') from None
                 stream.close()
+        except DeletionUncertain:
+            raise
         except Exception:
             raise StorageError('PDF deletion preflight is unavailable.') from None
         try:
             with timeout(self.deadline):
                 self.bucket.delete(identifier)
-            return True
+            return DeletionOutcome.DELETED
         except Exception:
-            raise StorageUncertain('PDF deletion outcome requires reconciliation.') from None
+            raise DeletionUncertain('PDF deletion outcome requires reconciliation.') from None
+
+    def delete_confirmed(self, document):
+        return self.delete(document)
+
+    def compensate(self, document):
+        return self.delete_confirmed(document)
