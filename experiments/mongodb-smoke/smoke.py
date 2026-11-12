@@ -5,7 +5,8 @@ from pathlib import Path
 from pymongo import MongoClient
 from pymongo.read_concern import ReadConcern
 from pymongo.write_concern import WriteConcern
-from storage_schema import setup_storage_schema, verify_storage_schema, COLLECTIONS, StorageSchemaError
+from storage_schema import (setup_storage_schema, verify_storage_schema, COLLECTIONS,
+                            StorageSchemaError, INDEXES, DRIVER_CATEGORIES, inspect_failed_index)
 
 
 def failure_diagnostic(error):
@@ -16,11 +17,21 @@ def failure_diagnostic(error):
                'index_options_conflict', 'index_keys_conflict', 'duplicate_key',
                'deadline_exceeded', 'write_concern_unconfirmed', 'database_operation_unconfirmed',
                'index_keys_mismatch', 'index_uniqueness_mismatch', 'index_options_mismatch',
-               'index_name_conflict', 'indexes_missing', 'identity_index_missing'}
+               'index_name_conflict', 'indexes_missing', 'identity_index_missing',
+               'bad_value', 'parse_rejected', 'cannot_create_index', 'invalid_options',
+               'invalid_index_specification'}
     if isinstance(error, StorageSchemaError):
         operation = error.operation if error.operation in operations else 'unknown'
         reason = error.reason if error.reason in reasons else 'unknown'
-        return f'FAIL: schema validation; operation={operation}; reason={reason}'
+        message = f'FAIL: schema validation; operation={operation}; reason={reason}'
+        index = next((i for i in INDEXES if i == error.index), None)
+        if index is not None:
+            category = error.driver_category if error.driver_category in DRIVER_CATEGORIES else 'unknown'
+            code = error.server_code if type(error.server_code) is int and 0 <= error.server_code <= 2147483647 else 'unknown'
+            outcome = error.outcome if error.outcome in {'unknown', 'command_rejected', 'incompatible_definition'} else 'unknown'
+            message += (f'; collection={index.collection}; index={index.name}; driver={category}'
+                        f'; server_code={code}; command_outcome={outcome}')
+        return message
     return 'FAIL: smoke validation; category=' + type(error).__name__
 
 
@@ -36,6 +47,18 @@ def guard(config, hello=None):
             or not hello.get('isWritablePrimary')
             or hello.get('passives') or hello.get('arbiters')):
         raise ValueError('Replica identity rejected.')
+
+
+def setup_with_diagnostics(database):
+    try:
+        setup_storage_schema(database)
+    except StorageSchemaError as error:
+        if error.operation == 'create_index':
+            # setup has exited its deadline. Readback gets a fresh bounded budget.
+            # Keep the failed job even if the desired definition is now visible.
+            state = inspect_failed_index(database, error)
+            print('Index readback: ' + state, flush=True)
+        raise
 
 
 def run():
@@ -58,12 +81,12 @@ def run():
         assert database.command('ping')['ok'] == 1
         assert client.admin.command('buildInfo')['version'] == '8.0.38'
         print('Identity verified; checking explicit schema setup.', flush=True)
-        setup_storage_schema(database)
+        setup_with_diagnostics(database)
         print('Initial schema setup completed; verifying manifest.', flush=True)
         verify_storage_schema(database)
         before = {c: list(database[c].list_indexes()) for c in COLLECTIONS}
         print('Initial manifest verified; checking idempotent setup.', flush=True)
-        setup_storage_schema(database)
+        setup_with_diagnostics(database)
         verify_storage_schema(database)
         assert before == {c: list(database[c].list_indexes()) for c in COLLECTIONS}
         print('Schema verified; checking majority write and transactions.', flush=True)

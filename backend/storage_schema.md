@@ -49,6 +49,24 @@ has a five-second client deadline, which does not prove server work stopped.
 
 ## Transaction outcomes
 
+Index creation diagnostics additionally identify the exact manifest collection
+and index, an allowlisted driver category, numeric server code and command outcome.
+Only explicit known server rejections are marked `command_rejected`; transport,
+write-concern, deadline and unrecognized failures remain `unknown`. Rejection does
+not authorize quota release, compensation or dropping an existing index.
+
+The isolated harness performs one bounded read-only `list_indexes` inspection
+after failed creation, outside setup's five-second deadline. Results distinguish
+`confirmed_definition`, `incompatible_definition`, `not_observed` and `unavailable`.
+Only complete successful inspection can report not_observed, and this is not proof
+that an in-flight build will never finish. No mutation is retried and the original
+failure still fails the job, even if an exact definition is now visible. Raw server
+messages, codeName, command payloads and connection details are never printed.
+
+The second hosted failure identifies create_index but contains neither an index
+identity nor a numeric error code. Its actual root cause remains unconfirmed;
+these diagnostics must precede any permissions, definition or timeout changes.
+
 Schema failures now retain fixed `operation` and `reason` diagnostic codes.
 `StorageSchemaError` inherits from OSError through the storage retention hierarchy;
 it must be re-raised before wrapping generic OS/driver failures. Otherwise a real

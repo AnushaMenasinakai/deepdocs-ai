@@ -1,8 +1,9 @@
 import copy
 import unittest
 from unittest.mock import Mock
-from pymongo.errors import OperationFailure, ExecutionTimeout, ConnectionFailure
-from storage_schema import INDEXES, setup_storage_schema, verify_storage_schema, StorageSchemaError
+from pymongo.errors import OperationFailure, ExecutionTimeout, ConnectionFailure, WriteConcernError
+from storage_schema import (INDEXES, setup_storage_schema, verify_storage_schema,
+                            StorageSchemaError, inspect_failed_index)
 
 
 class Database:
@@ -31,6 +32,56 @@ class Database:
 
 
 class SchemaTests(unittest.TestCase):
+    def test_index_failure_identity_code_and_outcome(self):
+        for failure, outcome in ((OperationFailure('private', 197), 'command_rejected'),
+                                 (OperationFailure('private', 99999), 'unknown'),
+                                 (WriteConcernError('private', 64), 'unknown'),
+                                 (ConnectionFailure('private'), 'unknown')):
+            with self.subTest(outcome=outcome, error=type(failure).__name__):
+                db = Database(); setup_storage_schema(db)
+                name = 'files_id_1_n_1'
+                del db.rows['pdf_blobs.chunks'][name]
+                original = db.get_collection
+                calls = []
+                def get(collection_name):
+                    collection = original(collection_name)
+                    def create(*args, **kwargs):
+                        calls.append(kwargs['name'])
+                        raise failure
+                    collection.create_index = create
+                    return collection
+                db.get_collection = get
+                with self.assertRaises(StorageSchemaError) as caught:
+                    setup_storage_schema(db)
+                error = caught.exception
+                self.assertEqual(error.index.name, name)
+                self.assertEqual(error.index.collection, 'pdf_blobs.chunks')
+                self.assertEqual(error.outcome, outcome)
+                self.assertEqual(error.server_code, getattr(failure, 'code', None))
+                self.assertEqual(calls, [name])
+                self.assertEqual(inspect_failed_index(db, error), 'not_observed')
+                self.assertEqual(calls, [name])  # readback never retries createIndexes
+
+    def test_readback_distinguishes_confirmed_missing_incompatible_and_unavailable(self):
+        db = Database(); setup_storage_schema(db)
+        index = next(i for i in INDEXES if i.name == 'files_id_1_n_1')
+        error = StorageSchemaError('private', operation='create_index', index=index)
+        writes = db.writes
+        self.assertEqual(inspect_failed_index(db, error), 'confirmed_definition')
+        db.rows[index.collection][index.name]['unique'] = False
+        self.assertEqual(inspect_failed_index(db, error), 'incompatible_definition')
+        del db.rows[index.collection][index.name]
+        self.assertEqual(inspect_failed_index(db, error), 'not_observed')
+        db.get_collection = Mock(side_effect=ConnectionFailure('private'))
+        self.assertEqual(inspect_failed_index(db, error), 'unavailable')
+        self.assertEqual(db.writes, writes)
+
+    def test_invalid_readback_identity_performs_no_io(self):
+        db = Mock()
+        error = StorageSchemaError('private', operation='create_index', index='untrusted')
+        self.assertEqual(inspect_failed_index(db, error), 'unavailable')
+        db.get_collection.assert_not_called()
+
     def test_specific_failure_survives_oserror_inheritance(self):
         db = Database(); setup_storage_schema(db)
         db.rows['pdf_blobs.chunks']['files_id_1_n_1']['unique'] = False

@@ -2,6 +2,9 @@
 import importlib.util
 from pathlib import Path
 import unittest
+from unittest.mock import Mock, patch
+from contextlib import redirect_stdout
+from io import StringIO
 
 ROOT = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location('mongodb_smoke', ROOT / 'smoke.py')
@@ -10,6 +13,25 @@ spec.loader.exec_module(smoke)
 
 
 class IsolationTests(unittest.TestCase):
+    def test_failed_mutation_readback_does_not_resume_setup(self):
+        index = next(i for i in smoke.INDEXES if i.name == 'files_id_1_n_1')
+        error = smoke.StorageSchemaError('secret', operation='create_index', index=index,
+                                        server_code=197, driver_category='OperationFailure',
+                                        outcome='command_rejected')
+        for state in ('confirmed_definition', 'incompatible_definition', 'not_observed', 'unavailable'):
+            with patch.object(smoke, 'setup_storage_schema', side_effect=error) as setup, \
+                 patch.object(smoke, 'inspect_failed_index', return_value=state) as inspect, \
+                 redirect_stdout(StringIO()) as output:
+                with self.assertRaises(smoke.StorageSchemaError): smoke.setup_with_diagnostics(Mock())
+                setup.assert_called_once()
+                inspect.assert_called_once()
+                self.assertEqual(output.getvalue().strip(), 'Index readback: ' + state)
+        message = smoke.failure_diagnostic(error)
+        self.assertIn('index=files_id_1_n_1', message)
+        self.assertIn('server_code=197', message)
+        self.assertIn('command_outcome=command_rejected', message)
+        self.assertNotIn('secret', message)
+
     def test_safe_schema_diagnostic(self):
         error = smoke.StorageSchemaError('secret-provider-response',
                                         operation='create_index', reason='deadline_exceeded')
