@@ -8,7 +8,7 @@ RUN python -c "import importlib.metadata as m,json; open('/tmp/reference-package
  && python -m pip check \
  && python -c "import importlib.metadata as m,json; prior=json.load(open('/tmp/reference-packages.json')); assert all(m.version(k)==v for k,v in prior.items()), 'Experiment changed reference dependencies'" \
  && rm /tmp/reference-packages.json
-COPY export.py probe.py pooling_contract.py /experiment/
+COPY export.py probe.py application_probe.py pooling_contract.py /experiment/
 RUN --network=none python /experiment/export.py && chmod -R a+rX,a-w /experiment/model
 USER 10001:10001
 ENTRYPOINT ["python", "/experiment/probe.py"]

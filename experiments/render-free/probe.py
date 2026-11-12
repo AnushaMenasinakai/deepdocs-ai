@@ -15,10 +15,13 @@ def emit(event, **values):
 def stage(name):
     emit('start', stage=name)
     started = time.monotonic()
+    cpu_start = dict(line.split() for line in (CG / 'cpu.stat').read_text().splitlines())
     try:
         yield
     finally:
+        cpu_end = dict(line.split() for line in (CG / 'cpu.stat').read_text().splitlines())
         emit('end', stage=name, seconds=time.monotonic() - started,
+             cpu_delta={key: int(cpu_end[key]) - int(cpu_start[key]) for key in cpu_start},
              current_bytes=int((CG / 'memory.current').read_text()),
              lifetime_peak_bytes=int((CG / 'memory.peak').read_text()))
 
@@ -63,32 +66,6 @@ QUESTIONS = ['Who coordinates Project Aurora?', 'Who is responsible for the pilo
              'How many solar panels are used?', 'What is the coordinator email address?',
              'What is the project budget?', 'Who coordinates Aurora and when is its review?']
 
-async def journey(model):
-    from unittest.mock import patch
-    from test_embeddings import EmbeddingTests
-    from document_routes import processing_settings, embedding_settings
-    from config import ProcessingSettings, EmbeddingSettings
-    from main import app
-    fixture = EmbeddingTests()
-    await fixture.asyncSetUp()
-    try:
-        with stage('upload'):
-            body = await fixture.make_document([FACTS[i % 5] * 8 for i in range(12)])
-        # make_document overrides chunking for unit tests; restore production defaults.
-        app.dependency_overrides[processing_settings] = lambda: ProcessingSettings()
-        app.dependency_overrides[embedding_settings] = lambda: EmbeddingSettings()
-        with stage('pdf_extraction_and_chunking'):
-            status, _, _ = await fixture.process(body)
-            assert status == 200, status
-        with patch('embeddings.load_model', return_value=model), stage('indexing'):
-            status, result, _ = await fixture.embed(body)
-            assert status == 200 and result['embedding_dimension'] == 384, status
-            assert result['chunk_count'] > 0
-            emit('indexed', chunks=result['chunk_count'])
-    finally:
-        await fixture.asyncTearDown()
-        fixture.doCleanups()
-
 def main():
     runtime = sys.argv[1]
     from importlib.metadata import version
@@ -99,15 +76,15 @@ def main():
         import embeddings
         from config import EmbeddingSettings
         time.sleep(2)
-    with stage('model_initialization'):
-        model = embeddings.load_model(EmbeddingSettings.model_name) if runtime == 'torch' else ONNXModel()
-    with stage('inference'):
-        # Production batching, normalization and finite-vector validation for both runtimes.
-        from unittest.mock import patch
-        with patch('embeddings.load_model', return_value=model):
-            vectors = [v for _, batch in embeddings.embed_batches(FACTS + QUESTIONS, EmbeddingSettings()) for v in batch]
-        emit('vectors', corpus_count=len(FACTS), values=vectors)
-    asyncio.run(journey(model))
+    from application_probe import run_application
+    from unittest.mock import patch
+    import os
+    with patch('config.dotenv_values', return_value={}), patch.dict(os.environ, {
+        'GRIDFS_UPLOAD_ENABLED': 'false', 'RAG_VERIFIED_EXPERIMENT_ENABLED': 'false',
+        'HF_HUB_OFFLINE': '1', 'TRANSFORMERS_OFFLINE': '1'}):
+        asyncio.run(run_application(runtime, stage, emit,
+            lambda: embeddings.load_model(EmbeddingSettings.model_name) if runtime == 'torch' else ONNXModel(),
+            FACTS, QUESTIONS))
     if runtime == 'onnx':
         assert 'torch' not in sys.modules, 'ONNX probe unexpectedly imported torch'
     emit('complete', runtime=runtime)

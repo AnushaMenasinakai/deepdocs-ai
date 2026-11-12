@@ -93,5 +93,100 @@ class Contracts(unittest.TestCase):
         self.assertIn('dynamo=False', (HERE / 'export.py').read_text())
         self.assertIn("'torch' not in sys.modules", (HERE / 'probe.py').read_text())
 
+class ResourceScreen(unittest.TestCase):
+    def record(self, peak=400 * 1024**2):
+        from assessment import REQUIRED_STAGES
+        return {'complete': True, 'exit_code': 0, 'oom_killed': False, 'timed_out': False,
+                'verified_limits': {'memory_bytes': 512 * 1024**2, 'swap_bytes': 0, 'cpus': .1},
+                'memory_events': 'oom 0\noom_kill 0',
+                'cpu_stat': 'usage_usec 1\nnr_throttled 1\nthrottled_usec 1',
+                'kernel_peak_bytes': peak, 'events': [
+            {'event': 'end', 'stage': name, 'seconds': 1, 'current_bytes': peak,
+             'lifetime_peak_bytes': peak, 'cpu_delta': {'usage_usec': 1, 'nr_throttled': 1, 'throttled_usec': 1}}
+            for name in REQUIRED_STAGES] + [{'event': 'application_complete'}, {'event': 'complete'}]}
+
+
+    def test_complete_screen_is_not_deployment_approval(self):
+        from assessment import assess
+        self.assertIn('live_full_backend_validation_still_required', assess(self.record())['screen'])
+
+    def test_insufficient_margin(self):
+        from assessment import assess
+        self.assertEqual(assess(self.record(450 * 1024**2))['screen'], 'insufficient_20_percent_headroom')
+
+    def test_incomplete_oom_timeout_missing_stage(self):
+        from assessment import assess
+        for change in ({'complete': False}, {'oom_killed': True}, {'timed_out': True}, {'events': []}):
+            self.assertIn('unsuitable_for_approval', assess({**self.record(), **change})['screen'])
+
+    def test_calibration_cannot_approve(self):
+        from assessment import assess
+        self.assertEqual(assess({**self.record(), 'calibration': True})['screen'], 'calibration_only')
+
+    def test_slow_request(self):
+        from assessment import assess
+        record = self.record()
+        for event in record['events']:
+            if event.get('stage') == 'rag_request_2':
+                event['seconds'] = 60
+        self.assertEqual(assess(record)['screen'], 'request_latency_exceeds_frontend_budget')
+
+    def test_missing_measurements_fail_closed(self):
+        from assessment import assess
+        for key in ('oom_killed', 'timed_out', 'exit_code', 'kernel_peak_bytes',
+                    'verified_limits', 'memory_events', 'cpu_stat'):
+            record = self.record()
+            del record[key]
+            self.assertIn('unsuitable_for_approval', assess(record)['screen'], key)
+        for key in ('current_bytes', 'lifetime_peak_bytes', 'seconds', 'cpu_delta'):
+            record = self.record()
+            del record['events'][0][key]
+            self.assertIn('unsuitable_for_approval', assess(record)['screen'], key)
+
+    def test_invalid_measurements_and_limits_fail_closed(self):
+        from assessment import assess
+        for change in ({'seconds': float('nan')}, {'seconds': -1}, {'current_bytes': 0},
+                       {'lifetime_peak_bytes': None}, {'cpu_delta': {}}):
+            record = self.record()
+            record['events'][0].update(change)
+            self.assertIn('unsuitable_for_approval', assess(record)['screen'])
+        for change in ({'memory_events': 'oom 1\noom_kill 0'}, {'cpu_stat': ''},
+                       {'verified_limits': {'memory_bytes': 512 * 1024**2, 'swap_bytes': 1, 'cpus': .1}}):
+            self.assertIn('unsuitable_for_approval', assess({**self.record(), **change})['screen'])
+
+    def test_duplicate_stage_or_missing_completion_fails(self):
+        from assessment import assess
+        record = self.record()
+        record['events'].append(record['events'][0])
+        self.assertIn('unsuitable_for_approval', assess(record)['screen'])
+        record = self.record()
+        record['events'] = [e for e in record['events'] if e['event'] != 'application_complete']
+        self.assertIn('unsuitable_for_approval', assess(record)['screen'])
+
+    def test_full_probe_execution_chain(self):
+        self.assertIn('from assessment import assess', SOURCE)
+        self.assertIn("raise SystemExit('Constrained resource screening", SOURCE)
+        self.assertIn('application_probe.py', (HERE / 'Dockerfile').read_text())
+        self.assertIn('asyncio.run(run_application(', (HERE / 'probe.py').read_text())
+        self.assertIn('workers=1, proxy_headers=False', (HERE / 'application_probe.py').read_text())
+        workflow = (HERE.parents[1] / '.github/workflows/render-free-resource-experiment.yml').read_text()
+        self.assertIn('python3 experiments/render-free/run.py', workflow)
+        self.assertNotIn('secrets.', workflow)
+
+    def test_experiment_copy_sources_are_allowlisted(self):
+        allowed = {line[1:] for line in (HERE / '.dockerignore').read_text().splitlines()
+                   if line.startswith('!')}
+        for line in (HERE / 'Dockerfile').read_text().splitlines():
+            if line.startswith('COPY '):
+                for source in line.split()[1:-1]:
+                    self.assertTrue((HERE / source).is_file(), source)
+                    self.assertIn(source, allowed)
+
+    def test_kernel_endpoint_peak_is_retained(self):
+        from assessment import assess
+        record = self.record(450 * 1024**2)
+        record['kernel_peak_bytes'] = 1
+        self.assertEqual(assess(record)['peak_bytes'], 450 * 1024**2)
+
 if __name__ == '__main__':
     unittest.main()

@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import subprocess
 import time
+from assessment import assess
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = Path(os.environ['RUNNER_TEMP']) / 'render-experiment'
@@ -28,7 +29,9 @@ def run(runtime, calibration=False):
                '--tmpfs', '/tmp/suite:rw,noexec,nosuid,size=64m,mode=1777',
                '--mount', f'type=bind,src={ROOT / "backend/tests"},dst=/tmp/suite/backend/tests,readonly',
                '-e', 'PYTHONPATH=/app/backend:/tmp/suite/backend/tests',
-               '-e', 'TOKENIZERS_PARALLELISM=false', IMAGE, runtime)
+               '-e', 'TOKENIZERS_PARALLELISM=false',
+               '-e', 'GRIDFS_UPLOAD_ENABLED=false', '-e', 'RAG_VERIFIED_EXPERIMENT_ENABLED=false',
+               '-e', 'HF_HUB_OFFLINE=1', '-e', 'TRANSFORMERS_OFFLINE=1', IMAGE, runtime)
         info = json.loads(docker('inspect', name).stdout)[0]
         pid = info['State']['Pid']
         group = Path(f'/proc/{pid}/cgroup').read_text().strip()
@@ -38,6 +41,8 @@ def run(runtime, calibration=False):
         assert (cg / 'memory.swap.max').read_text().strip() == '0'
         quota, period = map(int, (cg / 'cpu.max').read_text().split())
         assert quota / period == (2 if calibration else 0.1)
+        record['verified_limits'] = {'memory_bytes': int((cg / 'memory.max').read_text()),
+                                     'swap_bytes': 0, 'cpus': quota / period}
         deadline = time.monotonic() + (300 if calibration else 480)
         record['timed_out'] = False
         while time.monotonic() < deadline:
@@ -116,9 +121,14 @@ if __name__ == '__main__':
     finally:
         summary = [{'runtime':r['runtime'], 'calibration':r['calibration'], 'complete':r.get('complete'),
                     'oom':r.get('oom_killed'), 'timeout':r.get('timed_out'),
-                    'peak_bytes':r.get('kernel_peak_bytes'),
+                    'assessment': assess(r),
                     'stages':[e for e in r.get('events',[]) if e['event']=='end']} for r in results]
         print(json.dumps(summary, indent=2))
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
             f.write('Resource experiment (not a deployment approval)\n```json\n'+json.dumps(summary,indent=2)+'\n```\n')
         (OUT / 'summary.json').write_text(json.dumps(summary,indent=2))
+
+    # Preserve every result/artifact first. A green run must not hide a failed screen.
+    limited = [r for r in results if not r['calibration']]
+    if len(limited) != 2 or any(not assess(r)['screen'].startswith('synthetic_screen_pass;') for r in limited):
+        raise SystemExit('Constrained resource screening failed or is incomplete; inspect preserved results.')

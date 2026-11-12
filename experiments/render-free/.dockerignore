@@ -2,4 +2,5 @@
 !Dockerfile
 !export.py
 !probe.py
+!application_probe.py
 !pooling_contract.py

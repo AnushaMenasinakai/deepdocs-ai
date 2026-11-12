@@ -17,23 +17,37 @@ then each at **512 MiB/0.1 CPU with no swap**. The host verifies actual cgroup l
 Each has no network, no credentials, nonroot execution, read-only root, bounded tmpfs,
 dropped capabilities, no-new-privileges and a 128-PID cap. Only backend tests are
 mounted, read-only. All PDFs, metadata and fake vectors are synthetic and disposable.
-The inherited HTTP health check is disabled: this probe uses ASGI directly and has
-no listening server. Production health-check configuration is unchanged.
+The inherited Docker HTTP health check is disabled to avoid an extra polling process.
+One real Uvicorn server runs on container loopback with one worker and no proxy
+headers. Its actual FastAPI lifespan owns admission, CPU/PDF supervision and auth
+protection; only the async MongoDB client boundary is mocked during startup.
 Build downloads are public packages/model artifacts, not runtime provider traffic.
 
-Stages: application import/idle, cold model initialization, one 14-text embedding
-batch, 12-page PDF upload, supervised extraction/chunking and indexing. Real ASGI
-routes and worker ownership are exercised through existing test fixtures; MongoDB,
-Qdrant and authentication are replaced by their scoped test doubles. Production
-chunk/batch defaults are restored after fixture creation. There is no Uvicorn server,
-startup lifespan, live database client or Gemini call. This is a representative small
-journey, **not worst-case 10 MiB PDF, maximum pages or concurrent-request testing**.
+Stages: application import, Uvicorn/lifespan startup and idle, cold model initialization,
+one 14-text embedding batch, 12-page upload, supervised extraction/chunking, indexing,
+three sequential standard Ask requests, post-request idle, GridFS adapter upload,
+materialization/reprocessing through the same trusted PDF lane, lease drain, final
+idle and graceful shutdown. No forced garbage collection hides retained memory.
+ASGI requests invoke the actual app in the same process; they do not measure the
+HTTP socket transport. Authentication, MongoDB metadata/index acknowledgements,
+Qdrant storage/scores and Gemini responses are deterministic doubles. Real query
+embeddings, retrieval validation, context selection, citation checks and history
+orchestration execute; fake Qdrant scores deliberately exercise generation, not
+retrieval quality. The three answers must have citations and persisted fake history.
+Production chunk/batch defaults are restored after fixture creation.
+
+The GridFS stage uses the real storage adapter, bounded worker and parser lease,
+with an in-memory bucket. It measures that path's overhead **after** the local journey,
+not an isolated incremental cost. It excludes real MongoDB sockets/pools/TLS, quota
+transactions and the optional upload-intent route. Production GridFS stays disabled.
+The fake bucket and test framework also add memory not present in deployment.
+This is a small sequential journey, **not worst-case 10 MiB PDF, authentication
+hashing, maximum pages or concurrent-request testing**.
 
 Linux cgroup memory includes children, native allocations, cache and tmpfs.
 `memory.peak` is the exact **lifetime** peak observed before cgroup removal; per-stage
 50 ms sampled peaks are lower bounds, not exact peaks. Stage endpoints also record
-kernel lifetime peaks. Idle is application-import idle, not fully connected service
-idle. CPU throttling, OOM state, exit code, deadlines, stage timings and raw synthetic
+kernel lifetime peaks. Startup idle includes the lifespan and server but not connected provider clients. CPU throttling, OOM state, exit code, deadlines, stage timings and raw synthetic
 vectors are retained in a three-day artifact. Calibration never establishes fit at
 512 MiB. A limited probe gets eight minutes; calibration gets five. Timeout is a
 failure to complete within this experiment, not necessarily an OOM.
@@ -52,3 +66,35 @@ CPU scheduling, cold starts and platform overhead can differ. PDF persistence,
 free-tier/no-card eligibility and provider quotas remain separate unresolved concerns.
 The ONNX image still contains PyTorch on disk and is not an optimized deployment image.
 No success or ₹0 hosting guarantee can be inferred from static validation.
+
+## Full-backend screening and offline checks
+
+`assessment.py` requires every full-journey stage, successful exit, no OOM/timeout,
+at least 20% headroom (102.4 MiB; peak at most 409.6 MiB) and each Ask under 60s.
+A passing synthetic screen is explicitly **not deployment approval**. A failed
+stage still records its endpoint; only the final success event establishes completion.
+CPU throttling counters and per-stage wall latency are retained in the summary.
+The four-container count and existing outer timeouts remain unchanged.
+Missing exit/OOM/timeout evidence, cgroup limits, CPU counters, memory endpoints,
+completion events or required stages cannot pass the screen. Invalid/duplicate
+stage measurements also fail closed. Results are written before the runner exits
+nonzero if either constrained runtime fails its screen; artifact upload and cleanup
+still run. A red experiment can therefore be a valid negative resource finding.
+
+The public Ubuntu runner is nominally 4 CPUs/16 GB RAM/14 GB SSD according to
+[GitHub's runner specification](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+Actual free capacity is not guaranteed: the existing 5 GiB available-RAM and 14 GiB
+free-disk guards must pass before sequential builds. The disk guard can reject a
+nominal 14 GB runner; it is intentionally not reduced without build-space evidence.
+
+Offline checks (no model, provider or Docker):
+
+```powershell
+& .\backend\.venv\Scripts\python.exe experiments/render-free/test_static.py
+& .\backend\.venv\Scripts\python.exe experiments/render-free/test_application_probe.py
+```
+
+The wiring test substitutes Uvicorn's socket-serving wrapper and the embedding model;
+it still executes the lifespan, routes and real supervised synthetic PDF extraction.
+It is not a resource measurement. Hosted measurements must be obtained by manually
+running the **existing** workflow after review; no additional workflow is needed.
