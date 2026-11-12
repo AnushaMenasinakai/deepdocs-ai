@@ -37,7 +37,7 @@ def _operation(name, index=None):
                   85: 'index_options_conflict', 86: 'index_keys_conflict',
                   67: 'cannot_create_index', 72: 'invalid_options', 197: 'invalid_index_specification',
                   11000: 'duplicate_key', 50: 'deadline_exceeded',
-                  64: 'write_concern_unconfirmed'}.get(code)
+                  64: 'write_concern_unconfirmed', 14031: 'out_of_disk_space'}.get(code)
         if reason is None:
             reason = ('deadline_exceeded' if isinstance(error, TimeoutError)
                       or getattr(error, 'timeout', False) else 'database_operation_unconfirmed')

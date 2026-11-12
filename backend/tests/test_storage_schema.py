@@ -32,6 +32,31 @@ class Database:
 
 
 class SchemaTests(unittest.TestCase):
+    def test_out_of_disk_space_is_specific_but_does_not_authorize_retry(self):
+        db = Database(); setup_storage_schema(db)
+        name = 'storage_intent_owner_document'
+        del db.rows['storage_operation_intents'][name]
+        original = db.get_collection
+        calls = []
+        def get(collection_name):
+            collection = original(collection_name)
+            def create(*args, **kwargs):
+                calls.append(kwargs['name'])
+                raise OperationFailure('private server details', 14031)
+            collection.create_index = create
+            return collection
+        db.get_collection = get
+        with self.assertRaises(StorageSchemaError) as caught:
+            setup_storage_schema(db)
+        error = caught.exception
+        self.assertEqual(error.reason, 'out_of_disk_space')
+        self.assertEqual(error.server_code, 14031)
+        self.assertEqual(error.index.name, name)
+        self.assertEqual(error.outcome, 'unknown')  # May also abort an active build.
+        self.assertEqual(inspect_failed_index(db, error), 'not_observed')
+        self.assertEqual(calls, [name])
+        self.assertNotIn('private', str(error))
+
     def test_index_failure_identity_code_and_outcome(self):
         for failure, outcome in ((OperationFailure('private', 197), 'command_rejected'),
                                  (OperationFailure('private', 99999), 'unknown'),

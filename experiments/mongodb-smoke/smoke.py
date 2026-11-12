@@ -19,7 +19,7 @@ def failure_diagnostic(error):
                'index_keys_mismatch', 'index_uniqueness_mismatch', 'index_options_mismatch',
                'index_name_conflict', 'indexes_missing', 'identity_index_missing',
                'bad_value', 'parse_rejected', 'cannot_create_index', 'invalid_options',
-               'invalid_index_specification'}
+               'invalid_index_specification', 'out_of_disk_space'}
     if isinstance(error, StorageSchemaError):
         operation = error.operation if error.operation in operations else 'unknown'
         reason = error.reason if error.reason in reasons else 'unknown'

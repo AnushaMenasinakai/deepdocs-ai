@@ -56,7 +56,7 @@ chmod 444 "$work/app.json" "$work/bootstrap.json" "$work/ca.crt"
 docker run -d --name "$TEST_ID" --label "deepdocs.smoke=$TEST_ID" \
   --network none --user 999:999 --read-only --cap-drop ALL --security-opt no-new-privileges:true \
   --memory 2g --memory-swap 2g --cpus 2 --pids-limit 128 \
-  --tmpfs /data/db:rw,nosuid,noexec,size=512m,uid=999,gid=999,mode=700 \
+  --tmpfs /data/db:rw,nosuid,noexec,size=1g,uid=999,gid=999,mode=700 \
   --tmpfs /data/configdb:rw,nosuid,noexec,size=16m,uid=999,gid=999,mode=700 \
   --tmpfs /tmp:rw,nosuid,noexec,size=64m,mode=1777 \
   --mount "type=bind,src=$work/keyfile,dst=/run/keyfile,readonly" \
@@ -85,6 +85,15 @@ test "$ready" = true
 echo 'Listener ready; initializing disposable replica and scoped user.'
 timeout --signal=TERM --kill-after=5s 150s docker exec --env HOME=/tmp "$TEST_ID" \
   mongosh --quiet --host localhost --tls --tlsCAFile /run/ca.crt /run/bootstrap.js
+# MongoDB 8.0 requires 500 MiB free in dbPath before index builds. Host disk
+# preflight cannot measure this separate tmpfs. Keep 100 MiB additional headroom.
+available_kib=$(timeout 5s docker exec "$TEST_ID" df -Pk /data/db | awk 'NR == 2 {print $4}')
+[[ "$available_kib" =~ ^[0-9]+$ ]]
+echo "MongoDB dbPath available KiB=$available_kib; required preflight KiB=614400"
+if (( available_kib < 614400 )); then
+  echo 'Insufficient disposable dbPath space for safe index creation.'
+  exit 1
+fi
 timeout --signal=TERM --kill-after=5s 120s docker run --name "${TEST_ID}_test" \
   --label "deepdocs.smoke=$TEST_ID" --network "container:$TEST_ID" \
   --read-only --cap-drop ALL --security-opt no-new-privileges:true \

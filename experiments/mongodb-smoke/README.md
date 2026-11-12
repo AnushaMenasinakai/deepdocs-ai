@@ -23,6 +23,21 @@ Neither runtime container has an external route or host-published port. Public
 image/package downloads occur only before runtime. There are no external service
 tests or provider credentials.
 
+MongoDB error 14031 means `OutOfDiskSpace`. The original 512 MiB dbPath tmpfs
+left insufficient free space after initialization for MongoDB 8.0's default
+500 MiB index-build free-space safeguard. dbPath is now bounded at 1 GiB; this
+is a maximum, not a preallocation. The existing 2 GiB container memory/no-swap
+limit remains unchanged, and tmpfs usage counts against that memory limit.
+After bootstrap, a container-local disk check requires 600 MiB available before
+starting schema tests. No server safeguard is lowered or disabled. Host free-disk
+checks alone cannot detect insufficient capacity inside tmpfs. The failed run
+did not record exact free bytes; the next manual run will report this measurement.
+
+Authoritative references:
+- https://www.mongodb.com/docs/v8.0/reference/parameters/#mongodb-parameter-param.indexBuildMinAvailableDiskSpaceMB
+- https://github.com/mongodb/mongo/blob/r8.0.0/src/mongo/base/error_codes.yml
+- https://github.com/mongodb/mongo/blob/r8.0.0/src/mongo/db/index_builds_coordinator.cpp
+
 A temporary CA verifies the server's localhost SAN. Authentication uses a random
 keyfile and generated passwords. The localhost exception initializes the empty
 replica set and creates a bootstrap administrator; it then creates a readWrite user

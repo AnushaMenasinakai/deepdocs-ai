@@ -13,6 +13,25 @@ spec.loader.exec_module(smoke)
 
 
 class IsolationTests(unittest.TestCase):
+    def test_dbpath_has_headroom_without_lowering_server_safeguard(self):
+        script = (ROOT / 'run.sh').read_text()
+        self.assertIn('--tmpfs /data/db:rw,nosuid,noexec,size=1g,uid=999,gid=999,mode=700', script)
+        self.assertIn('--memory 2g --memory-swap 2g', script)
+        self.assertNotIn('--setParameter', script)
+        self.assertIn('df -Pk /data/db', script)
+        self.assertIn('available_kib < 614400', script)
+        self.assertLess(script.index('df -Pk /data/db'), script.index('docker run --name "${TEST_ID}_test"'))
+
+    def test_disk_error_diagnostic_is_sanitized(self):
+        index = next(i for i in smoke.INDEXES if i.name == 'storage_intent_owner_document')
+        error = smoke.StorageSchemaError('private', operation='create_index',
+            index=index, reason='out_of_disk_space', server_code=14031,
+            driver_category='OperationFailure')
+        diagnostic = smoke.failure_diagnostic(error)
+        self.assertIn('reason=out_of_disk_space', diagnostic)
+        self.assertIn('server_code=14031', diagnostic)
+        self.assertNotIn('private', diagnostic)
+
     def test_failed_mutation_readback_does_not_resume_setup(self):
         index = next(i for i in smoke.INDEXES if i.name == 'files_id_1_n_1')
         error = smoke.StorageSchemaError('secret', operation='create_index', index=index,
