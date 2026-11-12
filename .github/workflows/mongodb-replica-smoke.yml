@@ -1,0 +1,38 @@
+name: Isolated MongoDB replica-set smoke tests
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      TEST_ID: dd_smoke_${{ github.run_id }}_${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build disposable harness and run smoke tests
+        timeout-minutes: 18
+        run: bash experiments/mongodb-smoke/run.sh
+      - name: Remove only job-owned containers and test image
+        if: always()
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          [[ "$TEST_ID" =~ ^dd_smoke_[0-9]+_[0-9]+$ ]]
+          # Remove the namespace consumer before its owner.
+          for name in "${TEST_ID}_test" "$TEST_ID"; do
+            if docker container inspect "$name" >/dev/null 2>&1; then
+              test "$(docker inspect -f '{{index .Config.Labels "deepdocs.smoke"}}' "$name")" = "$TEST_ID"
+              docker rm -f -v "$name" >/dev/null
+            fi
+          done
+          if docker image inspect "deepdocs-smoke:$TEST_ID" >/dev/null 2>&1; then
+            test "$(docker image inspect -f '{{index .Config.Labels "deepdocs.smoke"}}' "deepdocs-smoke:$TEST_ID")" = "$TEST_ID"
+            docker image rm "deepdocs-smoke:$TEST_ID" >/dev/null
+          fi
