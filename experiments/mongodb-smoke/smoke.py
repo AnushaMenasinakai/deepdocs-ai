@@ -5,7 +5,23 @@ from pathlib import Path
 from pymongo import MongoClient
 from pymongo.read_concern import ReadConcern
 from pymongo.write_concern import WriteConcern
-from storage_schema import setup_storage_schema, verify_storage_schema, COLLECTIONS
+from storage_schema import setup_storage_schema, verify_storage_schema, COLLECTIONS, StorageSchemaError
+
+
+def failure_diagnostic(error):
+    # Whitelist even internal attributes: never serialize arbitrary exception text.
+    operations = {'inspection', 'list_collections', 'list_indexes', 'create_collection',
+                  'create_index', 'compare_index', 'inspect_manifest', 'verify_schema', 'setup_schema'}
+    reasons = {'schema_unconfirmed', 'permission_denied', 'namespace_exists',
+               'index_options_conflict', 'index_keys_conflict', 'duplicate_key',
+               'deadline_exceeded', 'write_concern_unconfirmed', 'database_operation_unconfirmed',
+               'index_keys_mismatch', 'index_uniqueness_mismatch', 'index_options_mismatch',
+               'index_name_conflict', 'indexes_missing', 'identity_index_missing'}
+    if isinstance(error, StorageSchemaError):
+        operation = error.operation if error.operation in operations else 'unknown'
+        reason = error.reason if error.reason in reasons else 'unknown'
+        return f'FAIL: schema validation; operation={operation}; reason={reason}'
+    return 'FAIL: smoke validation; category=' + type(error).__name__
 
 
 def guard(config, hello=None):
@@ -43,8 +59,10 @@ def run():
         assert client.admin.command('buildInfo')['version'] == '8.0.38'
         print('Identity verified; checking explicit schema setup.', flush=True)
         setup_storage_schema(database)
+        print('Initial schema setup completed; verifying manifest.', flush=True)
         verify_storage_schema(database)
         before = {c: list(database[c].list_indexes()) for c in COLLECTIONS}
+        print('Initial manifest verified; checking idempotent setup.', flush=True)
         setup_storage_schema(database)
         verify_storage_schema(database)
         assert before == {c: list(database[c].list_indexes()) for c in COLLECTIONS}
@@ -69,5 +87,5 @@ if __name__ == '__main__':
         run()
     except Exception as error:
         # No raw exceptions, payloads, URIs or server responses in job logs.
-        print('FAIL: smoke validation; category=' + type(error).__name__)
+        print(failure_diagnostic(error))
         raise SystemExit(1) from None

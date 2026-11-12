@@ -49,6 +49,20 @@ has a five-second client deadline, which does not prove server work stopped.
 
 ## Transaction outcomes
 
+Schema failures now retain fixed `operation` and `reason` diagnostic codes.
+`StorageSchemaError` inherits from OSError through the storage retention hierarchy;
+it must be re-raised before wrapping generic OS/driver failures. Otherwise a real
+index mismatch is replaced by a generic setup error. The smoke harness prints
+only allowlisted codes, never provider messages or index/credential payloads.
+Permission errors, timeouts, write-concern failures and index conflicts remain
+fail-closed, with the original five-second deadline unchanged.
+
+The initial hosted smoke failure recorded only the exception class. Its underlying
+MongoDB command or mismatch cannot be reconstructed from that output. The error
+wrapping defect is reproduced offline; a hosted run with these diagnostics is
+still needed to identify the original setup failure. No role expansion, timeout
+increase or relaxed index comparison is justified by the existing log.
+
 `StorageTransactionError` retains `StorageUncertain` inheritance and the existing
 sanitized message. Internal `category` and `phase` contain no provider text.
 

@@ -10,6 +10,16 @@ spec.loader.exec_module(smoke)
 
 
 class IsolationTests(unittest.TestCase):
+    def test_safe_schema_diagnostic(self):
+        error = smoke.StorageSchemaError('secret-provider-response',
+                                        operation='create_index', reason='deadline_exceeded')
+        self.assertEqual(smoke.failure_diagnostic(error),
+                         'FAIL: schema validation; operation=create_index; reason=deadline_exceeded')
+        error.operation = 'secret-uri'
+        error.reason = 'secret-pdf'
+        self.assertEqual(smoke.failure_diagnostic(error),
+                         'FAIL: schema validation; operation=unknown; reason=unknown')
+
     def setUp(self):
         self.config = dict(database='dd_smoke_123_1', replica='dd_smoke_123_1', password='a' * 64)
         self.hello = dict(setName='dd_smoke_123_1', hosts=['localhost:27017'], isWritablePrimary=True)
