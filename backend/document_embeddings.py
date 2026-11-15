@@ -5,7 +5,7 @@ from bson import ObjectId
 from document_operations import claim_document, release_document, record_operation_stage, DocumentBusy
 from document_processing import inspect_chunks
 from embeddings import EmbeddingFailure, embed_batches
-from embedding_execution import Batches
+from embedding_execution import Batches, run_embedding
 from cpu_workers import WorkerInfrastructureFailure
 from expensive_admission import Resource
 from vector_store import get_vector_store, cleanup_document_vectors, VectorFailure
@@ -125,7 +125,7 @@ async def _generate_embeddings(database, owner_id, document_id, settings, expect
         count, dimension = 0, None
         batches = Batches([chunk["text"] for chunk in chunks], settings, factory=embed_batches)
         while True:
-            batch = await session.run(batches.next_batch)
+            batch = await run_embedding(session, batches.next_batch, settings=settings)
             if batch is None:
                 break
             batch_dimension, vectors = batch

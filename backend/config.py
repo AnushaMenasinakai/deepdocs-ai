@@ -291,6 +291,20 @@ def load_processing_settings() -> ProcessingSettings:
 class EmbeddingSettings:
     model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
     batch_size: int = 32
+    provider: str = "local"
+    gemini_model: str = "gemini-embedding-001"
+    dimension: int = 768  # Remote output only; local dimensions remain model-owned.
+
+    def __post_init__(self):
+        if self.provider not in ("local", "gemini"):
+            raise ConfigurationError("Invalid embedding provider.")
+        if self.provider == "gemini":
+            if self.gemini_model != "gemini-embedding-001" or type(self.dimension) is not int or self.dimension != 768:
+                raise ConfigurationError("Unsupported Gemini embedding configuration.")
+            if type(self.batch_size) is not int or not 1 <= self.batch_size <= 128:
+                raise ConfigurationError("Invalid embedding batch size.")
+            # Existing eligibility and publication code uses this model identity.
+            object.__setattr__(self, "model_name", self.gemini_model)
 
 
 def load_embedding_settings() -> EmbeddingSettings:
@@ -299,6 +313,17 @@ def load_embedding_settings() -> EmbeddingSettings:
         values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
         name = values.get("EMBEDDING_MODEL_NAME", EmbeddingSettings.model_name)
         size = int(values.get("EMBEDDING_BATCH_SIZE", "32"))
+        provider = values.get("EMBEDDING_PROVIDER", "local")
+        if provider == "gemini":
+            # Never implicitly point remote vectors at the existing default collection.
+            collection = values.get("QDRANT_COLLECTION_NAME", "")
+            if not isinstance(collection, str) or not collection.strip() or collection.strip() == "deepdocs_chunks":
+                raise ValueError
+            return EmbeddingSettings(batch_size=size, provider=provider,
+                gemini_model=values.get("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001"),
+                dimension=int(values.get("EMBEDDING_DIMENSION", "768")))
+        if provider != "local":
+            raise ValueError
         # Repository IDs only, never local paths or remote executable code.
         if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9_-]+/[A-Za-z0-9_-]+", name):
             raise ValueError

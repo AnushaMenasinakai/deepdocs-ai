@@ -3,7 +3,7 @@ import math
 from numbers import Real
 from bson import ObjectId
 import embeddings
-from embedding_execution import query_vector
+from embedding_execution import query_vector, run_embedding
 from cpu_workers import WorkerInfrastructureFailure, SubmissionRejected
 from vector_store import get_vector_store, VectorFailure, point_id
 
@@ -79,7 +79,7 @@ async def search_chunks(database, owner_id, base_id, data, settings, *, workers=
         # Production routes pass their admitted owner; standalone evaluation
         # callers retain the existing CPU-only execution path.
         with (workers.session(workflow) if workflow is not None else workers.embedding_session()) as session:
-            dimension, vector = await session.run(query_vector, data.query, settings)
+            dimension, vector = await run_embedding(session, query_vector, data.query, settings, settings=settings)
     except (WorkerInfrastructureFailure, SubmissionRejected):
         raise embeddings.EmbeddingFailure() from None
     candidates = [document for document in candidates if eligible(document, settings, store, dimension)]
