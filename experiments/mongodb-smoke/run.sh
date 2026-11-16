@@ -17,10 +17,10 @@ work=$(mktemp -d "$RUNNER_TEMP/mongodb-smoke.XXXXXX")
 chmod 700 "$work"
 # Only these allowlisted sources enter the image build context. No .env or Git data.
 mkdir -p "$work/build/backend" "$work/build/experiments/mongodb-smoke"
-for file in document_storage.py storage_contract.py storage_schema.py; do
+for file in document_storage.py storage_contract.py storage_schema.py gridfs_storage.py storage_intents.py storage_reconciliation.py pdf_processing.py; do
   cp "backend/$file" "$work/build/backend/"
 done
-cp experiments/mongodb-smoke/{Dockerfile,smoke.py} "$work/build/experiments/mongodb-smoke/"
+cp experiments/mongodb-smoke/{Dockerfile,smoke.py,lifecycle.py} "$work/build/experiments/mongodb-smoke/"
 # Public source files must remain readable by the image's nonroot test user.
 chmod 644 "$work/build/backend/"*.py "$work/build/experiments/mongodb-smoke/"*
 timeout --signal=TERM --kill-after=15s 8m docker build --platform linux/amd64 \

@@ -103,6 +103,24 @@ def run():
         assert collection.find_one({'_id': 'commit'}) is not None
         assert collection.find_one({'_id': 'rollback'}) is None
         print('PASS: TLS/auth, replica identity, majority ACK, commit/rollback, schema and idempotency.')
+        from lifecycle import lifecycle
+        def reconnect():
+            fresh = MongoClient('localhost', 27017, directConnection=True,
+                replicaSet=config['replica'], username='smoke', password=config['password'],
+                authSource=config['database'], tls=True, tlsCAFile='/run/ca.crt',
+                tlsAllowInvalidCertificates=False, tlsAllowInvalidHostnames=False,
+                retryWrites=False, retryReads=False, timeoutMS=5000,
+                serverSelectionTimeoutMS=5000, connectTimeoutMS=5000,
+                socketTimeoutMS=5000, waitQueueTimeoutMS=5000)
+            try:
+                guard(config, fresh.admin.command('hello'))
+                roles = fresh.admin.command('connectionStatus', showPrivileges=False)['authInfo']['authenticatedUserRoles']
+                assert roles == [{'role': 'readWrite', 'db': config['database']}]
+                return fresh, fresh.get_database(config['database'], write_concern=WriteConcern('majority', wtimeout=5000))
+            except BaseException:
+                fresh.close()
+                raise
+        lifecycle(database, reconnect)
 
 
 if __name__ == '__main__':

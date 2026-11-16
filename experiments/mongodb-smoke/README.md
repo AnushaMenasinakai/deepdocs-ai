@@ -86,3 +86,55 @@ Bootstrap follows MongoDB's documented localhost-exception procedure:
 https://www.mongodb.com/docs/manual/core/localhost-exception/
 Official image version metadata:
 https://github.com/docker-library/official-images/blob/master/library/mongo
+
+## Prepared GridFS lifecycle extension (not yet executed remotely)
+
+The existing manual job now also calls `lifecycle.py` after the identity, schema
+and transaction smoke checks. It reuses real GridFSPDFStorage, StorageIntents,
+ReconciliationInspector and PDF extraction/chunking. Two PDFs are generated in
+memory. Uploads are checksummed, published into disposable metadata, read back,
+and re-read after closing/recreating the authenticated client. The new client
+repeats replica identity and exact scoped-role checks before database access.
+
+The isolated ledger policy permits two documents (production policy unchanged).
+After one deletion, two concurrent reservations compete for one remaining slot.
+Exactly one must succeed; a quota rejection or classified transaction conflict
+is accepted for the other. Unknown outcomes fail the test; no retry is performed.
+Deletion invokes the adapter and transactional finalizer, checks files/chunks
+are absent, and checks accounting. A deliberately staged write_dispatched intent
+is marked uncertain and inspected read-only. Its one-byte reservation must remain
+while both real PDFs and their accounting are removed. Database/container teardown
+removes this intentionally unresolved test record, not an application recovery sweep.
+
+Limits: this is service/adapter integration, not HTTP-route or asynchronous worker/
+parser-supervisor integration. Extraction is synchronous inside the bounded tester.
+No vectors exist, so vector deletion is a vacuous prerequisite; no Qdrant is called.
+The interruption is a staged durable state, not a network fault or a killed writer.
+Client recreation is tested, not MongoDB restart/failover. Concurrent admission
+uses the shared global/user count boundary; exhaustive byte-limit tests remain
+in the existing offline suite. No automatic recovery or fencing is proven.
+
+### One-time remote execution
+
+1. Review these harness-only changes and offline results. No new workflow is needed.
+2. With separate approval, commit/push the reviewed files to a branch in the same
+   repository. A hosted runner cannot execute uncommitted laptop files. Include
+   any source prerequisites that are not already on that branch; do not include
+   unrelated pending files or secrets.
+3. A repository user with Actions write permission selects the existing
+   **Isolated MongoDB replica-set smoke tests** workflow, the reviewed branch,
+   and **Run workflow** exactly once. Workflow-dispatch availability and Actions
+   policy must permit this existing workflow on the repository/default branch.
+4. Confirm runner preflight reports at least 4 GiB available RAM and 10 GiB free
+   disk. Existing Ubuntu 24.04 AMD64 runner, 20-minute job, bounded 2 GiB MongoDB
+   and 256 MiB tester remain unchanged. Actual hosted availability, account
+   minutes/spending controls and organization policies must be checked before run;
+   no paid runner or billing change is required by this plan.
+5. Review every PASS checkpoint, concurrency outcome, retained-reservation message
+   and always-run ownership-checked cleanup. Any missing stage is incomplete.
+
+No repository secrets are supplied. Generated credentials and TLS keys are runner
+local and never uploaded. Runtime networking cannot reach Atlas or AI providers.
+Public package/image downloads occur at build time only. Runner disposal removes
+private temporary files; existing cleanup removes only labeled test resources.
+This preparation neither triggers Actions nor approves deployment/GridFS activation.

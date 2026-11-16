@@ -13,6 +13,37 @@ spec.loader.exec_module(smoke)
 
 
 class IsolationTests(unittest.TestCase):
+    def test_lifecycle_synthetic_pdf_and_parser_contract(self):
+        import tempfile
+        from types import SimpleNamespace
+        spec = importlib.util.spec_from_file_location('smoke_lifecycle', ROOT / 'lifecycle.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        fixtures = module.fixtures()
+        self.assertEqual(len(fixtures), 2)
+        for data, expected in fixtures:
+            self.assertLess(len(data), 10000)
+            with tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / 'synthetic.pdf'
+                path.write_bytes(data)
+                pages, chunks = module.extract_chunks(path, SimpleNamespace(max_source_bytes=10000,
+                    max_pages=2, max_text_characters=10000, chunk_target=1000, chunk_overlap=150, max_chunks=10))
+                self.assertEqual(pages, 1)
+                self.assertIn(expected, chunks[0]['text'])
+
+    def test_lifecycle_is_wired_without_production_dependencies(self):
+        script = (ROOT / 'run.sh').read_text()
+        docker = (ROOT / 'Dockerfile').read_text()
+        lifecycle = (ROOT / 'lifecycle.py').read_text()
+        self.assertIn('lifecycle.py', script)
+        self.assertIn('lifecycle.py', docker)
+        self.assertIn('lifecycle(database, reconnect)', (ROOT / 'smoke.py').read_text())
+        for forbidden in ('load_settings', 'load_dotenv', 'qdrant_client', 'google.genai'):
+            self.assertNotIn(forbidden, lifecycle)
+        self.assertIn('ledger.finalize_deletion', lifecycle)
+        self.assertIn('threading.Barrier(2)', lifecycle)
+        self.assertIn('not inspection.mutation_authorized', lifecycle)
+
     def test_dbpath_has_headroom_without_lowering_server_safeguard(self):
         script = (ROOT / 'run.sh').read_text()
         self.assertIn('--tmpfs /data/db:rw,nosuid,noexec,size=1g,uid=999,gid=999,mode=700', script)
