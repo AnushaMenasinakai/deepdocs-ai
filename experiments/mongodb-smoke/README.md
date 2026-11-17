@@ -138,3 +138,57 @@ local and never uploaded. Runtime networking cannot reach Atlas or AI providers.
 Public package/image downloads occur at build time only. Runner disposal removes
 private temporary files; existing cleanup removes only labeled test resources.
 This preparation neither triggers Actions nor approves deployment/GridFS activation.
+
+### Durable Gemini budget validation (Phase 7G5D)
+
+The existing manual workflow now runs `budgets.py` after the GridFS lifecycle
+checks. No workflow changes or secrets are required. Two independent asynchronous
+PyMongo clients authenticate to the same disposable database and recheck replica
+identity and scoped roles before any budget writes. Network isolation, TLS,
+resource limits, ownership labels and cleanup remain unchanged.
+
+The actual `usage_budgets.Ledger`, `admit` and index setup are exercised with a
+process-local synthetic policy (global 3, per-user 2 for each request type).
+No environment configuration is loaded: the settings loader is patched only
+inside the experiment. The image contains the allowlisted config source, never
+an environment file. No provider SDK is installed or called.
+
+Prepared real-database assertions:
+- Both embedding/generation global and per-user exhaustion, duplicate operation
+  rejection, and UTC midnight rollover with a synthetic clock supplied to reserve.
+- Eight simultaneous reservations across two clients, including same-owner and
+  mixed-owner races. Cold first-ledger conflicts may fail closed with 503; tests
+  require at least one admission, never over-admission, and matching stored counts.
+- Idempotent confirmed pre-dispatch release and retained dispatched consumption.
+- Reservation and dispatch acknowledgement loss injected after the real write
+  returns. The actual admission function must reject and retain exactly one entry;
+  replay of the same operation must not reach the simulated provider counter.
+- Intrinsic unique `_id`, exact expiry index and 32-day timestamp, repeated setup.
+
+TTL *configuration* is checked, not eventual background deletion. Future synthetic
+days prevent the TTL monitor from deleting rollover fixtures. These tests do not
+simulate a real network partition, process kill, failover, or provider request.
+All cases share one disposable database; no synthetic user accounts are created,
+only ObjectId owner identities. The existing harness timeout still bounds the
+whole test container; the budget validation additionally has a 60-second limit.
+A failure or a missing PASS checkpoint means validation is incomplete. Raw driver
+messages and documents are not printed. Cleanup destroys only owned resources.
+
+For the later one-time manual run, the exact harness change set is:
+- experiments/mongodb-smoke/Dockerfile
+- experiments/mongodb-smoke/run.sh
+- experiments/mongodb-smoke/smoke.py
+- experiments/mongodb-smoke/budgets.py (new)
+- experiments/mongodb-smoke/test_contract.py
+- experiments/mongodb-smoke/README.md
+
+Required foundation prerequisites are backend/usage_budgets.py (new) and only
+the UsageBudgetSettings/load_usage_budget_settings additions in backend/config.py.
+Exclude the unrelated private-access configuration addition. Defer
+backend/tests/test_usage_budgets.py: its provider/route tests depend on pending
+application integration and an untracked fixture. The harness test_contract.py
+provides independent offline checks for this foundation commit. Other pending
+application integration changes are not required by this isolated image.
+Existing committed bootstrap.js, lifecycle.py, storage
+modules and .github/workflows/mongodb-replica-smoke.yml remain prerequisites but
+need no edits. No staging, push or workflow execution is authorized by preparation.

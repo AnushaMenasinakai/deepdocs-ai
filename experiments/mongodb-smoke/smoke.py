@@ -121,6 +121,9 @@ def run():
                 fresh.close()
                 raise
         lifecycle(database, reconnect)
+        import asyncio
+        from budgets import run as run_budgets
+        asyncio.run(run_budgets(config, guard))
 
 
 if __name__ == '__main__':

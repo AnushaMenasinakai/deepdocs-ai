@@ -10,6 +10,59 @@ ROOT = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location('mongodb_smoke', ROOT / 'smoke.py')
 smoke = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(smoke)
+budget_spec = importlib.util.spec_from_file_location('smoke_budgets', ROOT / 'budgets.py')
+budget_checks = importlib.util.module_from_spec(budget_spec)
+budget_spec.loader.exec_module(budget_checks)
+
+
+class BudgetHarnessTests(unittest.IsolatedAsyncioTestCase):
+    async def test_ack_loss_follows_exactly_one_completed_write(self):
+        from unittest.mock import AsyncMock
+        for method in ('find_one_and_update', 'update_one'):
+            collection = Mock()
+            mutation = AsyncMock(return_value={'synthetic': True})
+            setattr(collection, method, mutation)
+            wrapped = budget_checks.LostAcknowledgement(collection, method)
+            with self.assertRaises(budget_checks.AutoReconnect):
+                await getattr(wrapped, method)({'synthetic': True})
+            mutation.assert_awaited_once()
+            self.assertTrue(wrapped.injected)
+            self.assertEqual(await getattr(wrapped, method)({}), {'synthetic': True})
+            self.assertEqual(mutation.await_count, 2)
+
+    async def test_rejected_identity_never_opens_client(self):
+        with patch.object(budget_checks, 'AsyncMongoClient') as client:
+            with self.assertRaises(ValueError):
+                await budget_checks.run({'database': 'production'}, smoke.guard)
+            client.assert_not_called()
+
+    async def test_unexpected_replica_closes_client_before_writes(self):
+        from unittest.mock import AsyncMock
+        client = Mock()
+        client.admin.command = AsyncMock(return_value={'setName': 'wrong'})
+        client.close = AsyncMock()
+        config = dict(database='dd_smoke_123_1', replica='dd_smoke_123_1', password='a' * 64)
+        with patch.object(budget_checks, 'AsyncMongoClient', return_value=client), \
+             patch.object(budget_checks, 'validate', new_callable=AsyncMock) as validate:
+            with self.assertRaises(ValueError):
+                await budget_checks.run(config, smoke.guard)
+            validate.assert_not_awaited()
+            client.get_database.assert_not_called()
+            client.close.assert_awaited_once()
+
+    def test_budget_sources_and_invocation_are_allowlisted(self):
+        docker = (ROOT / 'Dockerfile').read_text()
+        script = (ROOT / 'run.sh').read_text()
+        source = (ROOT / 'budgets.py').read_text()
+        for name in ('budgets.py', 'usage_budgets.py', 'config.py'):
+            self.assertIn(name, docker)
+            self.assertIn(name, script)
+        self.assertIn('asyncio.run(run_budgets(config, guard))', (ROOT / 'smoke.py').read_text())
+        self.assertIn('python-dotenv==1.2.3', docker)
+        self.assertIn('retryWrites=False, retryReads=False', source)
+        self.assertIn('asyncio.timeout(60)', source)
+        for forbidden in ('load_dotenv', 'load_settings(', 'google.genai', 'qdrant_client', 'mongodb+srv'):
+            self.assertNotIn(forbidden, source)
 
 
 class IsolationTests(unittest.TestCase):

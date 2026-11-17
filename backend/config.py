@@ -13,6 +13,31 @@ class ConfigurationError(ValueError):
     """A safe, public configuration message that never includes input values."""
 
 
+@dataclass(frozen=True)
+class UsageBudgetSettings:
+    enabled: bool = False
+    global_embedding: int = 100
+    user_embedding: int = 30
+    global_generation: int = 30
+    user_generation: int = 10
+
+
+def load_usage_budget_settings():
+    try:
+        values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+        raw = values.get('GEMINI_USAGE_BUDGETS_ENABLED', 'false').strip().lower()
+        if raw not in ('true', 'false'): raise ValueError
+        limits = {}
+        for name, default in vars(UsageBudgetSettings()).items():
+            if name == 'enabled': continue
+            limits[name] = int(values.get('GEMINI_DAILY_' + name.upper(), default))
+            if not 1 <= limits[name] <= 5000: raise ValueError
+        if any(limits['user_'+k] > limits['global_'+k] for k in ('embedding','generation')): raise ValueError
+        return UsageBudgetSettings(enabled=raw == 'true', **limits)
+    except (OSError, UnicodeError, ValueError, TypeError, AttributeError):
+        raise ConfigurationError('Invalid usage budget configuration.') from None
+
+
 def load_gridfs_upload_enabled() -> bool:
     try:
         values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
