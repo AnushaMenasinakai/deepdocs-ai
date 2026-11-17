@@ -174,7 +174,7 @@ class StorageIntents:
             self.intents.insert_one(record, session=session)
             return record
 
-    def reserve(self, identity):
+    def reserve(self, identity, *, growth_policy=None):
         with self.transaction() as session:
             record = self._record(identity, session)
             if identity.operation_type != 'upload' or record['reconciliation_status'] != 'none':
@@ -193,6 +193,10 @@ class StorageIntents:
                     or sum(e['bytes'] for e in entries) + size > self.policy.global_bytes
                     or sum(e['bytes'] for e in own) + size > self.policy.user_bytes):
                 raise QuotaExceeded('PDF storage quota is exhausted.')
+            if growth_policy is not None and growth_policy.enabled:
+                from gridfs_growth import reserve
+                reserve(self.db, session, identity, growth_policy)
+                record['growth_reserved'] = True
             entries.append({'operation_id':identity.operation_id, 'document_id':identity.document_id,
                             'owner_id':identity.owner_id, 'knowledge_base_id':identity.knowledge_base_id,
                             'bytes':size, 'state':'reserved'})
@@ -253,6 +257,9 @@ class StorageIntents:
         if len(matches) != 1:
             raise IntentConflict('Missing quota entry.')
         if action == 'release':
+            if source.get('growth_reserved') is True:
+                from gridfs_growth import release
+                release(self.db, session, source)
             row['entries'].remove(matches[0])
         else:
             matches[0]['state'] = target

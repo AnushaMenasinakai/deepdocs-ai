@@ -23,7 +23,7 @@ def fixtures():
     return result
 
 
-def lifecycle(database, reconnect):
+def lifecycle(database, reconnect, pdfs=None):
     owner, base=ObjectId(), ObjectId()
     database.knowledge_bases.insert_one({'_id':base,'owner_id':owner,'_document_ids':[], '_document_revision':0})
     policy=QuotaPolicy(global_documents=2,user_documents=2)  # isolated test policy only
@@ -31,7 +31,7 @@ def lifecycle(database, reconnect):
     records=[]
     with tempfile.TemporaryDirectory() as root:
         storage=GridFSPDFStorage(database,owner_id=owner,knowledge_base_id=base,temp_root=root)
-        for data,text in fixtures():
+        for data,text in (fixtures() if pdfs is None else pdfs):
             identity=IntentIdentity.new(ObjectId(),owner,base)
             digest=hashlib.sha256(data).hexdigest()
             ledger.create(identity,len(data),digest,'smoke_worker')

@@ -13,6 +13,69 @@ spec.loader.exec_module(smoke)
 budget_spec = importlib.util.spec_from_file_location('smoke_budgets', ROOT / 'budgets.py')
 budget_checks = importlib.util.module_from_spec(budget_spec)
 budget_spec.loader.exec_module(budget_checks)
+combined_spec = importlib.util.spec_from_file_location('smoke_combined', ROOT / 'combined.py')
+combined_checks = importlib.util.module_from_spec(combined_spec)
+combined_spec.loader.exec_module(combined_checks)
+
+
+class CombinedHarnessTests(unittest.TestCase):
+    def test_lost_ack_occurs_after_commit_without_replay(self):
+        from contextlib import contextmanager
+        events = []
+        @contextmanager
+        def transaction():
+            events.append('begin')
+            yield 'session'
+            events.append('commit')
+        store = Mock(transaction=transaction)
+        with combined_checks.lost_commit(store):
+            with self.assertRaises(combined_checks.StorageTransactionError) as caught:
+                with store.transaction() as session:
+                    self.assertEqual(session, 'session')
+                    events.append('write')
+        self.assertEqual(events, ['begin', 'write', 'commit'])
+        self.assertEqual(caught.exception.category, 'unknown_commit_result')
+        self.assertIs(store.transaction, transaction)
+
+    def test_body_failure_is_not_mislabeled_as_lost_commit(self):
+        from contextlib import contextmanager
+        events = []
+        @contextmanager
+        def transaction():
+            yield None
+            events.append('commit')
+        store = Mock(transaction=transaction)
+        with combined_checks.lost_commit(store), self.assertRaises(ValueError):
+            with store.transaction():
+                raise ValueError('synthetic')
+        self.assertEqual(events, [])
+
+    def test_rejection_helper_does_not_swallow_other_failures(self):
+        def wrong(): raise RuntimeError('synthetic')
+        with self.assertRaises(RuntimeError): combined_checks.rejected(wrong)
+        with self.assertRaises(AssertionError): combined_checks.rejected(lambda: None)
+
+    def test_combined_sources_and_execution_are_allowlisted(self):
+        docker = (ROOT / 'Dockerfile').read_text()
+        script = (ROOT / 'run.sh').read_text()
+        for name in ('combined.py', 'growth_limits.py', 'gridfs_growth.py',
+                     'gridfs_growth_recovery.py', 'policy_readiness.py'):
+            self.assertIn(name, docker)
+            self.assertIn(name, script)
+        smoke_source = (ROOT / 'smoke.py').read_text()
+        self.assertLess(smoke_source.index('lifecycle(database, reconnect, pdfs)'), smoke_source.index('validate_sync(reconnect, pdfs)'))
+        self.assertEqual(smoke_source.count('pdfs = fixtures()'), 1)
+        budget_source = (ROOT / 'budgets.py').read_text()
+        self.assertLess(budget_source.index('await validate(databases)'), budget_source.index('await validate_async(databases)'))
+        self.assertIn('180s docker run', script)
+        source = (ROOT / 'combined.py').read_text()
+        for forbidden in ('load_dotenv', 'load_settings(', 'MongoClient(', 'mongodb+srv',
+                          'google.genai', 'qdrant_client', 'drop_database', 'drop_collection'):
+            self.assertNotIn(forbidden, source)
+        for required in ('barrier.wait(timeout=5)', 'store.finalize_deletion',
+                         'session.abort_transaction()', 'not result.mutation_authorized',
+                         'assert await policy_readiness.verify(db)', 'assert held(interrupted) == (True, True)'):
+            self.assertIn(required, source)
 
 
 class BudgetHarnessTests(unittest.IsolatedAsyncioTestCase):
@@ -90,7 +153,7 @@ class IsolationTests(unittest.TestCase):
         lifecycle = (ROOT / 'lifecycle.py').read_text()
         self.assertIn('lifecycle.py', script)
         self.assertIn('lifecycle.py', docker)
-        self.assertIn('lifecycle(database, reconnect)', (ROOT / 'smoke.py').read_text())
+        self.assertIn('lifecycle(database, reconnect, pdfs)', (ROOT / 'smoke.py').read_text())
         for forbidden in ('load_settings', 'load_dotenv', 'qdrant_client', 'google.genai'):
             self.assertNotIn(forbidden, lifecycle)
         self.assertIn('ledger.finalize_deletion', lifecycle)

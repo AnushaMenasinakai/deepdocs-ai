@@ -174,21 +174,85 @@ whole test container; the budget validation additionally has a 60-second limit.
 A failure or a missing PASS checkpoint means validation is incomplete. Raw driver
 messages and documents are not printed. Cleanup destroys only owned resources.
 
-For the later one-time manual run, the exact harness change set is:
+## Combined policy validation (Phase 7G5L)
+
+The existing manual workflow is unchanged. It runs the original lifecycle and
+budget cases plus `combined.py`, in the same disposable database with the same
+scoped credentials. Exactly two synthetic PDF byte sequences are generated once
+and reused. The allowlisted build context now includes growth/recovery/readiness
+source modules. No production configuration file, provider SDK or route module
+is copied. Policies are patched in this test process only; no settings loader
+reads an environment file. TLS, role/replica guards, network isolation, resource
+thresholds and ownership-checked teardown remain unchanged.
+
+New prepared real-database checks:
+- Combined quota admission and rollback, retaining the original lifecycle's
+  uncertain reservation. The original isolated 2-document GridFS policy is reused;
+  a 1-document growth limit exercises exhaustion independently.
+- Two independently authenticated clients race for the remaining global slot.
+  Both ledgers must agree, exactly one admission succeeds, and no mutation retries
+  occur. An explicitly held competing transaction also forces a real write conflict.
+- An acknowledgement is deliberately lost **after** a real admission commit.
+  Both reservations must remain. This is not a real network partition.
+- Pre-dispatch cancellation is represented by a retained prepared intent, not an
+  actual request cancellation. A failed release rolls back real transactional
+  writes; an explicit operator review then releases both quotas. Changed metadata,
+  an actual stored original or a changed KB revision fences the reviewed action.
+  Released operations cannot be dispatched by the old worker.
+- A real original is saved and deleted, followed by atomic document metadata and
+  combined quota release. No vectors exist; Qdrant cleanup is deliberately not tested.
+- Post-dispatch interruption is represented by an uncertain intent: both quotas
+  remain and reconciliation requires manual review. No orphan deletion is performed.
+- Separate async clients insert/prune history concurrently. Conflicting requests
+  may fail closed; successful requests retain exactly the newest two records.
+  An injected failure after insertion verifies rollback of history and owner revision.
+- Actual enabled-policy readiness fails before ownership/history indexes exist,
+  then succeeds after explicit isolated setup, including a snapshot transaction read.
+  Existing budget cases continue verifying the budget TTL and identity indexes.
+
+The whole container has a bounded 180-second timeout (previously 120 seconds) to
+allow the additional sequential cases. The async budget/history sequence retains
+its 60-second bound. MongoDB memory, CPU and disk safeguards are unchanged.
+A failed assertion stops the run; raw exception messages and documents are not
+printed. Unresolved synthetic reservations are intentionally retained until
+ownership-checked destruction of the disposable MongoDB container.
+
+### Exact candidate change set for a later focused commit
+
+Harness files (8):
 - experiments/mongodb-smoke/Dockerfile
 - experiments/mongodb-smoke/run.sh
 - experiments/mongodb-smoke/smoke.py
-- experiments/mongodb-smoke/budgets.py (new)
+- experiments/mongodb-smoke/lifecycle.py
+- experiments/mongodb-smoke/budgets.py
+- experiments/mongodb-smoke/combined.py (new)
 - experiments/mongodb-smoke/test_contract.py
 - experiments/mongodb-smoke/README.md
 
-Required foundation prerequisites are backend/usage_budgets.py (new) and only
-the UsageBudgetSettings/load_usage_budget_settings additions in backend/config.py.
-Exclude the unrelated private-access configuration addition. Defer
-backend/tests/test_usage_budgets.py: its provider/route tests depend on pending
-application integration and an untracked fixture. The harness test_contract.py
-provides independent offline checks for this foundation commit. Other pending
-application integration changes are not required by this isolated image.
-Existing committed bootstrap.js, lifecycle.py, storage
-modules and .github/workflows/mongodb-replica-smoke.yml remain prerequisites but
-need no edits. No staging, push or workflow execution is authorized by preparation.
+Required application prerequisites (6):
+- backend/storage_intents.py: combined growth reserve/release additions
+- backend/growth_limits.py (new)
+- backend/gridfs_growth.py (new)
+- backend/gridfs_growth_recovery.py (new)
+- backend/policy_readiness.py (new)
+- backend/config.py: **only** GrowthSettings and load_growth_settings additions
+
+Do not stage all of config.py: it also contains private-access and PDF processing
+configuration changes unrelated to this focused harness. Existing dataclass,
+dotenv and os imports already support the selected additions. The committed
+usage_budgets.py/config budget settings and storage_schema.py are prerequisites,
+not new changes. No additional packages or workflow changes are required.
+The current complete working tree is not an isolated commit candidate; selective
+config staging and review of the resulting snapshot are required before committing.
+Do not include route, frontend, provider-integration or deployment changes.
+
+### Limits of this validation
+
+Offline contract tests cannot establish real MongoDB results. A later explicitly
+authorized manual workflow run is still required. These tests call the actual
+storage adapter, transaction ledger, recovery service, history retention and
+readiness helper; they do not execute FastAPI routes, real request cancellation,
+PDF subprocess shutdown, provider calls, active worker takeover, failover or
+actual TTL expiration. Readiness here verifies database prerequisites, not a full
+application lifespan. Production GridFS remains disabled. This phase authorizes
+no Docker execution, staging, commit, push or workflow dispatch.

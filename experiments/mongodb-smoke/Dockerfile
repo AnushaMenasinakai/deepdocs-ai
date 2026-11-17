@@ -6,6 +6,8 @@ COPY backend/gridfs_storage.py backend/storage_intents.py backend/storage_reconc
 COPY experiments/mongodb-smoke/smoke.py ./
 COPY experiments/mongodb-smoke/lifecycle.py experiments/mongodb-smoke/budgets.py ./
 COPY backend/usage_budgets.py backend/config.py ./
+COPY backend/growth_limits.py backend/gridfs_growth.py backend/gridfs_growth_recovery.py backend/policy_readiness.py ./
+COPY experiments/mongodb-smoke/combined.py ./
 ENV PYTHONDONTWRITEBYTECODE=1
 USER 10001:10001
 CMD ["python", "smoke.py"]

@@ -14,6 +14,31 @@ class ConfigurationError(ValueError):
 
 
 @dataclass(frozen=True)
+class GrowthSettings:
+    enabled: bool = False
+    knowledge_bases: int = 5
+    documents: int = 10
+    pages: int = 100
+    chunks: int = 500
+    history: int = 100
+
+
+def load_growth_settings():
+    try:
+        values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+        flag = values.get('GROWTH_LIMITS_ENABLED', 'false').strip().lower()
+        if flag not in ('true', 'false'):
+            raise ValueError
+        limits = {name: int(values.get('GROWTH_MAX_' + name.upper(), default))
+                  for name, default in vars(GrowthSettings()).items() if name != 'enabled'}
+        if any(not 1 <= value <= 1000 for value in limits.values()):
+            raise ValueError
+        return GrowthSettings(enabled=flag == 'true', **limits)
+    except (OSError, UnicodeError, ValueError, TypeError, AttributeError):
+        raise ConfigurationError('Invalid growth-limit configuration.') from None
+
+
+@dataclass(frozen=True)
 class UsageBudgetSettings:
     enabled: bool = False
     global_embedding: int = 100

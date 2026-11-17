@@ -163,6 +163,8 @@ async def run(config, guard):
             databases.append(client.get_database(config['database'], write_concern=WriteConcern('majority', wtimeout=5000)))
         async with asyncio.timeout(60):
             await validate(databases)
+            from combined import validate_async
+            await validate_async(databases)
     finally:
         for client in clients:
             await client.close()

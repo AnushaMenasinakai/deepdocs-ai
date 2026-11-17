@@ -17,10 +17,10 @@ work=$(mktemp -d "$RUNNER_TEMP/mongodb-smoke.XXXXXX")
 chmod 700 "$work"
 # Only these allowlisted sources enter the image build context. No .env or Git data.
 mkdir -p "$work/build/backend" "$work/build/experiments/mongodb-smoke"
-for file in document_storage.py storage_contract.py storage_schema.py gridfs_storage.py storage_intents.py storage_reconciliation.py pdf_processing.py usage_budgets.py config.py; do
+for file in document_storage.py storage_contract.py storage_schema.py gridfs_storage.py storage_intents.py storage_reconciliation.py pdf_processing.py usage_budgets.py config.py growth_limits.py gridfs_growth.py gridfs_growth_recovery.py policy_readiness.py; do
   cp "backend/$file" "$work/build/backend/"
 done
-cp experiments/mongodb-smoke/{Dockerfile,smoke.py,lifecycle.py,budgets.py} "$work/build/experiments/mongodb-smoke/"
+cp experiments/mongodb-smoke/{Dockerfile,smoke.py,lifecycle.py,budgets.py,combined.py} "$work/build/experiments/mongodb-smoke/"
 # Public source files must remain readable by the image's nonroot test user.
 chmod 644 "$work/build/backend/"*.py "$work/build/experiments/mongodb-smoke/"*
 timeout --signal=TERM --kill-after=15s 8m docker build --platform linux/amd64 \
@@ -94,7 +94,7 @@ if (( available_kib < 614400 )); then
   echo 'Insufficient disposable dbPath space for safe index creation.'
   exit 1
 fi
-timeout --signal=TERM --kill-after=5s 120s docker run --name "${TEST_ID}_test" \
+timeout --signal=TERM --kill-after=5s 180s docker run --name "${TEST_ID}_test" \
   --label "deepdocs.smoke=$TEST_ID" --network "container:$TEST_ID" \
   --read-only --cap-drop ALL --security-opt no-new-privileges:true \
   --memory 256m --memory-swap 256m --cpus 1 --pids-limit 64 \
