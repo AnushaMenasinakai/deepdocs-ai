@@ -1,5 +1,6 @@
 """Read-only question answering using the existing validated retrieval path."""
 import retrieval
+from usage_budgets import budget_scope
 from search_schemas import SearchRequest
 from rag_context import build_context
 from rag_citations import citation_context, cited_result
@@ -10,7 +11,12 @@ from verified_rag import (plan_question, build_candidate_context, validate_verif
 INSUFFICIENT_ANSWER = "I couldn't find enough relevant information in this Knowledge Base to answer that question."
 
 
-async def answer_question(database, owner_id, base_id, question, embedding_settings, settings, *,
+async def answer_question(database, owner_id, base_id, question, embedding_settings, settings, **options):
+    with budget_scope(database, owner_id):
+        return await _answer_question(database, owner_id, base_id, question, embedding_settings, settings, **options)
+
+
+async def _answer_question(database, owner_id, base_id, question, embedding_settings, settings, *,
                           workers=None, workflow=None, generation_unneeded=None,
                           verified=False, deadline=None):
     if verified:

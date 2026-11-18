@@ -77,6 +77,16 @@ async def application_lifespan(app):
 
 
 app = FastAPI(title="DeepDocs AI API", lifespan=application_lifespan)
+from usage_budgets import BudgetError
+from growth_limits import GrowthError
+
+
+@app.exception_handler(BudgetError)
+@app.exception_handler(GrowthError)
+async def budget_error_handler(request, error):
+    return JSONResponse({'detail': str(error)}, status_code=error.status,
+                        headers={'Cache-Control': 'no-store'})
+
 app.include_router(auth_router)
 app.include_router(knowledge_base_router)
 app.include_router(document_router)
@@ -123,9 +133,10 @@ async def database_health(database: AsyncDatabase = Depends(get_database), diagn
 
 @app.get("/api/ready")
 async def ready(request: Request):
+    from policy_readiness import runtime_ready
     readiness = getattr(request.app.state, "readiness", None)
     database = getattr(request.app.state, "database", None)
-    available = readiness is not None and await readiness.check(database)
+    available = runtime_ready(request.app.state) and readiness is not None and await readiness.check(database)
     return JSONResponse(
         {"status": "ready" if available else "not_ready"},
         status_code=200 if available else 503,

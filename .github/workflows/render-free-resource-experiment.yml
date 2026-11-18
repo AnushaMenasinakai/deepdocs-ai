@@ -1,6 +1,13 @@
 name: Render Free resource experiment
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Resource workload
+        type: choice
+        options: [local, gemini]
+        default: local
+        required: true
 permissions:
   contents: read
 concurrency:
@@ -16,6 +23,7 @@ jobs:
       run:
         shell: bash
     env:
+      RESOURCE_MODE: ${{ inputs.mode }}
       REFERENCE_IMAGE: deepdocs-reference:experiment-${{ github.run_id }}-${{ github.run_attempt }}
       EXPERIMENT_IMAGE: deepdocs-onnx:experiment-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
@@ -36,13 +44,33 @@ jobs:
       - name: Check experiment contracts
         run: python3 experiments/render-free/test_static.py
       - name: Build unchanged reference
+        if: inputs.mode == 'local'
         timeout-minutes: 18
         run: timeout 17m docker build --platform linux/amd64 -t "$REFERENCE_IMAGE" backend
       - name: Build isolated ONNX experiment and export offline
+        if: inputs.mode == 'local'
         timeout-minutes: 7
         run: |
           timeout 6m docker build --platform linux/amd64 --build-arg REFERENCE_IMAGE="$REFERENCE_IMAGE" -t "$EXPERIMENT_IMAGE" experiments/render-free
           docker image inspect "$EXPERIMENT_IMAGE" --format 'architecture={{.Architecture}} size={{.Size}}'
+      - name: Build Gemini experiment without model downloads
+        if: inputs.mode == 'gemini'
+        timeout-minutes: 18
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, pathlib, shutil
+          root = pathlib.Path(os.environ['RUNNER_TEMP']) / 'gemini-build'
+          root.mkdir(exist_ok=False)
+          for pattern in ('backend/*.py', 'backend/tests/*.py', 'experiments/render-free/*.py',
+                          'backend/requirements.txt', 'backend/docker/requirements-cpu.txt',
+                          'experiments/render-free/Dockerfile.gemini'):
+              for source in pathlib.Path('.').glob(pattern):
+                  target = root / source
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  shutil.copyfile(source, target)
+          PY
+          timeout 17m docker build --platform linux/amd64 -f "$RUNNER_TEMP/gemini-build/experiments/render-free/Dockerfile.gemini" -t "$EXPERIMENT_IMAGE" "$RUNNER_TEMP/gemini-build"
       - name: Sequential reference and constrained experiments
         timeout-minutes: 28
         run: python3 experiments/render-free/run.py
@@ -63,7 +91,7 @@ jobs:
       - name: Cleanup only owned resources
         if: always()
         run: |
-          for runtime in torch onnx; do
+          for runtime in torch onnx gemini; do
             for mode in calibration limited; do
               docker rm -f "deepdocs-render-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${runtime}-${mode}" 2>/dev/null || true
             done

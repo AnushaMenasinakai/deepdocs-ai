@@ -55,7 +55,7 @@ class ProbeTests(unittest.IsolatedAsyncioTestCase):
         self.state.indexes = dict.fromkeys(readiness.INDEX_GROUPS, True)
         self.db = SimpleNamespace(command=AsyncMock(return_value={"ok": 1}))
         self.vector = SimpleNamespace(health=AsyncMock())
-        self.store = patch("readiness.get_vector_store", return_value=self.vector)
+        self.store = patch("vector_store.get_vector_store", return_value=self.vector)
         self.factory = self.store.start()
 
     async def asyncTearDown(self):
@@ -68,7 +68,7 @@ class ProbeTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(await self.state.check(self.db))
             self.assertTrue(await self.state.check(self.db))
         self.db.command.assert_awaited_once_with("ping")
-        self.vector.health.assert_awaited_once_with()
+        self.vector.health.assert_not_awaited()
         with patch("readiness.time.monotonic", return_value=103):
             self.assertTrue(await self.state.check(self.db))
         self.assertEqual(self.db.command.await_count, 2)
@@ -107,7 +107,7 @@ class ProbeTests(unittest.IsolatedAsyncioTestCase):
         self.db.command.assert_awaited_once_with("ping")
 
     async def test_failures_and_temporary_recovery(self):
-        for target in [self.db.command, self.vector.health]:
+        for target in [self.db.command]:
             for error in [OSError("private-host"), TimeoutError(), RuntimeError("private-token")]:
                 with self.subTest(target=target, error=type(error)):
                     self.state._expires = 0
@@ -120,7 +120,7 @@ class ProbeTests(unittest.IsolatedAsyncioTestCase):
                     self.assertTrue(await self.state.check(self.db))
 
     async def test_dependency_deadline_cancels_hanging_check(self):
-        for target in [self.db.command, self.vector.health]:
+        for target in [self.db.command]:
             entered, cancelled = asyncio.Event(), asyncio.Event()
             async def hang(*args):
                 entered.set()
@@ -154,7 +154,7 @@ class ProbeTests(unittest.IsolatedAsyncioTestCase):
         finish.set()
         self.assertEqual(await asyncio.gather(*callers), [True] * 20)
         self.db.command.assert_awaited_once()
-        self.vector.health.assert_awaited_once()
+        self.vector.health.assert_not_awaited()
 
     async def test_shutdown_cleans_pending_cycle_and_prevents_stale_success(self):
         entered, cancelled = asyncio.Event(), asyncio.Event()
@@ -223,7 +223,7 @@ class LifespanTests(unittest.IsolatedAsyncioTestCase):
                         if failure == i:
                             raise TimeoutError("private")
                     stack.enter_context(patch("database." + name, side_effect=initialize))
-                probe = stack.enter_context(patch("readiness.get_vector_store", return_value=SimpleNamespace(health=AsyncMock())))
+                probe = stack.enter_context(patch("vector_store.get_vector_store", return_value=SimpleNamespace(health=AsyncMock())))
                 local = FastAPI()
                 previous = None
                 for _ in range(2):

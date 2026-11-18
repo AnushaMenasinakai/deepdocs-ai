@@ -8,7 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import PyMongoError
 
-from config import ConfigurationError, JWTSettings, load_jwt_settings
+from config import ConfigurationError, JWTSettings, load_jwt_settings, load_private_access_enabled
 from database import get_database
 from user_schemas import UserResponse
 from users import find_user_by_id, public_user
@@ -37,6 +37,18 @@ def create_access_token(user_id: ObjectId, settings: JWTSettings) -> str:
 
 
 bearer_scheme = HTTPBearer(auto_error=False, bearerFormat="JWT")
+
+
+def private_access_enabled():
+    try:
+        return load_private_access_enabled()
+    except ConfigurationError:
+        raise HTTPException(503, 'Access policy is temporarily unavailable.') from None
+
+
+def require_account_access(document):
+    if private_access_enabled() and (document.get('approved') is not True or document.get('enabled') is not True):
+        raise HTTPException(403, 'Access requires operator approval and an enabled account.')
 
 
 def token_subject(
@@ -80,4 +92,5 @@ async def get_current_user(
         raise HTTPException(503, "Authentication is temporarily unavailable.") from None
     if document is None:
         raise authentication_error()
+    require_account_access(document)
     return public_user(document)

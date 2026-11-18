@@ -105,7 +105,7 @@ class AuthTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(body["access_token"].split(".")), 3)
         self.assertEqual(headers[b"cache-control"], b"no-store")
         self.collection.find_one.assert_awaited_once_with(
-            {"email": "user@example.com"}, {"_id": 1, "password_hash": 1},
+            {"email": "user@example.com"}, {"_id": 1, "password_hash": 1, "approved": 1, "enabled": 1},
         )
         claims = jwt.decode(body["access_token"], self.settings.secret_key, algorithms=["HS256"])
         self.assertEqual(set(claims), {"sub", "iat", "exp"})
@@ -167,7 +167,7 @@ class AuthTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(body["id"], str(self.user["_id"]))
         self.assertNotIn(self.stored_hash, json.dumps(body))
         self.collection.find_one.assert_awaited_once_with(
-            {"_id": self.user["_id"]}, {"_id": 1, "name": 1, "email": 1, "created_at": 1},
+            {"_id": self.user["_id"]}, {"_id": 1, "name": 1, "email": 1, "created_at": 1, "approved": 1, "enabled": 1},
         )
 
     async def test_missing_and_malformed_headers(self):

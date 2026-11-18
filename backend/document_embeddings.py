@@ -8,6 +8,8 @@ from embeddings import EmbeddingFailure, embed_batches
 from embedding_execution import Batches, run_embedding
 from cpu_workers import WorkerInfrastructureFailure
 from expensive_admission import Resource
+from usage_budgets import BudgetError
+from growth_limits import check_indexing_limits, GrowthError
 from vector_store import get_vector_store, cleanup_document_vectors, VectorFailure
 
 
@@ -99,6 +101,7 @@ async def _generate_embeddings(database, owner_id, document_id, settings, expect
         await indexing_checkpoint()
         require_processed_generation(document)
         chunks = await inspect_chunks(database, owner_id, document_id)
+        check_indexing_limits(document, chunks)
         if not chunks:
             raise RequiresProcessing("This document has no active chunks to embed.")
         if [chunk["chunk_index"] for chunk in chunks] != list(range(len(chunks))):
@@ -109,6 +112,16 @@ async def _generate_embeddings(database, owner_id, document_id, settings, expect
                     "model": settings.model_name, "dimension": None,
                     "embedded_at": None, "chunk_count": 0, "error": None}
         store = get_vector_store()
+        if settings.provider == 'gemini':
+            previous = document.get('vector_index', {})
+            # Existing cleanup can delete a document's previous collection. An
+            # embedding-provider switch is not authorization to erase that index.
+            if (store.collection == 'deepdocs_chunks' or
+                    (previous.get('collection_name') and
+                     (previous['collection_name'] != store.collection or
+                      previous.get('embedding_model') != settings.model_name or
+                      previous.get('embedding_dimension') != settings.dimension))):
+                raise EmbeddingFailure('Use a separate document/index for Gemini embeddings.', 409)
         vector_state = {**vector_state, "status": "indexing"}
         # Replace the whole state before work; a failed retry cannot retain success.
         await indexing_checkpoint()
@@ -125,7 +138,7 @@ async def _generate_embeddings(database, owner_id, document_id, settings, expect
         count, dimension = 0, None
         batches = Batches([chunk["text"] for chunk in chunks], settings, factory=embed_batches)
         while True:
-            batch = await run_embedding(session, batches.next_batch, settings=settings)
+            batch = await run_embedding(session, batches.next_batch, settings=settings, database=database, owner_id=owner_id)
             if batch is None:
                 break
             batch_dimension, vectors = batch
@@ -225,7 +238,7 @@ async def _generate_embeddings(database, owner_id, document_id, settings, expect
             except Exception:
                 # Leave the generating state/lock for reconciliation; never fake success.
                 pass
-        if isinstance(error, (EmbeddingFailure, VectorFailure)):
+        if isinstance(error, (EmbeddingFailure, VectorFailure, BudgetError, GrowthError)):
             raise
         raise EmbeddingFailure() from None
     finally:

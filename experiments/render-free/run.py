@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 import time
 from assessment import assess
+from gemini_assessment import assess_gemini
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = Path(os.environ['RUNNER_TEMP']) / 'render-experiment'
@@ -30,7 +31,7 @@ def run(runtime, calibration=False):
                '--mount', f'type=bind,src={ROOT / "backend/tests"},dst=/tmp/suite/backend/tests,readonly',
                '-e', 'PYTHONPATH=/app/backend:/tmp/suite/backend/tests',
                '-e', 'TOKENIZERS_PARALLELISM=false',
-               '-e', 'GRIDFS_UPLOAD_ENABLED=false', '-e', 'RAG_VERIFIED_EXPERIMENT_ENABLED=false',
+               '-e', 'GRIDFS_UPLOAD_ENABLED=' + ('true' if runtime == 'gemini' else 'false'), '-e', 'RAG_VERIFIED_EXPERIMENT_ENABLED=false',
                '-e', 'HF_HUB_OFFLINE=1', '-e', 'TRANSFORMERS_OFFLINE=1', IMAGE, runtime)
         info = json.loads(docker('inspect', name).stdout)[0]
         pid = info['State']['Pid']
@@ -113,15 +114,18 @@ if __name__ == '__main__':
     try:
         # Calibration is explicitly outside the Render envelope. It establishes the reference
         # even when the unchanged PyTorch implementation OOMs in the limited run.
-        for calibration in (True, False):
-            for runtime in ('torch', 'onnx'):
-                results.append(run(runtime, calibration))
-        if all(r['complete'] for r in results[:2]):
+        if os.environ.get('RESOURCE_MODE') == 'gemini':
+            results.append(run('gemini'))
+        else:
+            for calibration in (True, False):
+                for runtime in ('torch', 'onnx'):
+                    results.append(run(runtime, calibration))
+        if len(results) >= 2 and all(r['complete'] for r in results[:2]):
             (OUT / 'compatibility.json').write_text(json.dumps(compare(*results[:2]), indent=2))
     finally:
         summary = [{'runtime':r['runtime'], 'calibration':r['calibration'], 'complete':r.get('complete'),
                     'oom':r.get('oom_killed'), 'timeout':r.get('timed_out'),
-                    'assessment': assess(r),
+                    'assessment': assess_gemini(r) if r['runtime']=='gemini' else assess(r),
                     'stages':[e for e in r.get('events',[]) if e['event']=='end']} for r in results]
         print(json.dumps(summary, indent=2))
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
@@ -130,5 +134,8 @@ if __name__ == '__main__':
 
     # Preserve every result/artifact first. A green run must not hide a failed screen.
     limited = [r for r in results if not r['calibration']]
-    if len(limited) != 2 or any(not assess(r)['screen'].startswith('synthetic_screen_pass;') for r in limited):
+    if os.environ.get('RESOURCE_MODE') == 'gemini':
+        if len(limited) != 1 or assess_gemini(limited[0])['screen'] != 'synthetic_screen_pass':
+            raise SystemExit('Gemini resource screening incomplete or failed; inspect artifacts.')
+    elif len(limited) != 2 or any(not assess(r)['screen'].startswith('synthetic_screen_pass;') for r in limited):
         raise SystemExit('Constrained resource screening failed or is incomplete; inspect preserved results.')

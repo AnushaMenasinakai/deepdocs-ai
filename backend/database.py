@@ -103,6 +103,18 @@ async def database_lifespan(app: FastAPI):
             except (PyMongoError, TimeoutError):
                 logger.error("Ask history index initialization failed. Retry on restart.")
         # Liveness remains available even if database readiness fails.
+        from usage_budgets import setup_budget_indexes
+        try:
+            if app.state.database is not None:
+                await setup_budget_indexes(app.state.database)
+        except Exception:
+            logger.error('Usage budget initialization unavailable; provider admission will fail closed.')
+        from policy_readiness import setup_growth_identity
+        try:
+            if app.state.database is not None:
+                await setup_growth_identity(app.state.database)
+        except Exception:
+            logger.error('Growth accounting initialization unavailable; readiness will fail closed.')
         readiness.initialized = True
         yield
     finally:

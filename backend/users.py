@@ -40,13 +40,13 @@ async def create_user(database: AsyncDatabase, registration: RegistrationRequest
 
 async def find_user_by_email(database: AsyncDatabase, email: str):
     return await database.get_collection("users").find_one(
-        {"email": email}, {"_id": 1, "password_hash": 1},
+        {"email": email}, {"_id": 1, "password_hash": 1, "approved": 1, "enabled": 1},
     )
 
 
 async def find_user_by_id(database: AsyncDatabase, user_id: ObjectId):
     return await database.get_collection("users").find_one(
-        {"_id": user_id}, {"_id": 1, "name": 1, "email": 1, "created_at": 1},
+        {"_id": user_id}, {"_id": 1, "name": 1, "email": 1, "created_at": 1, "approved": 1, "enabled": 1},
     )
 
 

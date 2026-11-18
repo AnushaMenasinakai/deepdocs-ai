@@ -3,7 +3,7 @@ import asyncio
 import time
 
 import config
-from vector_store import get_vector_store
+from policy_readiness import verify as verify_policies
 
 DEPENDENCY_TIMEOUT = 2.0
 PROBE_TIMEOUT = 3.0
@@ -13,6 +13,7 @@ CONFIG_LOADERS = (
     "load_settings", "load_jwt_settings", "load_qdrant_settings",
     "load_gemini_settings", "load_document_settings", "load_processing_settings",
     "load_embedding_settings", "load_rag_settings", "load_cors_origins",
+    "load_private_access_enabled", "load_usage_budget_settings", "load_growth_settings", "load_gridfs_upload_enabled",
 )
 
 
@@ -46,20 +47,14 @@ class Readiness:
             result = await database.command("ping")
             return result.get("ok") == 1
 
-    async def _qdrant(self):
-        async with asyncio.timeout(DEPENDENCY_TIMEOUT):
-            # Lazy client construction is allowed; health only lists collections.
-            await get_vector_store().health()
-            return True
-
     async def _probe(self, database):
         result = False
         try:
             async with asyncio.timeout(PROBE_TIMEOUT):
                 async with asyncio.TaskGroup() as group:
                     mongo = group.create_task(self._mongo(database))
-                    qdrant = group.create_task(self._qdrant())
-                result = mongo.result() is True and qdrant.result() is True
+                    policies = group.create_task(verify_policies(database))
+                result = mongo.result() is True and policies.result() is True
         except Exception:
             result = False
         # Cancellation propagates, so a shutdown cannot publish a cached success.

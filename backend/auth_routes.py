@@ -7,6 +7,7 @@ from pymongo.errors import DuplicateKeyError, PyMongoError
 from database import get_database
 from user_schemas import LoginRequest, RegistrationRequest, TokenResponse, UserResponse
 from auth import authentication_error, create_access_token, get_auth_settings, get_current_user
+from auth import private_access_enabled, require_account_access
 from config import JWTSettings
 from security import verify_password
 from users import create_user, find_user_by_email
@@ -14,6 +15,13 @@ import asyncio
 from auth_protection import get_auth_protection, PasswordCapacityExceeded, too_many_requests
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+
+
+@router.get('/policy')
+async def access_policy(response: Response):
+    response.headers['Cache-Control'] = 'no-store'
+    private = private_access_enabled()
+    return {'public_registration': not private, 'approval_required': private}
 
 
 @router.post("/register", status_code=201, response_model=UserResponse)
@@ -24,6 +32,8 @@ async def register(
     protection=Depends(get_auth_protection),
 ):
     protection.admit("register", request, str(registration.email))
+    if private_access_enabled():
+        raise HTTPException(403, 'Public registration is disabled. Access requires operator approval.')
     if not getattr(request.app.state, "users_index_ready", False):
         raise HTTPException(503, "Registration is unavailable. Please try again later.")
     try:
@@ -62,6 +72,7 @@ async def login(
         raise asyncio.CancelledError
     if not valid or document is None:
         raise authentication_error("Invalid email or password")
+    require_account_access(document)
     response.headers["Cache-Control"] = "no-store"
     response.headers["Pragma"] = "no-cache"
     return TokenResponse(access_token=create_access_token(document["_id"], settings))

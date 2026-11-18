@@ -4,6 +4,7 @@ from ask_history import delete_base_history
 from bson import ObjectId
 from pymongo import ASCENDING, DESCENDING, ReturnDocument
 from knowledge_base_schemas import KnowledgeBaseResponse
+from growth_limits import reserve, release_confirmed
 
 LIST_ORDER = [("updated_at", DESCENDING), ("_id", DESCENDING)]
 
@@ -34,6 +35,8 @@ async def create_knowledge_base(database, owner_id, data):
         "name": data.name, "description": data.description,
         "created_at": now, "updated_at": now,
     }
+    await reserve(database, owner_id, 'knowledge_bases', document['_id'])
+    # Lost insertion acknowledgements retain capacity for operator reconciliation.
     await database.get_collection("knowledge_bases").insert_one(document)
     return public_knowledge_base(document)
 
@@ -88,6 +91,7 @@ async def delete_knowledge_base(database, owner_id, knowledge_base_id):
     })
     if result.deleted_count == 1:
         await delete_base_history(database, owner_id, knowledge_base_id)
+        await release_confirmed(database, owner_id, 'knowledge_bases', knowledge_base_id)
         return True
     if await bases.find_one(owned) is not None:
         raise KnowledgeBaseHasDocuments()

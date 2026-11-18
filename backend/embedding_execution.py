@@ -1,19 +1,28 @@
 """Worker-side embedding entry points; no model or executor is allocated here."""
 import embeddings
 import asyncio
+import threading
+from usage_budgets import budget_scope
 
 REMOTE_DEADLINE_SECONDS = 30
 
 
-async def run_embedding(session, function, *args, settings):
+async def run_embedding(session, function, *args, settings, database=None, owner_id=None):
     """Bound remote waits; session ownership still drains native work on timeout."""
     if settings.provider == 'local':
         return await session.run(function, *args)
+    loop = asyncio.get_running_loop()
+    cancelled = threading.Event()
+    def owned_call():
+        with budget_scope(database, owner_id, loop, cancelled):
+            return function(*args)
     try:
         async with asyncio.timeout(REMOTE_DEADLINE_SECONDS):
-            return await session.run(function, *args)
+            return await session.run(owned_call)
     except TimeoutError:
         raise embeddings.EmbeddingFailure() from None
+    finally:
+        cancelled.set()
 
 
 def query_vector(text, settings):

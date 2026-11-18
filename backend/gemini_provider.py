@@ -8,6 +8,7 @@ from config import load_gemini_settings
 from rag_schemas import AnswerClaim, plain_answer
 from rag_citations import validate_claims
 from verified_rag import ProviderVerificationPayload, resolve_verification_quotes
+from usage_budgets import admit, BudgetError
 
 SYSTEM_INSTRUCTIONS = """SYSTEM INSTRUCTIONS
 You answer questions only from the provided RETRIEVED_DOCUMENT_CONTEXT.
@@ -204,6 +205,7 @@ class GeminiProvider:
             # document delimiter strings from changing the structured envelope.
             data = '{"USER_QUESTION":' + json.dumps(question, ensure_ascii=False) + ',"RETRIEVED_DOCUMENT_CONTEXT":' + context.serialized + '}'
             async with asyncio.timeout(provider_timeout(deadline)):
+                await admit('generation')
                 response = await self.client.aio.models.generate_content(
                     model=self.settings.model,
                     contents=types.Content(role="user", parts=[types.Part.from_text(text=data)]),
@@ -220,6 +222,8 @@ class GeminiProvider:
                                            for key in ("document_id", "chunk_id")):
                 raise GeminiFailure("Answer service returned internal metadata.")
             return answer
+        except BudgetError:
+            raise
         except Exception:
             raise GeminiFailure("Answer service is temporarily unavailable.") from None
 
@@ -236,6 +240,7 @@ class GeminiProvider:
                 "EVIDENCE": json.loads(context.serialized),
             }, ensure_ascii=False, separators=(",", ":"))
             async with asyncio.timeout(provider_timeout(deadline)):
+                await admit('generation')
                 response = await self.client.aio.models.generate_content(
                     model=self.settings.model,
                     contents=types.Content(role="user", parts=[types.Part.from_text(text=data)]),
@@ -248,6 +253,8 @@ class GeminiProvider:
                     ),
                 )
             return resolve_verification_quotes(parse_verification_response(response), context)
+        except BudgetError:
+            raise
         except Exception:
             raise GeminiFailure("Answer verification is temporarily unavailable.") from None
 

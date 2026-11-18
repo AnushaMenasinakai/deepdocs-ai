@@ -63,6 +63,17 @@ def load_usage_budget_settings():
         raise ConfigurationError('Invalid usage budget configuration.') from None
 
 
+def load_private_access_enabled() -> bool:
+    try:
+        values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+        raw = values.get('PRIVATE_ACCESS_ENABLED', 'false')
+        if not isinstance(raw, str) or raw.strip().lower() not in ('true', 'false'):
+            raise ValueError
+        return raw.strip().lower() == 'true'
+    except (OSError, UnicodeError, ValueError, TypeError):
+        raise ConfigurationError('Invalid private access configuration.') from None
+
+
 def load_gridfs_upload_enabled() -> bool:
     try:
         values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
@@ -317,12 +328,13 @@ class ProcessingSettings:
 def load_processing_settings() -> ProcessingSettings:
     try:
         values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+        growth = load_growth_settings()
         settings = ProcessingSettings(
             chunk_target=int(values.get("PDF_CHUNK_TARGET", "1000")),
             chunk_overlap=int(values.get("PDF_CHUNK_OVERLAP", "150")),
-            max_pages=int(values.get("PDF_MAX_PAGES", "1000")),
+            max_pages=min(int(values.get("PDF_MAX_PAGES", "1000")), growth.pages) if growth.enabled else int(values.get("PDF_MAX_PAGES", "1000")),
             max_text_characters=int(values.get("PDF_MAX_TEXT_CHARACTERS", "5000000")),
-            max_chunks=int(values.get("PDF_MAX_CHUNKS", "20000")),
+            max_chunks=min(int(values.get("PDF_MAX_CHUNKS", "20000")), growth.chunks) if growth.enabled else int(values.get("PDF_MAX_CHUNKS", "20000")),
             max_source_bytes=int(values.get("DOCUMENT_MAX_UPLOAD_BYTES", str(10 * 1024 * 1024))),
         )
         if not (100 <= settings.chunk_target <= 5000 and

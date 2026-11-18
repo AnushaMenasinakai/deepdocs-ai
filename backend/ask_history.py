@@ -4,12 +4,15 @@ from bson import ObjectId
 from pymongo import ASCENDING, DESCENDING
 from rag_schemas import AskResponse
 from history_schemas import HistoryResponse
+from growth_limits import load_growth_settings, retain_history
 
 COLLECTION = "ask_history"
 ORDER = [("created_at", DESCENDING), ("_id", DESCENDING)]
 
 
 async def ensure_history_indexes(database):
+    await database.get_collection(COLLECTION).create_index(
+        [("owner_id", ASCENDING), *ORDER], name="ask_history_owner_created")
     await database.get_collection(COLLECTION).create_index(
         [("owner_id", ASCENDING), ("knowledge_base_id", ASCENDING), *ORDER],
         name="ask_history_owner_base_created")
@@ -35,7 +38,10 @@ async def save_history(database, owner_id, base_id, question, result):
         snapshot.update(retrieved_chunk_count=0, sources=[])
     record = {"_id": ObjectId(), **scope(owner_id, base_id), "question": question,
               **snapshot, "created_at": datetime.now(timezone.utc)}
-    await database.get_collection(COLLECTION).insert_one(record)
+    if load_growth_settings().enabled:
+        await retain_history(database, owner_id, record)
+    else:
+        await database.get_collection(COLLECTION).insert_one(record)
     # A concurrent KB deletion may have completed during inference/insertion.
     if await database.get_collection("knowledge_bases").find_one({"_id": base_id, "owner_id": owner_id}) is None:
         await database.get_collection(COLLECTION).delete_one({"_id": record["_id"], **scope(owner_id, base_id)})

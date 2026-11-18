@@ -58,11 +58,8 @@ def embed_batches(texts, settings):
     if not texts or any(not isinstance(text, str) or not text.strip() for text in texts):
         raise EmbeddingFailure("Embedding input must contain non-empty text.", 409)
     if settings.provider == "gemini":
-        from gemini_embeddings import embed_remote
-        # Bound each SDK request independently, without retaining all output vectors.
-        for offset in range(0, len(texts), min(settings.batch_size, 16)):
-            batch = texts[offset:offset + min(settings.batch_size, 16)]
-            yield settings.dimension, embed_remote(batch, settings, "RETRIEVAL_DOCUMENT")
+        from gemini_embeddings import embed_documents
+        yield from embed_documents(texts, settings)
         return
     model = load_model(settings.model_name)
     dimension = model_dimension(model)

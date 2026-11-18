@@ -22,6 +22,7 @@ from storage_contract import StorageUncertain
 from storage_intents import StorageIntents, IntentIdentity, QuotaPolicy, QuotaExceeded
 from storage_workers import optional_storage_lifespan, StorageRejected
 from upload_safety import SaveLifetime, require_acknowledged, check_cancellation
+from growth_limits import load_growth_settings, GrowthError
 
 
 def checksum(path):
@@ -87,8 +88,14 @@ class GridFSUploads:
                 self.intents.create(identity, stored['file_size'], digest, self.worker_id)
                 stage = 'prepared'
                 try:
-                    self.intents.reserve(identity)
-                except QuotaExceeded:
+                    growth_policy = load_growth_settings()
+                    if growth_policy.enabled:
+                        self.intents.reserve(identity, growth_policy=growth_policy)
+                    else:
+                        self.intents.reserve(identity)
+                except (QuotaExceeded, GrowthError) as admission_error:
+                    if isinstance(admission_error, GrowthError) and admission_error.status != 409:
+                        raise
                     # Confirmed transaction rejection, no GridFS dispatch and no
                     # quota entry. Retain evidence of the rejected intent.
                     advance('failed_before_dispatch')
@@ -97,6 +104,8 @@ class GridFSUploads:
                                                          '$inc': {'_document_revision': 1}})
                     if result.matched_count != 1:
                         raise StorageUncertain('Upload reservation cleanup requires review.')
+                    if isinstance(admission_error, GrowthError):
+                        raise UploadRejected(409, 'Account document limit reached.') from None
                     raise UploadRejected(413, 'PDF storage quota is exhausted.') from None
                 checkpoint()
                 storage = self.storage_factory(self.db, owner_id=identity.owner_id,
