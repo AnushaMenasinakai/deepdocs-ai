@@ -98,6 +98,36 @@ class RemoteTests(unittest.TestCase):
                 embed_remote(texts, self.settings, task)
         self.factory.assert_not_called()
 
+    def test_lossless_unicode_packing_and_one_vector_per_chunk(self):
+        from gemini_embeddings import document_pieces
+        text = ('Aurora café 世界 🚀. ' * 150)
+        pieces = document_pieces(text)
+        self.assertEqual(''.join(pieces), text)
+        self.assertTrue(all(len(p.encode('utf-8')) <= MAX_INPUT_BYTES for p in pieces))
+        result = list(embed_batches([text, 'short'], self.settings))
+        self.assertEqual(sum(len(v) for _, v in result), 2)
+        sent = [t for c in self.client.models.embed_content.call_args_list for t in c.kwargs['contents']]
+        self.assertEqual(sent, pieces + ['short'])
+        self.assertAlmostEqual(math.hypot(*result[0][1][0]), 1)
+
+    def test_oversized_tail_rejected_before_any_provider_call(self):
+        from gemini_embeddings import MAX_DOCUMENT_BYTES
+        with self.assertRaises(EmbeddingFailure):
+            list(embed_batches(['valid', 'x' * (MAX_DOCUMENT_BYTES + 1)], self.settings))
+        self.factory.assert_not_called()
+
+    def test_packing_weight_and_cancellation_of_opposite_vectors(self):
+        text = 'a' * 1024 + 'b' * 512
+        self.client.models.embed_content.side_effect = None
+        self.client.models.embed_content.return_value = SimpleNamespace(embeddings=[
+            SimpleNamespace(values=[1., 0.] + [0.] * 766),
+            SimpleNamespace(values=[0., 1.] + [0.] * 766)])
+        vector = list(embed_batches([text], self.settings))[0][1][0]
+        self.assertAlmostEqual(vector[0] / vector[1], 2)
+        self.client.models.embed_content.return_value.embeddings[1].values = [-1.] + [0.] * 767
+        with self.assertRaises(EmbeddingFailure):
+            list(embed_batches(['a' * 2048], self.settings))
+
 
 class ConfigurationTests(unittest.TestCase):
     def load(self, values):

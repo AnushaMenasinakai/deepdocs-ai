@@ -171,3 +171,29 @@ def test_admission_retry_header_exposure_preserves_origin_policy(origin):
                 if origin in LOCAL:
                     assert cross.headers["access-control-expose-headers"] == "Retry-After"
     asyncio.run(run())
+
+
+@pytest.mark.parametrize("value", [None, "", " ", "*", "https://*.example.com", "http://app.example.com", "https://app.example.com/", "https://app.example.com,", "https://app.example.com,http://localhost:5173"])
+def test_production_cors_fails_closed(value):
+    with patch.dict(os.environ, {"CORS_MODE": "production", "CORS_FRONTEND_ORIGINS": value or ""}, clear=True), patch("config.dotenv_values", return_value={}):
+        with pytest.raises(ConfigurationError): load_cors_origins()
+
+
+def test_production_cors_exact_https_origins_and_precedence():
+    with patch.dict(os.environ, {"CORS_MODE": "production", "CORS_FRONTEND_ORIGINS": "https://APP.example:443"}, clear=True), patch("config.dotenv_values", return_value={"CORS_MODE": "development"}):
+        assert load_cors_origins() == ["https://app.example"]
+        app = runpy.run_path(str(BACKEND / "main.py"))["app"]
+    for preflight in (False, True):
+        status, headers = request(app, "https://app.example", preflight)
+        assert status == 200 and headers[b"access-control-allow-origin"] == b"https://app.example"
+        assert b"access-control-allow-credentials" not in headers
+        for origin in [*LOCAL, "https://evil.example"]:
+            status, headers = request(app, origin, preflight)
+            assert status == (400 if preflight else 200)
+            assert b"access-control-allow-origin" not in headers
+
+
+@pytest.mark.parametrize("mode", ["", "Production", "invalid"])
+def test_invalid_cors_mode_rejected(mode):
+    with patch.dict(os.environ, {"CORS_MODE": mode}, clear=True), patch("config.dotenv_values", return_value={}):
+        with pytest.raises(ConfigurationError): load_cors_origins()

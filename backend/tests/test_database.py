@@ -71,6 +71,15 @@ class ConfigurationTests(unittest.TestCase):
 
 
 class DatabaseTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        from auth import get_current_user
+        previous = app.dependency_overrides.copy()
+        app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id="synthetic")
+        def restore():
+            app.dependency_overrides.clear()
+            app.dependency_overrides.update(previous)
+        self.addCleanup(restore)
+
     def mock_client(self):
         client = MagicMock()
         client.close = AsyncMock()

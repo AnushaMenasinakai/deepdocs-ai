@@ -103,3 +103,53 @@ test('cancellation stays cancellation and never triggers another mutation', asyn
     assert.equal(calls.length, 1)
   }
 })
+
+test('private access policy and forbidden authentication remain explicit', async () => {
+  respond = async () => ({ status: 200, data: { public_registration: false, approval_required: true } })
+  calls = []
+  assert.equal((await api.accessPolicy()).public_registration, false)
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].url, '/api/auth/policy')
+  reject(403, 'private')
+  await assert.rejects(() => api.register({ name: 'User', email: 'user@example.com', password: 'password' }), /operator approval/)
+  await assert.rejects(() => api.login({ email: 'user@example.com', password: 'password' }), /operator approval/)
+})
+
+
+test('bulk policy failures preserve earlier successes, stop later items and never retry', async () => {
+  const ids = [id, '507f1f77bcf86cd799439012', '507f1f77bcf86cd799439013']
+  for (const operation of ['delete', 'reindex']) {
+    const action = operation === 'delete' ? api.bulkDeleteDocuments : api.bulkReindexDocuments
+    for (const code of ['budget_exhausted', 'growth_limit_reached', 'accounting_unavailable']) {
+      const data = { operation, requested: 3, succeeded: 1, failed: 1, not_attempted: 1,
+        results: [{ document_id: ids[0], outcome: 'succeeded', code: null },
+          { document_id: ids[1], outcome: 'failed', code },
+          { document_id: ids[2], outcome: 'not_attempted', code: null }] }
+      respond = async () => ({ status: 200, data })
+      calls = []
+      assert.deepEqual(await action(id, ids), data)
+      assert.equal(calls.length, 1)
+      data.results[2].outcome = 'succeeded'
+      data.succeeded = 2; data.not_attempted = 0
+      await assert.rejects(() => action(id, ids), /confirm the bulk results/)
+    }
+  }
+})
+
+test('external diagnostics send authentication; liveness stays public', async () => {
+  respond = async () => ({ status: 200, data: { status: 'ok' } })
+  for (const service of ['api', 'database', 'vector']) {
+    calls = []
+    assert.equal(await api.getServiceHealth(service), 'operational')
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].headers.get('Authorization'), service === 'api' ? undefined : 'Bearer test-token')
+  }
+})
+
+test('Vercel SPA fallback covers direct login, documents and Ask routes', () => {
+  const config = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'))
+  assert.deepEqual(config, { rewrites: [{ source: '/(.*)', destination: '/index.html' }] })
+  const route = new RegExp('^' + config.rewrites[0].source + '$')
+  for (const path of ['/login', '/documents', '/ask']) assert.ok(route.test(path))
+  assert.ok(readFileSync(new URL('../index.html', import.meta.url), 'utf8').includes('/src/main.jsx'))
+})

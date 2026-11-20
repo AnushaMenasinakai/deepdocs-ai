@@ -147,7 +147,21 @@ Frontend in a second terminal:
 npm.cmd --prefix frontend run dev -- --host 127.0.0.1 --port 5173 --strictPort
 ```
 
-PowerShell can use npm.cmd. Open http://127.0.0.1:5173. The API reference is at http://127.0.0.1:8000/docs and its schema at /openapi.json. GET /api/health is basic liveness; /api/health/database and /api/health/qdrant report dependency connectivity. /api/ready provides the application's readiness checks. Liveness alone does not establish readiness for ingestion or generation.
+PowerShell can use npm.cmd. Open http://127.0.0.1:5173. The API reference is at http://127.0.0.1:8000/docs and its schema at /openapi.json. GET /api/health is basic liveness; /api/health/database and /api/health/qdrant report dependency connectivity. /api/ready checks MongoDB and enabled safeguard prerequisites without Qdrant or Gemini calls. See [safeguard readiness and bulk outcomes](backend/deployment_readiness.md) for its guarantees and limitations. Liveness alone does not establish readiness for ingestion or generation.
+
+Deployment status: the private-access, usage-budget, growth-policy and optional
+GridFS implementations are a development baseline, not an approved production
+release. The combined isolated MongoDB validation at commit `50ad04c` and Gemini-mode
+resource experiment #5 were previously reported as passing; these results have not
+been independently reverified during the current documentation preparation.
+Synthetic resource screening does not validate real cloud-service memory/latency
+or the exact production Docker image. Existing historical phase counts below remain
+historical results, not results for the pending selective deployment snapshot.
+Keep `GRIDFS_UPLOAD_ENABLED=false` and `GROWTH_LIMITS_ENABLED=false` pending operational
+approval. Existing local PDF originals require preservation; enabling GridFS does
+not migrate them. See [private access](backend/private_access.md),
+[usage budgets](backend/usage_budgets.md), [growth limits](backend/growth_limits.md)
+and [combined storage accounting](backend/gridfs_growth.md).
 
 Startup initializes users, knowledge-base, document, chunk and history indexes when MongoDB is available. Registration requires confirmed unique-user-index initialization. Logs sanitize initialization failures. PDF storage defaults to backend/storage/documents; preserve it together with MongoDB metadata and Qdrant data. compose.yaml mounts persistent PDF storage and a read-only backend environment file, runs nonroot, and uses one worker. Avoid deleting persistent volumes during cleanup.
 

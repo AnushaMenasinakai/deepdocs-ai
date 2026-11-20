@@ -24,6 +24,10 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+export async function accessPolicy(signal) {
+  return (await api.get('/api/auth/policy', { signal })).data
+}
+
 function safeError(error, action) {
   if (axios.isCancel(error)) return error
   const status = error.response?.status
@@ -31,6 +35,7 @@ function safeError(error, action) {
   if (!error.response) message = 'Unable to connect. Please check your connection and try again.'
   else if (status === 409 && action === 'register') message = 'An account with this email already exists.'
   else if (status === 401 && action === 'login') message = 'Invalid email or password.'
+  else if (status === 403 && (action === 'login' || action === 'register')) message = 'Access requires operator approval and an enabled account.'
   else if (status === 429 && (action === 'login' || action === 'register')) message = 'Too many authentication requests. Please try again later.'
   else if (status === 422) message = 'Please check your details and try again.'
   else if (status === 503) message = 'Authentication service is temporarily unavailable.'
@@ -284,13 +289,14 @@ async function bulkDocumentRequest(knowledgeBaseId, documentIds, operation, sign
   const invalid = () => { throw new Error('We could not confirm the bulk results. Some documents may have changed. Refresh the list before deciding whether to try again.') }
   if (response.status !== 200 || !data || data.operation !== operation || data.requested !== ids.length ||
       !Array.isArray(data.results) || data.results.length !== ids.length) invalid()
-  const codes = ['not_found', 'busy', 'service_unavailable', ...(operation === 'reindex' ? ['requires_processing'] : [])]
+  const stoppingCodes = ['service_unavailable', 'budget_exhausted', 'growth_limit_reached', 'accounting_unavailable']
+  const codes = ['not_found', 'busy', ...stoppingCodes, ...(operation === 'reindex' ? ['requires_processing'] : [])]
   let stopped = false
   const results = data.results.map((item, index) => {
     if (!item || item.document_id !== ids[index] || !['succeeded', 'failed', 'not_attempted'].includes(item.outcome)) invalid()
     if (item.outcome === 'failed' ? !codes.includes(item.code) : item.code != null) invalid()
     if ((stopped && item.outcome !== 'not_attempted') || (!stopped && item.outcome === 'not_attempted')) invalid()
-    if (item.code === 'service_unavailable') stopped = true
+    if (stoppingCodes.includes(item.code)) stopped = true
     return { document_id: item.document_id, outcome: item.outcome, code: item.code }
   })
   const counts = Object.fromEntries(['succeeded', 'failed', 'not_attempted'].map(key => [key, results.filter(item => item.outcome === key).length]))
@@ -473,7 +479,8 @@ export async function getServiceHealth(service, signal) {
   const paths = { api: '/api/health', database: '/api/health/database', vector: '/api/health/qdrant' }
   if (!paths[service]) return 'unavailable'
   try {
-    const response = await api.get(paths[service], { signal, timeout: 7000 })
+    const response = await api.get(paths[service], { signal, timeout: 7000,
+      ...(service === 'api' ? {} : { headers: { Authorization: 'Bearer ' + getAccessToken() } }) })
     return response.status === 200 && response.data?.status === 'ok' ? 'operational' : 'unavailable'
   } catch {
     return 'unavailable'

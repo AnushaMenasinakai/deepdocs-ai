@@ -32,7 +32,7 @@ class BulkDeleteRequest(BaseModel):
 class BulkDeleteItem(BaseModel):
     document_id: str
     outcome: Literal["succeeded", "failed", "not_attempted"]
-    code: Literal["not_found", "busy", "service_unavailable"] | None = None
+    code: Literal["not_found", "busy", "service_unavailable", "budget_exhausted", "growth_limit_reached", "accounting_unavailable"] | None = None
 
 
 class BulkDeleteResponse(BaseModel):
@@ -49,7 +49,7 @@ class BulkReindexRequest(BulkDeleteRequest):
 
 
 class BulkReindexItem(BulkDeleteItem):
-    code: Literal["not_found", "busy", "requires_processing", "service_unavailable"] | None = None
+    code: Literal["not_found", "busy", "requires_processing", "service_unavailable", "budget_exhausted", "growth_limit_reached", "accounting_unavailable"] | None = None
 
 
 class BulkReindexResponse(BulkDeleteResponse):

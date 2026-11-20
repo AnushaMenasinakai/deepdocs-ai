@@ -205,7 +205,15 @@ def load_cors_origins() -> list[str]:
     origins = ["http://127.0.0.1:5173", "http://localhost:5173"]
     try:
         values = {**dotenv_values(ENV_FILE, interpolate=False), **os.environ}
+        mode = values.get("CORS_MODE", "development")
+        if mode not in ("development", "production"):
+            raise ValueError
+        production = mode == "production"
+        if production:
+            origins = []
         raw = values.get("CORS_FRONTEND_ORIGINS") or ""
+        if production and not raw.strip():
+            raise ValueError
         if not raw.strip():
             return origins
         for entry in raw.split(","):
@@ -217,6 +225,8 @@ def load_cors_origins() -> list[str]:
                 raise ValueError
             parsed = urlsplit(origin)
             host = parsed.hostname
+            if production and parsed.scheme != "https":
+                raise ValueError
             if host is None:
                 raise ValueError
             if ":" in host:
@@ -237,8 +247,8 @@ def load_cors_origins() -> list[str]:
             if normalized not in origins:
                 origins.append(normalized)
         return origins
-    except (OSError, UnicodeError, ValueError, TypeError):
-        raise ConfigurationError("CORS_FRONTEND_ORIGINS must contain comma-separated explicit HTTP/HTTPS origins without paths, credentials, queries, fragments or wildcards.") from None
+    except (OSError, UnicodeError, ValueError, TypeError, AttributeError):
+        raise ConfigurationError("CORS_FRONTEND_ORIGINS must contain explicit origins without paths, credentials, queries, fragments or wildcards; CORS_MODE must be development or production, and production requires HTTPS origins.") from None
 
 
 @dataclass(frozen=True)
