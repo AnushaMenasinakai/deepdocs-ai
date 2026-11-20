@@ -23,6 +23,22 @@ class QuotaExceeded(ValueError):
     pass
 
 
+def publication_descriptor(identity, stored):
+    """Only validated upload fields; never reconstruct missing legacy fields."""
+    expected = {'original_filename', 'stored_filename', 'storage_path', 'file_size', 'content_type'}
+    if not isinstance(stored, dict) or set(stored) != expected:
+        raise IntentConflict('Publication descriptor requires review.')
+    name = stored['original_filename']
+    key = str(identity.document_id) + '.pdf'
+    if (not isinstance(name, str) or not 1 <= len(name) <= 255
+            or any(ord(c) < 32 for c in name) or '/' in name or '\\' in name
+            or not name.lower().endswith('.pdf') or stored['content_type'] != 'application/pdf'
+            or stored['stored_filename'] != key or stored['storage_path'] != key
+            or type(stored['file_size']) is not int or not 0 < stored['file_size'] <= 5 * 1024**2):
+        raise IntentConflict('Publication descriptor requires review.')
+    return dict(stored)
+
+
 class StorageTransactionError(StorageUncertain):
     """Sanitized diagnostic only; never authorizes replay or quota release."""
     def __init__(self, category, phase):
@@ -146,6 +162,35 @@ class StorageIntents:
         self.ledger.replace_one({'_id': row['_id']}, row, upsert=True, session=session)
 
     def create(self, identity, expected_size, checksum, worker_id, reservation_id=None):
+        with self.transaction() as session:
+            return self._create(identity, expected_size, checksum, worker_id, reservation_id, session)
+
+    def prepare_upload(self, identity, stored, checksum, worker_id):
+        descriptor = publication_descriptor(identity, stored)
+        if identity.operation_type != 'upload':
+            raise IntentConflict('Upload identity required.')
+        with self.transaction() as session:
+            bases = self.db.get_collection('knowledge_bases')
+            scope = {'_id': identity.knowledge_base_id, 'owner_id': identity.owner_id}
+            base = bases.find_one(scope, session=session)
+            if base is None:
+                return None
+            old = self.intents.find_one({'_id': identity.operation_id}, session=session)
+            if old is not None:
+                self._record(identity, session)
+                # Duplicate preparation never grants another remote dispatch.
+                raise IntentConflict('Preparation already exists; inspect without replay.')
+            record = self._create(identity, descriptor['file_size'], checksum, worker_id, None, session)
+            record['publication_descriptor'] = descriptor
+            self.intents.replace_one({'_id': identity.operation_id}, record, session=session)
+            reserved = bases.find_one_and_update(scope, {
+                '$addToSet': {'_document_ids': identity.document_id},
+                '$inc': {'_document_revision': 1}}, session=session)
+            if reserved is None or any(reserved.get(k) != v for k, v in scope.items()):
+                raise IntentConflict('Knowledge-base reservation conflict.')
+            return record
+
+    def _create(self, identity, expected_size, checksum, worker_id, reservation_id, session):
         if type(expected_size) is not int or not 0 < expected_size <= self.policy.file_bytes:
             raise QuotaExceeded('PDF size exceeds quota.')
         if not isinstance(checksum, str) or not re.fullmatch('[0-9a-f]{64}', checksum):
@@ -157,22 +202,21 @@ class StorageIntents:
             raise ValueError('Invalid reservation reference.')
         if identity.operation_type == 'upload' and reservation_id != identity.operation_id:
             raise ValueError('Upload owns its reservation.')
-        with self.transaction() as session:
-            old = self.intents.find_one({'_id': identity.operation_id}, session=session)
-            if old is not None:
-                self._record(identity, session)
-                if any(old[k] != v for k, v in {'expected_size':expected_size, 'checksum':checksum,
-                                               'reservation_id':reservation_id, 'worker_id':worker_id}.items()):
-                    raise IntentConflict('Conflicting duplicate intent.')
-                return old
-            now = datetime.now(timezone.utc)
-            record = {**identity.fields(), 'schema_version':1, 'stage':'prepared',
-                      'last_acknowledged_stage':'prepared', 'expected_size':expected_size,
-                      'checksum':checksum, 'reservation_id':reservation_id, 'worker_id':worker_id,
-                      'created_at':now, 'updated_at':now, 'heartbeat_at':now,
-                      'error_category':None, 'reconciliation_status':'none', 'quota_state':'none'}
-            self.intents.insert_one(record, session=session)
-            return record
+        old = self.intents.find_one({'_id': identity.operation_id}, session=session)
+        if old is not None:
+            self._record(identity, session)
+            if any(old[k] != v for k, v in {'expected_size':expected_size, 'checksum':checksum,
+                                           'reservation_id':reservation_id, 'worker_id':worker_id}.items()):
+                raise IntentConflict('Conflicting duplicate intent.')
+            return old
+        now = datetime.now(timezone.utc)
+        record = {**identity.fields(), 'schema_version':1, 'stage':'prepared',
+                  'last_acknowledged_stage':'prepared', 'expected_size':expected_size,
+                  'checksum':checksum, 'reservation_id':reservation_id, 'worker_id':worker_id,
+                  'created_at':now, 'updated_at':now, 'heartbeat_at':now,
+                  'error_category':None, 'reconciliation_status':'none', 'quota_state':'none'}
+        self.intents.insert_one(record, session=session)
+        return record
 
     def reserve(self, identity, *, growth_policy=None):
         with self.transaction() as session:
@@ -289,32 +333,35 @@ class StorageIntents:
         if identity.operation_type != 'delete':
             raise IntentConflict('Deletion intent required.')
         with self.transaction() as session:
-            record = self._record(identity, session)
-            if (record['stage'] != 'file_deleted' or record['worker_id'] != worker_id
-                    or record['reconciliation_status'] != 'none'):
-                raise IntentConflict('Confirmed deletion stages required.')
-            scope = {'_id': identity.document_id, 'owner_id': identity.owner_id,
-                     'knowledge_base_id': identity.knowledge_base_id,
-                     '_operation': identity.operation_id, 'storage_backend': 'gridfs',
-                     'storage_file_id': identity.document_id,
-                     'storage_operation_id': record['reservation_id'],
-                     'storage_checksum': record['checksum'], 'file_size': record['expected_size']}
-            docs = self.db.get_collection('documents')
-            if docs.find_one(scope, session=session) is None:
-                raise IntentConflict('Deletion claim or original identity conflict.')
-            self.db.get_collection('document_chunks').delete_many({
-                'document_id': identity.document_id, 'owner_id': identity.owner_id,
-                'knowledge_base_id': identity.knowledge_base_id}, session=session)
-            result = self.db.get_collection('knowledge_bases').update_one({
-                '_id': identity.knowledge_base_id, 'owner_id': identity.owner_id},
-                {'$pull': {'_document_ids': identity.document_id}, '$inc': {'_document_revision': 1}},
-                session=session)
-            if result.matched_count != 1 or docs.delete_one(scope, session=session).deleted_count != 1:
-                raise IntentConflict('Deletion metadata cleanup is unconfirmed.')
-            record.update(stage='delete_confirmed', previous_stage='file_deleted',
-                          last_acknowledged_stage='delete_confirmed', updated_at=datetime.now(timezone.utc))
-            self.intents.replace_one({'_id': identity.operation_id, 'stage': 'file_deleted'}, record, session=session)
-            self._quota_transition(identity, 'release', session)
+            return self._finalize_deletion(identity, worker_id, session)
+
+    def _finalize_deletion(self, identity, worker_id, session):
+        record = self._record(identity, session)
+        if (record['stage'] != 'file_deleted' or record['worker_id'] != worker_id
+                or record['reconciliation_status'] != 'none'):
+            raise IntentConflict('Confirmed deletion stages required.')
+        scope = {'_id': identity.document_id, 'owner_id': identity.owner_id,
+                 'knowledge_base_id': identity.knowledge_base_id,
+                 '_operation': identity.operation_id, 'storage_backend': 'gridfs',
+                 'storage_file_id': identity.document_id,
+                 'storage_operation_id': record['reservation_id'],
+                 'storage_checksum': record['checksum'], 'file_size': record['expected_size']}
+        docs = self.db.get_collection('documents')
+        if docs.find_one(scope, session=session) is None:
+            raise IntentConflict('Deletion claim or original identity conflict.')
+        self.db.get_collection('document_chunks').delete_many({
+            'document_id': identity.document_id, 'owner_id': identity.owner_id,
+            'knowledge_base_id': identity.knowledge_base_id}, session=session)
+        result = self.db.get_collection('knowledge_bases').update_one({
+            '_id': identity.knowledge_base_id, 'owner_id': identity.owner_id},
+            {'$pull': {'_document_ids': identity.document_id}, '$inc': {'_document_revision': 1}},
+            session=session)
+        if result.matched_count != 1 or docs.delete_one(scope, session=session).deleted_count != 1:
+            raise IntentConflict('Deletion metadata cleanup is unconfirmed.')
+        record.update(stage='delete_confirmed', previous_stage='file_deleted',
+                      last_acknowledged_stage='delete_confirmed', updated_at=datetime.now(timezone.utc))
+        self.intents.replace_one({'_id': identity.operation_id, 'stage': 'file_deleted'}, record, session=session)
+        self._quota_transition(identity, 'release', session)
 
     def heartbeat(self, identity, worker_id):
         with self.transaction() as session:

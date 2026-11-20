@@ -45,6 +45,8 @@ class UploadCollection(Collection):
 class UploadDatabase(Database):
     def __init__(self):
         super().__init__()
+        # Collection operations now run inside the preparation transaction.
+        self.lock = threading.RLock()
         self.publication_failure = False
     def get_collection(self, name): return UploadCollection(self, name)
 

@@ -177,3 +177,46 @@ class IntentTests(unittest.TestCase):
         self.assertEqual(self.db.rows,{})
 
 if __name__=='__main__': unittest.main()
+
+class AtomicPreparationTests(unittest.TestCase):
+    def setUp(self):
+        from test_gridfs_uploads import UploadDatabase
+        self.db = UploadDatabase(); self.store = StorageIntents(self.db)
+        self.i = IntentIdentity.new(ObjectId(), ObjectId(), ObjectId())
+        self.db.rows['knowledge_bases'] = {self.i.knowledge_base_id: {'_id': self.i.knowledge_base_id, 'owner_id': self.i.owner_id}}
+        key = str(self.i.document_id)+'.pdf'
+        self.descriptor = dict(original_filename='synthetic.pdf', stored_filename=key, storage_path=key, file_size=5, content_type='application/pdf')
+    def prepare(self): return self.store.prepare_upload(self.i, self.descriptor, 'a'*64, 'worker')
+    def test_atomic_rollback_and_lost_ack(self):
+        for failure in ('before_commit','after_commit'):
+            self.setUp(); self.db.failure = failure
+            with self.assertRaises(StorageUncertain): self.prepare()
+            base = self.db.rows['knowledge_bases'][self.i.knowledge_base_id]
+            self.assertEqual(self.i.document_id in base.get('_document_ids',[]), failure=='after_commit')
+            self.assertEqual(self.i.operation_id in self.db.rows.get('storage_operation_intents',{}), failure=='after_commit')
+    def test_owned_authorization_and_duplicate(self):
+        self.db.rows['knowledge_bases'][self.i.knowledge_base_id]['owner_id'] = ObjectId()
+        self.assertIsNone(self.prepare())
+        self.assertFalse(self.db.rows.get('storage_operation_intents'))
+        self.db.rows['knowledge_bases'][self.i.knowledge_base_id]['owner_id'] = self.i.owner_id
+        self.prepare()
+        with self.assertRaises(IntentConflict): self.prepare()
+        self.assertEqual(self.db.rows['knowledge_bases'][self.i.knowledge_base_id]['_document_ids'],[self.i.document_id])
+    def test_kb_disappears_during_preparation_rolls_back(self):
+        from unittest.mock import patch
+        from test_gridfs_uploads import UploadCollection
+        with patch.object(UploadCollection,'find_one_and_update',return_value=None):
+            with self.assertRaises(IntentConflict): self.prepare()
+        self.assertFalse(self.db.rows.get('storage_operation_intents'))
+    def test_uncertain_preparation_never_dispatches_original(self):
+        import io
+        from unittest.mock import Mock
+        from gridfs_uploads import GridFSUploads
+        service = GridFSUploads(Mock(),self.db,storage_factory=Mock())
+        upload = SimpleNamespace(filename='synthetic.pdf',content_type='application/pdf',file=io.BytesIO(b'%PDF-test'))
+        self.db.failure='after_commit'
+        with self.assertRaises(StorageUncertain):
+            service._execute(self.i,upload,100,threading.Event())
+        service.storage_factory.assert_not_called()
+        upload.file.close()
+        self.assertIn(self.i.operation_id,self.db.rows['storage_operation_intents'])

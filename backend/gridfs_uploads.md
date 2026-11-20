@@ -75,3 +75,17 @@ orphan deletion, stale-worker expiry or client retry endpoint in this phase.
 
 Offline coverage exercises the real adapter, intent ledger and HTTP route using
 synthetic PDFs, a transactional database double and an in-memory GridFS bucket.
+
+## Atomic preparation and interrupted publication
+
+The owned KB reservation and prepared intent now share one snapshot/majority
+transaction via StorageIntents.prepare_upload. Validation still precedes mutation;
+missing/foreign KBs create no intent. The bounded publication descriptor is durable
+before dispatch. Unknown preparation commits never dispatch GridFS writes. Duplicate
+preparation is not upload retry permission. Quota admission follows this transaction;
+prepared reservations remain inspectable if admission is interrupted.
+
+Publication review/apply is documented in gridfs_growth.md. Recovery never creates
+another original or modifies original bytes. Legacy intentless reservations and
+missing descriptors remain quarantined. Feature activation is still disabled and
+requires separate operational approval and real-database validation.

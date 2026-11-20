@@ -3,7 +3,8 @@
 Run **Actions → Isolated MongoDB replica-set smoke tests → Run workflow** only
 after reviewing the selected branch. There are no push/PR triggers, inputs,
 repository secrets, production environment files, image publishing or deployment.
-This phase has not been executed against MongoDB; offline checks are not a live pass.
+The D3B recovery extension has not been executed against MongoDB; static checks
+are not a live pass. Earlier harness executions do not validate this extension.
 
 The workflow uses Ubuntu 24.04 AMD64, a 20-minute job limit and a resource preflight
 of 4 GiB available memory / 10 GiB disk. MongoDB 8.0.38-noble is pinned to its
@@ -217,7 +218,7 @@ A failed assertion stops the run; raw exception messages and documents are not
 printed. Unresolved synthetic reservations are intentionally retained until
 ownership-checked destruction of the disposable MongoDB container.
 
-### Exact candidate change set for a later focused commit
+### Historical combined-policy candidate change set (superseded for D3C-R3)
 
 Harness files (8):
 - experiments/mongodb-smoke/Dockerfile
@@ -256,3 +257,125 @@ PDF subprocess shutdown, provider calls, active worker takeover, failover or
 actual TTL expiration. Readiness here verifies database prerequisites, not a full
 application lifespan. Production GridFS remains disabled. This phase authorizes
 no Docker execution, staging, commit, push or workflow dispatch.
+
+## D3C-R3 recovery validation preparation
+
+Current transfer set: the twelve reviewed D3B modified files plus these five
+harness files: `combined.py`, `run.sh`, `Dockerfile`, this `README.md` and
+`.github/workflows/mongodb-replica-smoke.yml`. All paths here are relative to
+`experiments/mongodb-smoke` except the workflow. No selective config changes or
+new dependencies are required for this extension. The historical file list above
+must not be used as the current staging list.
+
+Twenty named scenario groups run before the existing combined-policy checks.
+Four cover atomic preparation rollback, missing/foreign KBs, real concurrent KB
+deletion conflicts, and simulated lost preparation acknowledgement. Eight groups
+run in each of growth-off and growth-on modes: preparation/duplicate rejection;
+corrupt/incomplete chunks and identity conflicts; maintenance and changed review;
+publication rollback; publication/matching metadata/idempotency; deletion
+orphan/vector/claim evidence; deletion rollback; deletion acknowledgement loss
+and exactly-once release. Each group has multiple assertions, not separately
+counted tests. A failure stops execution; subsequent groups are `not_run`, never
+passed or silently skipped. Existing lifecycle, budgets, history and readiness
+cases remain in the original execution path.
+
+The same two synthetic PDF fixtures, database, scoped user and persisted test
+quota policy are reused. Recovery receives that same policy via a constructor
+patch; its transaction and recovery methods are the production implementations.
+Duplicate operation IDs fail during preparation; a second operation for the same
+document is denied at quota admission. The fixture removes only that proved
+never-dispatched duplicate intent before publication review. Production does not
+perform this fixture cleanup. No existing uncertain reservation is released.
+
+Concurrency is a genuine server write conflict: one client holds an uncommitted
+KB deletion while another authenticated client attempts preparation. It must
+receive the classified write conflict, with no orphan intent after deletion
+commits. Rollback injection raises inside a real transaction after its mutations.
+Acknowledgement injection raises **after a real successful commit**; it is not a
+network partition, driver-generated unknown commit result, failover or failpoint.
+No mutation is automatically retried. Review is repeated explicitly to recognize
+an already-finalized operation. PDF readback is compared byte-for-byte after
+publication; adapter save/delete calls are forbidden during recovery finalizers.
+There are no Qdrant dependencies or vector calls. The vector-cleaned stage is an
+affirmative synthetic fixture assertion because these documents never had vectors.
+
+This validates StorageIntents, GridFS and recovery primitives, **not**
+GridFSUploads, HTTP routes or upload cancellation orchestration. Existing focused
+mocked tests cover uncertain preparation preventing remote dispatch. Full lifecycle
+integration remains a D5/D6 requirement. Maintenance attestation is valid only
+after this sequential fixture's writers have completed; it is not worker fencing.
+
+The tester deadline increases from 180 to 300 seconds for the additional real
+transactions and bounded conflict waits. The job remains 20 minutes and the main
+step 18 minutes. Build/pull/startup delays can still exhaust that deadline: failure
+must be reviewed, not automatically rerun. Memory (4 GiB available), disk (10 GiB)
+and separate dbPath (600 MiB) preflights are unchanged.
+
+Evidence is allowlisted to `sources.json`, `resources.json`, `recovery.json`,
+`execution.json` and `cleanup.json`, retained for three days. It includes source
+SHA-256 hashes and candidate commit, preflight measurements, verified MongoDB
+version/topology, named outcomes/durations, counts and cleanup status. No raw logs,
+database documents, credentials, private keys or entire temporary directories are
+uploaded. `recovery.json` covers the new twenty groups; `execution.json` covers the
+whole harness. Both must succeed, and cleanup must succeed. An absent/incomplete
+report is not a pass. Artifact upload success cannot override a failed step.
+
+Only the evidence directory is writable from the nonroot tester. Container/image
+cleanup uses exact names and verified ownership labels. Data is tmpfs and is
+destroyed with the owned MongoDB container. Abrupt runner loss or job cancellation
+may prevent cleanup/artifact steps; missing evidence must be reported as unknown.
+Generated credentials remain in runner-private temporary storage, never artifacts,
+and disappear with the ephemeral GitHub runner. Do not run this harness on a
+persistent shared runner.
+
+After separate approval, export baseline HEAD to an isolated checkout outside the
+working tree, overlay exactly the twelve D3B and five harness files, compare their
+hashes, and commit on `codex/gridfs-recovery-validation`. Preserve the dirty main
+checkout and five unrelated untracked files. Review branch diff and external
+deployment webhook policies before pushing. Dispatch the existing manual workflow
+once against that branch and verify the run SHA. Do not open a PR or merge as part
+of validation. Confirm the repository/account Actions allowance, artifact budget,
+spending controls and standard-runner eligibility first; free execution is not
+assumed. Do not select paid/larger runners or activate billing.
+
+### R5 acceptance evidence and cleanup gate
+
+After cleanup, the workflow runs `bash experiments/mongodb-smoke/run.sh
+--verify-evidence`. This host-only Python standard-library validator requires all
+five allowlisted JSON files (each at most 256 KiB), rejects duplicate JSON keys,
+and checks the actual checkout SHA against `GITHUB_SHA`. It recomputes the exact
+allowlisted source hashes, including all twelve D3B files and the harness README.
+The three resource thresholds, MongoDB 8.0.38/single-member topology, explicit
+execution completion and independently recorded cleanup must all pass.
+
+The gate checks the exact twenty unique scenario identifiers, not just their
+count. Every outcome must be `passed`; failed/skipped/not-run counts must be zero,
+and counts, durations and coverage labels must agree. Missing or malformed
+evidence, unexpected identifiers and unknown cleanup fail acceptance. Upload runs
+even after failure, with `if-no-files-found: error`; its five-file allowlist and
+three-day retention are unchanged. Upload success never changes earlier failures.
+The gate has a one-minute step bound within the unchanged twenty-minute job.
+
+Cleanup inventories containers/images through successful bounded Docker API
+commands. Only an affirmative inventory can establish prior absence. Present
+resources require exact identity and matching ownership before removal, followed
+by a fresh inventory proving absence. Tester, MongoDB, and tester image remain in
+that order. A failed inventory/inspection, ownership mismatch, failed removal or
+unconfirmed post-removal absence stops cleanup and records failed/unknown state;
+later resources remain unknown rather than being blindly removed. Evidence
+contains sanitized phase/category values, never Docker error text. Each Docker
+command has an eight-second bound; no retries or broad pruning are performed.
+
+Publication and deletion rollback checks now compare exact scoped persisted
+participants: current/linked intents, KB, metadata, full bounded quota ledger,
+owner growth record, application chunks and original file metadata/chunks.
+Deletion includes one owned synthetic application chunk and verifies its rollback
+and final removal. Matching publication metadata must remain exactly unchanged:
+the production finalizer does not update an existing matching document. Repeated
+publication/deletion finalization compares the complete post-finalization snapshot
+and checks capacity again. Original byte and identity preservation remains checked.
+
+Synthetic validator and simulated Docker-response tests exercise the host helpers
+without contacting Docker or MongoDB. Their success is evidence about acceptance
+reporting only, not a real-database test pass. Final Bash syntax validation must
+refer to the corrected scripts; prior-version syntax evidence is not sufficient.
