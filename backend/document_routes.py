@@ -272,7 +272,7 @@ async def bulk_reindex(
 
 
 @router.get("/api/health/qdrant")
-async def qdrant_health(diagnostics=Depends(get_diagnostics)):
+async def qdrant_health(current_user=Depends(get_current_user), diagnostics=Depends(get_diagnostics)):
     with safe_errors():
         await diagnostics.run('qdrant', lambda: get_vector_store().health())
         return {"status": "ok", "message": "Qdrant is reachable"}

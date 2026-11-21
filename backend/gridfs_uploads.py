@@ -77,15 +77,9 @@ class GridFSUploads:
                 stored = local.save(upload, identity.document_id, min(max_bytes, self.intents.policy.file_bytes))
                 digest = checksum(local.reference({'_id': identity.document_id, **stored}))
                 checkpoint()
-                with timeout(5):
-                    base = bases.find_one_and_update(scope, {
-                        '$addToSet': {'_document_ids': identity.document_id},
-                        '$inc': {'_document_revision': 1}})
-                if base is None:
+                prepared = self.intents.prepare_upload(identity, stored, digest, self.worker_id)
+                if prepared is None:
                     return None
-                if any(base.get(k) != v for k, v in scope.items()):
-                    raise StorageUncertain('Upload authorization requires review.')
-                self.intents.create(identity, stored['file_size'], digest, self.worker_id)
                 stage = 'prepared'
                 try:
                     growth_policy = load_growth_settings()

@@ -47,3 +47,19 @@ Remaining validation: real isolated MongoDB transaction/rollback and GridFS faul
 testing, reconciliation tooling, restart recovery, backup procedures and operational
 monitoring. Offline doubles do not establish Atlas compatibility or production
 readiness. No live services or deployment are needed by these tests.
+
+## Interrupted deletion decisions
+
+| Observed evidence | Permitted operator action |
+| --- | --- |
+| Unconfirmed vector deletion | Inspect/quarantine; no metadata/quota finalization |
+| GridFS file present or orphan chunks present | Quarantine; no payload deletion by recovery |
+| Acknowledged vectors_deleted/file_deleted, exact claim, no file AND no chunks | Maintenance review/apply may finalize metadata/accounting atomically |
+| delete_confirmed with consistent absent metadata and released quotas | Recognize already finalized; no second release |
+| Conflicting identity, changed review state or unavailable reads | Stop; retain obligations |
+
+Review/apply uses the existing finalization transaction body, not a second deletion
+pipeline. An unknown commit requires fresh review, never blind replay. Maintenance
+requirements and evidence attestation are defined in gridfs_growth.md. These controls
+do not prove that an old writer is stopped: independently verified quiescence is
+mandatory. No automatic orphan cleanup or processing-claim clearing is introduced.

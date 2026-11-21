@@ -39,6 +39,26 @@ class ReconciliationInspector:
     def __init__(self, database):
         self.db = database
 
+    def inspect_reservation(self, owner_id, knowledge_base_id, document_id):
+        """One explicit historical KB reservation; never infer release permission."""
+        if any(not isinstance(v, ObjectId) for v in (owner_id, knowledge_base_id, document_id)):
+            raise ValueError('Explicit server-owned identities required.')
+        try:
+            with timeout(5), self.db.client.start_session(snapshot=True) as session:
+                base = self._one('knowledge_bases', {'_id': knowledge_base_id},
+                                 ('owner_id', '_document_ids'), session)
+                if base is None or base.get('owner_id') != owner_id:
+                    return {'classification': 'identity_conflict', 'mutation_authorized': False}
+                if document_id not in base.get('_document_ids', []):
+                    return {'classification': 'reservation_not_observed', 'mutation_authorized': False}
+                intents = self._many('storage_operation_intents',
+                    {'owner_id': owner_id, 'document_id': document_id}, ('_id',),
+                    'storage_intent_owner_document', 21, session, [('created_at', 1)])
+                return {'classification': 'quarantine_intentless_reservation' if not intents else 'inspect_intents',
+                        'mutation_authorized': False}
+        except Exception:
+            return {'classification': 'inspection_unavailable', 'mutation_authorized': False}
+
     def inspect(self, identity, *, now=None):
         if not isinstance(identity, IntentIdentity):
             raise ValueError('Explicit server-owned inspection identity required.')

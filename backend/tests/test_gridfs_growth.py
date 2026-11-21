@@ -24,9 +24,18 @@ import gridfs_growth_recovery as recovery
 
 class Cursor(list):
     def limit(self, n): return Cursor(self[:n])
+    def hint(self, name): return self
+    def sort(self, fields): return Cursor(sorted(self, key=lambda r: tuple(str(r.get(k, '')) for k, _ in fields)))
+    def batch_size(self, n): return self
+    def max_time_ms(self, n): return self
+    def close(self): pass
 
 
 class Collection(DeletionCollection):
+    def find_one(self, query, projection=None, **kwargs):
+        row = super().find_one(query, **kwargs)
+        return {k: v for k, v in row.items() if k in projection} if row is not None and projection else row
+
     def find(self, query, *args, **kwargs):
         def matches(row):
             return all(bool(row.get('_document_ids')) if key == '_document_ids.0' else row.get(key) == value
@@ -202,3 +211,145 @@ class CombinedTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn(identifier, self.db.rows['documents'])
         self.assertEqual(self.bucket.files, {})
         self.assertEqual(self.db.rows['storage_operation_intents'][token]['stage'], 'file_deleted')
+
+class RecoveryFinalizationTests(unittest.TestCase):
+    def setUp(self):
+        import hashlib
+        from storage_intents import StorageIntents
+        self.db = Database()
+        self.i = IntentIdentity.new(ObjectId(), ObjectId(), ObjectId())
+        self.store = StorageIntents(self.db)
+        self.db.rows['knowledge_bases'] = {self.i.knowledge_base_id: {'_id': self.i.knowledge_base_id, 'owner_id': self.i.owner_id}}
+        key = str(self.i.document_id)+'.pdf'
+        self.descriptor = dict(original_filename='synthetic.pdf', stored_filename=key, storage_path=key, file_size=len(PDF), content_type='application/pdf')
+        self.store.prepare_upload(self.i, self.descriptor, hashlib.sha256(PDF).hexdigest(), 'worker')
+        self.store.reserve(self.i)
+        self.store.transition(self.i, 'prepared', 'write_dispatched', 'worker')
+        self.db.rows['pdf_blobs.files'] = {self.i.document_id: {'_id': self.i.document_id,
+            'metadata': dict(document_id=self.i.document_id, owner_id=self.i.owner_id, knowledge_base_id=self.i.knowledge_base_id),
+            'length': len(PDF), 'chunkSize': 65536}}
+        chunk = ObjectId()
+        self.db.rows['pdf_blobs.chunks'] = {chunk: {'_id': chunk, 'files_id': self.i.document_id, 'n': 0, 'data': PDF}}
+        self.maintenance = dict(operator='offline_test', evidence_id='maintenance_1', writers_stopped=True, inflight_resolved=True)
+
+    def review(self): return recovery.review_publication(self.db, self.i, maintenance=self.maintenance)
+    def apply(self, plan): return recovery.apply_publication(self.db, self.i, review_token=plan['review_token'], maintenance=self.maintenance)
+
+    def test_unpublished_and_repeated_finalization(self):
+        self.assertEqual(self.apply(self.review()), 'finalized')
+        self.assertEqual(self.apply(self.review()), 'already_finalized')
+        self.assertEqual(len(self.db.rows['documents']), 1)
+        self.assertEqual(self.db.rows['storage_quota_ledger']['pdf_payload_v1']['entries'][0]['state'], 'committed')
+
+    def test_matching_publication_after_lost_ack(self):
+        self.db.failure = 'after_commit'
+        # Set failure after review so it applies to the mutation commit.
+        self.db.failure = None
+        plan = self.review(); self.db.failure = 'after_commit'
+        with self.assertRaises(StorageUncertain): self.apply(plan)
+        self.assertEqual(self.review()['action'], 'already_finalized')
+
+    def test_rollback_preserves_capacity_and_payload(self):
+        plan = self.review(); before = copy.deepcopy(self.db.rows); self.db.failure = 'before_commit'
+        with self.assertRaises(StorageUncertain): self.apply(plan)
+        self.assertEqual(self.db.rows, before)
+
+    def test_quarantine_corruption_identity_overlap_and_legacy(self):
+        before = copy.deepcopy(self.db.rows)
+        changes = [lambda: self.db.rows['pdf_blobs.chunks'].clear(),
+            lambda: self.db.rows['pdf_blobs.files'][self.i.document_id]['metadata'].update(owner_id=ObjectId()),
+            lambda: self.db.rows['storage_operation_intents'][self.i.operation_id].pop('publication_descriptor'),
+            lambda: self.db.rows.setdefault('documents', {}).update({self.i.document_id: {'_id': self.i.document_id}}),
+            lambda: self.db.rows['storage_operation_intents'].update({ObjectId(): {**self.db.rows['storage_operation_intents'][self.i.operation_id], '_id': ObjectId()}})]
+        for change in changes:
+            self.db.rows = copy.deepcopy(before)
+            with self.subTest(change=changes.index(change)):
+                change()
+                with self.assertRaises(IntentConflict): self.review()
+
+    def test_review_token_and_maintenance_fail_closed(self):
+        plan = self.review()
+        self.db.rows['knowledge_bases'][self.i.knowledge_base_id]['_document_revision'] += 1
+        with self.assertRaises(IntentConflict): self.apply(plan)
+        self.maintenance['inflight_resolved'] = False
+        with self.assertRaises(IntentConflict): self.review()
+
+    def deletion(self):
+        self.apply(self.review())
+        d = IntentIdentity.new(self.i.document_id, self.i.owner_id, self.i.knowledge_base_id, 'delete')
+        row = self.db.rows['storage_operation_intents'][self.i.operation_id]
+        self.store.create(d, len(PDF), row['checksum'], 'delete_worker', self.i.operation_id)
+        self.db.rows['documents'][self.i.document_id]['_operation'] = d.operation_id
+        self.store.transition(d, 'prepared', 'delete_dispatched', 'delete_worker')
+        self.store.transition(d, 'delete_dispatched', 'vectors_deleted', 'delete_worker')
+        self.db.rows['pdf_blobs.files'].clear(); self.db.rows['pdf_blobs.chunks'].clear()
+        self.store.mark_uncertain(d, 'vectors_deleted')
+        return d
+
+    def test_deletion_finalizes_once_with_uncertain_ack(self):
+        d = self.deletion()
+        plan = recovery.review_deletion(self.db, d, maintenance=self.maintenance)
+        self.db.failure = 'after_commit'
+        with self.assertRaises(StorageUncertain):
+            recovery.apply_deletion(self.db, d, review_token=plan['review_token'], maintenance=self.maintenance)
+        plan = recovery.review_deletion(self.db, d, maintenance=self.maintenance)
+        self.assertEqual(plan['action'], 'already_finalized')
+        self.assertEqual(self.db.rows['storage_quota_ledger']['pdf_payload_v1']['entries'], [])
+        self.assertEqual(self.db.rows['documents'], {})
+
+    def test_deletion_orphans_claim_and_vector_evidence(self):
+        d = self.deletion(); before = copy.deepcopy(self.db.rows)
+        for kind in ('orphan', 'claim', 'vectors'):
+            self.db.rows = copy.deepcopy(before)
+            with self.subTest(kind=kind):
+                if kind == 'orphan': self.db.rows['pdf_blobs.chunks'][ObjectId()] = {'files_id': d.document_id, 'n': 0}
+                elif kind == 'claim': self.db.rows['documents'][d.document_id]['_operation'] = ObjectId()
+                else: self.db.rows['storage_operation_intents'][d.operation_id].update(stage='delete_dispatched', last_acknowledged_stage='delete_dispatched')
+                with self.assertRaises(IntentConflict): recovery.review_deletion(self.db, d, maintenance=self.maintenance)
+
+    def test_growth_enabled_publication_and_deletion_release(self):
+        row = self.db.rows['storage_operation_intents'][self.i.operation_id]
+        row['growth_reserved'] = True
+        self.db.rows['resource_usage'] = {self.i.owner_id: {'_id': self.i.owner_id, 'documents': [self.i.document_id], 'revision': 1}}
+        d = self.deletion()
+        plan = recovery.review_deletion(self.db, d, maintenance=self.maintenance)
+        self.assertEqual(recovery.apply_deletion(self.db,d,review_token=plan['review_token'],maintenance=self.maintenance),'finalized')
+        self.assertEqual(self.db.rows['resource_usage'][self.i.owner_id]['documents'], [])
+
+    def test_existing_matching_unfinalized_metadata(self):
+        self.apply(self.review())
+        row = self.db.rows['storage_operation_intents'][self.i.operation_id]
+        row.update(stage='file_confirmed',last_acknowledged_stage='file_confirmed',quota_state='reserved',reconciliation_status='required')
+        self.db.rows['storage_quota_ledger']['pdf_payload_v1']['entries'][0]['state']='reserved'
+        doc = copy.deepcopy(self.db.rows['documents'][self.i.document_id])
+        self.assertEqual(self.apply(self.review()),'finalized')
+        self.assertEqual(self.db.rows['documents'][self.i.document_id],doc)
+
+    def test_payload_change_between_review_and_apply(self):
+        plan = self.review()
+        next(iter(self.db.rows['pdf_blobs.chunks'].values()))['data'] = b'x'*len(PDF)
+        with self.assertRaises(IntentConflict): self.apply(plan)
+
+    def test_deletion_transaction_rollback(self):
+        d = self.deletion(); plan = recovery.review_deletion(self.db,d,maintenance=self.maintenance)
+        before=copy.deepcopy(self.db.rows); self.db.failure='before_commit'
+        with self.assertRaises(StorageUncertain): recovery.apply_deletion(self.db,d,review_token=plan['review_token'],maintenance=self.maintenance)
+        self.assertEqual(before,self.db.rows)
+
+    def test_missing_maintenance_and_wrong_growth_state(self):
+        self.maintenance['writers_stopped']=False
+        with self.assertRaises(IntentConflict): self.review()
+        self.maintenance['writers_stopped']=True
+        self.db.rows['storage_operation_intents'][self.i.operation_id]['growth_reserved']=True
+        with self.assertRaises(IntentConflict): self.review()
+
+    def test_changed_file_metadata_requires_new_review(self):
+        plan=self.review()
+        self.db.rows['pdf_blobs.files'][self.i.document_id]['filename']='changed.pdf'
+        with self.assertRaises(IntentConflict): self.apply(plan)
+
+    def test_foreign_chunks_block_deletion_finalization(self):
+        d=self.deletion()
+        chunk=ObjectId()
+        self.db.rows['document_chunks']={chunk:dict(_id=chunk,document_id=d.document_id,owner_id=ObjectId(),knowledge_base_id=d.knowledge_base_id)}
+        with self.assertRaises(IntentConflict): recovery.review_deletion(self.db,d,maintenance=self.maintenance)

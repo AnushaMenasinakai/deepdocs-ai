@@ -4,8 +4,10 @@ import { register } from '../services/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { intendedDestination } from './AuthRoutes.jsx'
 import Icon from './Icon.jsx'
+import useAccessPolicy from './useAccessPolicy.js'
 
 export default function AuthForm({ mode }) {
+  const policy = useAccessPolicy()
   const isRegister = mode === 'register'
   const { authenticate, logoutWarning } = useAuth()
   const navigate = useNavigate()
@@ -110,10 +112,11 @@ export default function AuthForm({ mode }) {
         </fieldset>
         <span className="visually-hidden" role="status">{submitting ? 'Please wait. Your request is being processed.' : ''}</span>
       </form>
-      <p className="auth-switch">
+      {!isRegister && !policy.loading && !policy.publicRegistration && <p role="status">Access requires operator approval. Contact the operator for an account.</p>}
+      {(isRegister || policy.publicRegistration) && <p className="auth-switch">
         {isRegister ? 'Already have an account? ' : 'New to DeepDocs AI? '}
         <Link to={isRegister ? '/login' : '/register'} state={{ from: intendedDestination(location.state?.from) }}>{isRegister ? 'Sign in' : 'Create an account'}</Link>
-      </p>
+      </p>}
     </>
   )
 }

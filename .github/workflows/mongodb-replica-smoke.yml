@@ -25,14 +25,27 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$TEST_ID" =~ ^dd_smoke_[0-9]+_[0-9]+$ ]]
-          # Remove the namespace consumer before its owner.
-          for name in "${TEST_ID}_test" "$TEST_ID"; do
-            if docker container inspect "$name" >/dev/null 2>&1; then
-              test "$(docker inspect -f '{{index .Config.Labels "deepdocs.smoke"}}' "$name")" = "$TEST_ID"
-              docker rm -f -v "$name" >/dev/null
-            fi
-          done
-          if docker image inspect "deepdocs-smoke:$TEST_ID" >/dev/null 2>&1; then
-            test "$(docker image inspect -f '{{index .Config.Labels "deepdocs.smoke"}}' "deepdocs-smoke:$TEST_ID")" = "$TEST_ID"
-            docker image rm "deepdocs-smoke:$TEST_ID" >/dev/null
-          fi
+          export EVIDENCE_DIR="$RUNNER_TEMP/${TEST_ID}_evidence"
+          mkdir -p "$EVIDENCE_DIR"
+          sudo chown "$(id -u):$(id -g)" "$EVIDENCE_DIR"
+          bash experiments/mongodb-smoke/run.sh --cleanup
+      - name: Require complete acceptance evidence
+        if: always()
+        timeout-minutes: 1
+        run: |
+          set -euo pipefail
+          export EVIDENCE_DIR="$RUNNER_TEMP/${TEST_ID}_evidence"
+          bash experiments/mongodb-smoke/run.sh --verify-evidence
+      - name: Retain only sanitized validation evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: mongodb-recovery-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 3
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/${{ env.TEST_ID }}_evidence/sources.json
+            ${{ runner.temp }}/${{ env.TEST_ID }}_evidence/resources.json
+            ${{ runner.temp }}/${{ env.TEST_ID }}_evidence/recovery.json
+            ${{ runner.temp }}/${{ env.TEST_ID }}_evidence/execution.json
+            ${{ runner.temp }}/${{ env.TEST_ID }}_evidence/cleanup.json

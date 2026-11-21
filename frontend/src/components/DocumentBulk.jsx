@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react'
 
 const reasons = {
+  budget_exhausted: 'Daily application request limit reached. Earlier successful items remain completed.',
+  growth_limit_reached: 'Account resource limit reached. Earlier successful items remain completed.',
+  accounting_unavailable: 'Accounting could not be confirmed. Refresh and inspect this item before retrying.',
   not_found: 'This document is no longer available in this Knowledge Base.',
   busy: 'Another operation is using this document. It was not changed by this request.',
   requires_processing: 'This document must be processed before it can be re-indexed.',

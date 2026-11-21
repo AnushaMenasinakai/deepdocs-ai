@@ -19,6 +19,169 @@ from test_documents import PDF, PUBLIC, request
 from upload_safety import SaveLifetime, close_upload_form, observe_save_result, UploadUncertain
 
 
+class LocalGrowthHandoffTests(unittest.IsolatedAsyncioTestCase):
+    """Real document services and temporary files; ledger boundary is observed.
+
+    Atomic ledger behavior belongs to test_growth_limits. These tests prove which
+    identity is admitted/released and whether uncertain service outcomes retain it.
+    """
+    asyncTearDown = fixtures.DocumentTests.asyncTearDown
+
+    async def asyncSetUp(self):
+        await fixtures.DocumentTests.asyncSetUp(self)
+        self.held = set()
+
+        async def reserve(db, owner, kind, identity):
+            self.assertIs(db, self.database)
+            self.assertEqual((owner, kind), (self.owner, 'documents'))
+            self.held.add(identity)
+
+        async def release(db, owner, kind, identity):
+            self.assertIs(db, self.database)
+            self.assertEqual((owner, kind), (self.owner, 'documents'))
+            self.held.remove(identity)
+
+        self.reserve = AsyncMock(side_effect=reserve)
+        self.release = AsyncMock(side_effect=release)
+        for target, value in (
+            ('documents.load_growth_settings', lambda: SimpleNamespace(enabled=True)),
+            ('documents.reserve', self.reserve), ('documents.release_confirmed', self.release),
+        ):
+            patcher = patch(target, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    async def upload(self):
+        import documents
+        upload = fixtures.UploadFile(io.BytesIO(PDF), filename='synthetic.pdf',
+            headers=fixtures.Headers({'content-type': 'application/pdf'}))
+        try:
+            return await documents.upload_document(self.database, self.storage,
+                self.owner, self.base_id, upload, 100)
+        finally:
+            await upload.close()
+
+    async def test_missing_or_foreign_kb_precedes_growth_and_storage(self):
+        for foreign in (False, True):
+            with self.subTest(foreign=foreign):
+                if foreign:
+                    self.bases.documents[self.base_id] = {'_id': self.base_id, 'owner_id': self.other}
+                else:
+                    self.bases.documents.clear()
+                with patch.object(self.storage, 'save') as save:
+                    self.assertIsNone(await self.upload())
+                save.assert_not_called()
+        self.reserve.assert_not_awaited()
+        self.release.assert_not_awaited()
+
+    async def test_exhaustion_stops_before_storage_or_metadata(self):
+        from growth_limits import GrowthError
+        self.reserve.side_effect = GrowthError(True)
+        with patch.object(self.storage, 'save') as save, \
+             patch.object(self.bases, 'find_one_and_update', new_callable=AsyncMock) as kb_write, \
+             patch.object(self.docs, 'insert_one', new_callable=AsyncMock) as publish:
+            with self.assertRaises(GrowthError):
+                await self.upload()
+        save.assert_not_called(); kb_write.assert_not_awaited(); publish.assert_not_awaited()
+        self.release.assert_not_awaited()
+        self.assertFalse(self.held)
+
+    async def test_confirmed_compensation_releases_exact_identity_once(self):
+        with patch('documents.BSON.encode', side_effect=InvalidDocument('synthetic')), \
+             patch.object(self.storage, 'delete', wraps=self.storage.delete) as delete:
+            with self.assertRaises(UploadUncertain):
+                await self.upload()
+        identity = self.reserve.await_args.args[-1]
+        self.release.assert_awaited_once_with(self.database, self.owner, 'documents', identity)
+        delete.assert_called_once()
+        self.assertFalse(self.held)
+        self.assertFalse(self.docs.documents)
+        self.assertFalse(self.bases.documents[self.base_id].get('_document_ids'))
+        self.assertEqual(list(self.root.glob('*.pdf')), [])
+
+    async def test_cancelled_kb_dispatch_retains_capacity(self):
+        with patch.object(self.bases, 'find_one_and_update', new_callable=AsyncMock,
+                          side_effect=asyncio.CancelledError), patch.object(self.storage, 'save') as save:
+            with self.assertRaises(asyncio.CancelledError):
+                await self.upload()
+        self.assertEqual(self.held, {self.reserve.await_args.args[-1]})
+        self.release.assert_not_awaited(); save.assert_not_called()
+
+    async def test_unconfirmed_metadata_ack_retains_file_and_capacity(self):
+        original = self.docs.insert_one
+        async def committed_but_unacknowledged(record):
+            await original(record)
+            raise ConnectionFailure('synthetic acknowledgement loss')
+        with patch.object(self.docs, 'insert_one', side_effect=committed_but_unacknowledged), \
+             patch('documents.verify', new_callable=AsyncMock, side_effect=UploadUncertain):
+            with self.assertRaises(UploadUncertain):
+                await self.upload()
+        identity = self.reserve.await_args.args[-1]
+        self.assertEqual(self.held, {identity})
+        self.assertIn(identity, self.docs.documents)
+        self.assertTrue((self.root / (str(identity) + '.pdf')).exists())
+        self.release.assert_not_awaited()
+
+    async def test_successful_local_delete_releases_after_metadata_and_file(self):
+        import documents
+        body = await self.upload()
+        identity = ObjectId(body.id)
+        release = self.release.side_effect
+        async def checked_release(*args):
+            self.assertNotIn(identity, self.docs.documents)
+            self.assertFalse((self.root / (str(identity) + '.pdf')).exists())
+            await release(*args)
+        self.release.side_effect = checked_release
+        self.assertTrue(await documents.delete_document(self.database, self.storage,
+            self.owner, identity, self.base_id))
+        self.release.assert_awaited_once_with(self.database, self.owner, 'documents', identity)
+        self.assertFalse(self.held)
+
+    async def test_release_failure_reports_error_without_rollback_or_retry(self):
+        from growth_limits import GrowthError
+        body = await self.upload()
+        identity = ObjectId(body.id)
+        self.release.side_effect = GrowthError()
+        status, response, _ = await request('DELETE', '/api/documents/' + str(identity))
+        self.assertEqual(status, 503)
+        self.assertEqual(response['detail'], str(GrowthError()))
+        self.assertNotIn(identity, self.docs.documents)
+        self.assertFalse((self.root / (str(identity) + '.pdf')).exists())
+        self.assertEqual(self.held, {identity})
+        self.release.assert_awaited_once()
+
+    async def test_gridfs_delegation_never_runs_local_accounting(self):
+        import documents
+        identity, token = ObjectId(), ObjectId()
+        record = {'_id': identity, 'owner_id': self.owner,
+                  'knowledge_base_id': self.base_id, 'storage_backend': 'gridfs'}
+        gridfs = SimpleNamespace(delete=AsyncMock(return_value=True))
+        with patch('documents.claim_document', new_callable=AsyncMock, return_value=(record, token)), \
+             patch.object(self.storage, 'delete') as local_delete:
+            self.assertTrue(await documents.delete_document(self.database, self.storage,
+                self.owner, identity, self.base_id, gridfs=gridfs))
+        gridfs.delete.assert_awaited_once_with(record, self.owner, identity, token, None)
+        local_delete.assert_not_called()
+        self.reserve.assert_not_awaited(); self.release.assert_not_awaited()
+
+    async def test_disabled_policy_keeps_local_upload_and_delete(self):
+        import documents
+        import growth_limits
+        from config import GrowthSettings
+        with patch('documents.load_growth_settings', return_value=GrowthSettings()), \
+             patch('growth_limits._load_settings', return_value=GrowthSettings()), \
+             patch('documents.reserve', wraps=growth_limits.reserve), \
+             patch('documents.release_confirmed', wraps=growth_limits.release_confirmed), \
+             patch('growth_limits.owner_transaction') as transaction:
+            body = await self.upload()
+            self.assertEqual(body.status, 'uploaded')
+            self.assertTrue(await documents.delete_document(self.database, self.storage,
+                self.owner, ObjectId(body.id), self.base_id))
+        transaction.assert_not_called()
+        self.assertFalse(self.docs.documents)
+        self.assertEqual(list(self.root.glob('*.pdf')), [])
+
+
 class UploadSafetyTests(unittest.IsolatedAsyncioTestCase):
     asyncSetUp = fixtures.DocumentTests.asyncSetUp
     asyncTearDown = fixtures.DocumentTests.asyncTearDown

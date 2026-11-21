@@ -76,3 +76,22 @@ Remaining work: isolated real-database snapshot/index verification, bounded oper
 discovery tooling, worker fencing/termination evidence, explicit reviewed recovery
 plans with fresh conditional writes, and backup/restore validation. Offline doubles
 do not prove Atlas compatibility or safe automated recovery.
+
+## Exact-ID historical discovery and quarantine
+
+`inspect_reservation(owner_id, knowledge_base_id, document_id)` inspects one known
+KB reservation using bounded indexed reads. `quarantine_intentless_reservation`
+authorizes no release. Operators obtain IDs from an authorized bounded KB inventory,
+not an unbounded collection scan. Never infer absence of remote payloads from a
+missing intent. Preserve capacity and originals; investigate separately.
+
+Post-dispatch review/apply is now narrowly implemented in gridfs_growth_recovery;
+this inspector remains read-only. Follow gridfs_growth.md maintenance prerequisites.
+Its original `mutation_authorized=False` contract is unchanged.
+
+Processing claims: no blanket `$unset`, TTL unlock or replay is authorized. Inspect
+exact owner/KB/token, immutable original integrity, active chunk generation and
+vector state after all prior work is proven stopped. A completed, consistent state
+may be considered for a separately reviewed token-conditional intervention. Unknown
+activation/generation/vector outcomes remain quarantined; do not convert diagnostic
+stages into proof of completion. No new processing-claim mutator is provided here.

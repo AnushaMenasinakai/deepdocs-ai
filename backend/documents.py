@@ -14,6 +14,7 @@ from document_operations import claim_document, release_document, record_operati
 from vector_store import cleanup_document_vectors
 from upload_safety import UploadUncertain, require_acknowledged, verify, check_cancellation
 from upload_safety import SaveLifetime, observe_save_result
+from growth_limits import reserve, release_confirmed, load_growth_settings
 
 ORDER = [("created_at", -1), ("_id", -1)]
 SAVE_CANCEL_WAIT_SECONDS = 5
@@ -60,6 +61,9 @@ async def upload_document(database, storage, owner_id, base_id, upload, max_byte
     require_acknowledged(bases)
     require_acknowledged(docs)
     scope = {"_id": base_id, "owner_id": owner_id}
+    if load_growth_settings().enabled and await bases.find_one(scope) is None:
+        return None
+    await reserve(database, owner_id, 'documents', document_id)
     # Atomic reservation conflicts with a concurrent conditional KB deletion.
     try:
         base = await bases.find_one_and_update(scope,
@@ -73,6 +77,7 @@ async def upload_document(database, storage, owner_id, base_id, upload, max_byte
             raise UploadUncertain() from None
     check_cancellation()
     if base is None:
+        await release_confirmed(database, owner_id, 'documents', document_id)
         return None
     stored = None
     insertion_attempted = False
@@ -136,6 +141,7 @@ async def upload_document(database, storage, owner_id, base_id, upload, max_byte
                 lifetime.prepare_compensation()
                 await run_in_threadpool(lifetime.compensate, storage.delete, {"_id": document_id, **stored})
             await release_reservation(database, owner_id, base_id, document_id)
+            await release_confirmed(database, owner_id, 'documents', document_id)
         except Exception:
             if isinstance(error, asyncio.CancelledError):
                 raise error from None
@@ -266,6 +272,7 @@ async def delete_document(database, storage, owner_id, document_id, expected_kno
         result = await database.get_collection("documents").delete_one(claimed)
         if result.deleted_count != 1:
             raise PyMongoError("Document deletion outcome could not be confirmed.")
+        await release_confirmed(database, owner_id, 'documents', document_id)
         await deletion_checkpoint()
         return True
     except asyncio.CancelledError:

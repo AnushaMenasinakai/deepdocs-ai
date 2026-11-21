@@ -9,6 +9,7 @@ from cpu_workers import CPUWorkers
 from dependency_diagnostics import DependencyDiagnostics, get_diagnostics
 
 from database import UNAVAILABLE_MESSAGE, database_lifespan, get_database, ping_database
+from auth import get_current_user
 from auth_routes import router as auth_router
 from knowledge_base_routes import router as knowledge_base_router
 from document_routes import router as document_router
@@ -125,7 +126,7 @@ def health():
 
 
 @app.get("/api/health/database")
-async def database_health(database: AsyncDatabase = Depends(get_database), diagnostics=Depends(get_diagnostics)):
+async def database_health(current_user=Depends(get_current_user), database: AsyncDatabase = Depends(get_database), diagnostics=Depends(get_diagnostics)):
     if not await diagnostics.run('database', lambda: ping_database(database)):
         raise HTTPException(status_code=503, detail=UNAVAILABLE_MESSAGE)
     return {"status": "ok", "message": "MongoDB is reachable"}

@@ -9,6 +9,16 @@ from embeddings import EmbeddingFailure
 from pdf_processing import ProcessingFailure
 from vector_store import VectorFailure
 from expensive_admission import Resource
+from growth_limits import GrowthError
+from usage_budgets import BudgetError
+
+
+def policy_code(error):
+    if isinstance(error, BudgetError) and error.status == 429:
+        return 'budget_exhausted'
+    if isinstance(error, GrowthError) and error.status == 409:
+        return 'growth_limit_reached'
+    return 'accounting_unavailable'
 
 
 async def delete_documents(database, storage, owner_id, base_id, document_ids, *, workflow=None, gridfs=None):
@@ -33,6 +43,8 @@ async def delete_documents(database, storage, owner_id, base_id, document_ids, *
                 code = None if deleted else "not_found"
             except DocumentBusy:
                 outcome, code = "failed", "busy"
+            except (GrowthError, BudgetError) as error:
+                outcome, code, stopped = 'failed', policy_code(error), True
             except (VectorFailure, PyMongoError, OSError, TimeoutError):
                 outcome, code = "failed", "service_unavailable"
                 stopped = True
@@ -70,6 +82,8 @@ async def _reindex_documents(database, owner_id, base_id, document_ids, settings
                 outcome, code = "failed", "busy"
             except document_embeddings.RequiresProcessing:
                 outcome, code = "failed", "requires_processing"
+            except (GrowthError, BudgetError) as error:
+                outcome, code, stopped = 'failed', policy_code(error), True
             except (EmbeddingFailure, ProcessingFailure, VectorFailure, PyMongoError, OSError, TimeoutError):
                 outcome, code = "failed", "service_unavailable"
                 stopped = True

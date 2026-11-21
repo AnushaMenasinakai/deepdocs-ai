@@ -229,3 +229,16 @@ class ReconciliationTests(unittest.TestCase):
         result = self.inspect()
         self.assertEqual(result.heartbeat, 'future')
         self.assertEqual(result.classification, 'ambiguous_manual_review')
+
+class ReservationDiscoveryTests(unittest.TestCase):
+    setUp = ReconciliationTests.setUp
+    def test_intentless_reservation_is_quarantined(self):
+        self.db.rows['storage_operation_intents'] = []
+        before = copy.deepcopy(self.db.rows)
+        result = self.inspector.inspect_reservation(self.i.owner_id,self.i.knowledge_base_id,self.i.document_id)
+        self.assertEqual(result['classification'],'quarantine_intentless_reservation')
+        self.assertFalse(result['mutation_authorized'])
+        self.assertEqual(before,self.db.rows)
+    def test_foreign_reservation_discovery_is_rejected(self):
+        result = self.inspector.inspect_reservation(ObjectId(),self.i.knowledge_base_id,self.i.document_id)
+        self.assertEqual(result['classification'],'identity_conflict')
